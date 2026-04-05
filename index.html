@@ -67,7 +67,22 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
 
 /* ── APP LAYOUT ── */
 #app{flex-direction:row;}
-.sidebar{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--bd);display:flex;flex-direction:column;padding:22px 0;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto;}
+.sidebar{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--bd);display:flex;flex-direction:column;padding:22px 0;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto;transition:transform .25s ease;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99;}
+.hamburger{display:none;position:fixed;top:12px;left:12px;z-index:200;background:var(--surface);border:1.5px solid var(--bd);border-radius:8px;padding:7px 10px;cursor:pointer;font-size:18px;line-height:1;}
+@media(max-width:680px){
+  .hamburger{display:block;}
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .sidebar-overlay.open{display:block;}
+  .mwrap{margin-left:0;padding:16px;padding-top:52px;}
+  .sgrid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
+  .meta-row{grid-template-columns:1fr;}
+  .scores-row{grid-template-columns:1fr 1fr;}
+  .goal-grid{grid-template-columns:1fr;}
+  .stats{flex-wrap:wrap;}
+  .stc{min-width:80px;}
+}
 .slogo{font-family:'DM Serif Display',serif;font-size:17px;padding:0 18px 18px;border-bottom:1px solid var(--bd);}
 .slogo em{font-style:italic;color:var(--a);}
 .ubadge{padding:11px 18px;border-bottom:1px solid var(--bd);font-size:12px;color:var(--mt);}
@@ -308,7 +323,9 @@ select.ti-sm{cursor:pointer;}
 
 <!-- MAIN APP (teacher) -->
 <div id="app" class="screen">
-  <aside class="sidebar">
+  <button class="hamburger" onclick="toggleSidebar()">☰</button>
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+  <aside class="sidebar" id="main-sidebar">
     <div class="slogo"><span style="color:#FFD84D;font-style:normal;">JB</span> IDOL<em>Note</em></div>
     <div class="ubadge"><strong>선생님</strong>관리자 모드</div>
     <nav class="snav">
@@ -973,6 +990,18 @@ async function renderStudentFBList(){
 // ── TEACHER SECTIONS ──
 const NM={'s-ai':'nb-ai','s-al':'nb-al','s-ki':'nb-ki','s-kl':'nb-kl','s-sinfo':'nb-sinfo','s-stu':'nb-stu','s-cfg':'nb-cfg'};
 const NC={'nb-ai':'ona','nb-al':'ona','nb-ki':'onk','nb-kl':'onk','nb-sinfo':'ona','nb-stu':'','nb-cfg':''};
+function toggleSidebar(){
+  const sb=document.getElementById('main-sidebar');
+  const ov=document.getElementById('sidebar-overlay');
+  sb.classList.toggle('open');
+  ov.classList.toggle('open');
+}
+function closeSidebarMobile(){
+  if(window.innerWidth<=680){
+    document.getElementById('main-sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('open');
+  }
+}
 function showSec(id){
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
   document.getElementById(id).classList.add('on');
@@ -983,6 +1012,7 @@ function showSec(id){
   if(id==='s-stu')renderStuManage();
   if(id==='s-sinfo')initSinfoSection();
   if(id==='s-cfg'){const el=document.getElementById('stu-pw-show');if(el)el.value=window._stuPw||'0000';}
+  closeSidebarMobile();
 }
 
 // teacher tabs (dance/vocal)
