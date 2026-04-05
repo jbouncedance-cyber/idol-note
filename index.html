@@ -93,6 +93,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);
 .nb:hover{background:var(--sf2);color:var(--tx);}
 .nb.ona{color:var(--a);background:var(--al);border-left-color:var(--a);}
 .nb.onk{color:var(--k);background:var(--kl);border-left-color:var(--k);}
+.nb.ong{color:#E8A020;background:#FEF3E0;border-left-color:#E8A020;}
 .nb.ong{color:var(--gr);background:var(--gl);border-left-color:var(--gr);}
 .ndot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 .da{background:var(--a);}.dk{background:var(--k);}
@@ -243,6 +244,17 @@ select.ti-sm{cursor:pointer;}
 .cff label{display:block;font-size:11px;font-weight:700;color:var(--mt);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px;}
 
 .hidden{display:none!important;}
+.note-tag-btn{padding:5px 12px;border-radius:18px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--bd);background:var(--surface);color:var(--mt);transition:all .15s;}
+.note-tag-btn.on{background:var(--a);color:#fff;border-color:var(--a);}
+.note-card{background:var(--surface);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;position:relative;}
+.note-card:hover{border-color:#C8B8A8;}
+.note-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;}
+.note-card.tag-일반::before{background:var(--mt);}
+.note-card.tag-2차오디션::before{background:#E8A020;}
+.note-card.tag-집중관리::before{background:var(--rd);}
+.note-card.tag-칭찬::before{background:var(--gr);}
+.note-card.tag-주의::before{background:var(--dance);}
+.note-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;}
 </style>
 </head>
 <body>
@@ -329,8 +341,10 @@ select.ti-sm{cursor:pointer;}
     <div class="slogo"><span style="color:#FFD84D;font-style:normal;">JB</span> IDOL<em>Note</em></div>
     <div class="ubadge"><strong>선생님</strong>관리자 모드</div>
     <nav class="snav">
-      <div class="nsec">오디션반</div>
-      <button class="nb ona" id="nb-ai" onclick="showSec('s-ai')"><span class="ndot da"></span>피드백 입력</button>
+      <div class="nsec">대시보드</div>
+      <button class="nb ong" id="nb-note" onclick="showSec('s-note')"><span class="ndot" style="background:#E8A020;"></span>📋 NOTE</button>
+      <div class="nsec" style="margin-top:5px;">오디션반</div>
+      <button class="nb" id="nb-ai" onclick="showSec('s-ai')"><span class="ndot da"></span>피드백 입력</button>
       <button class="nb" id="nb-al" onclick="showSec('s-al')"><span class="ndot da"></span>피드백 목록</button>
       <div class="nsec" style="margin-top:5px;">키즈오디션반</div>
       <button class="nb" id="nb-ki" onclick="showSec('s-ki')"><span class="ndot dk"></span>피드백 입력</button>
@@ -346,7 +360,7 @@ select.ti-sm{cursor:pointer;}
   <div class="mwrap">
 
     <!-- 오디션반 입력 -->
-    <div class="sec on" id="s-ai">
+    <div class="sec" id="s-ai">
       <div class="phd"><h2>피드백 입력 <span class="bdg bda">오디션반</span></h2><p>학생 선택 후 날짜와 기획사를 입력하고 댄스·보컬 피드백을 작성하세요</p></div>
       <div class="sgrid" id="grid-a"></div>
       <div id="form-a" class="hidden">
@@ -557,6 +571,48 @@ select.ti-sm{cursor:pointer;}
           <div class="goal-card"><div class="goal-title" style="margin-bottom:14px;">📊 인바디 기록</div><div id="sinfo-inbody-list" style="display:flex;flex-direction:column;gap:10px;"></div></div>
         </div>
       </div>
+    </div>
+
+    <!-- NOTE 게시판 -->
+    <div class="sec on" id="s-note">
+      <div class="phd"><h2>📋 NOTE</h2><p>학생별 현황과 메모를 한눈에 확인하세요</p></div>
+      <!-- 새 메모 추가 -->
+      <div class="fcard" style="margin-bottom:20px;">
+        <div class="fttl" style="margin-bottom:14px;">+ 새 메모 추가</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div class="fi">
+            <label>반</label>
+            <select class="ti-sm" id="note-cls">
+              <option value="all">전체</option>
+              <option value="audition">오디션반</option>
+              <option value="kids">키즈오디션반</option>
+            </select>
+          </div>
+          <div class="fi">
+            <label>학생 (선택)</label>
+            <select class="ti-sm" id="note-stu">
+              <option value="all">전체</option>
+            </select>
+          </div>
+        </div>
+        <div class="fi" style="margin-bottom:10px;">
+          <label>태그</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="note-tag-btn on" data-tag="일반" onclick="selectNoteTag(this)">일반</button>
+            <button class="note-tag-btn" data-tag="2차오디션" onclick="selectNoteTag(this)">2차오디션</button>
+            <button class="note-tag-btn" data-tag="집중관리" onclick="selectNoteTag(this)">집중관리</button>
+            <button class="note-tag-btn" data-tag="칭찬" onclick="selectNoteTag(this)">칭찬</button>
+            <button class="note-tag-btn" data-tag="주의" onclick="selectNoteTag(this)">주의</button>
+          </div>
+        </div>
+        <textarea class="ta" id="note-text" rows="3" placeholder="메모 내용을 입력하세요..."></textarea>
+        <div class="brow"><button class="btn bpa" onclick="saveNote()">메모 저장</button></div>
+        <div id="note-status"></div>
+      </div>
+      <!-- 필터 -->
+      <div class="fbar" id="note-filter-bar" style="margin-bottom:14px;"></div>
+      <!-- 메모 목록 -->
+      <div id="note-list" style="display:flex;flex-direction:column;gap:10px;"></div>
     </div>
 
     <!-- 학생 관리 -->
@@ -818,7 +874,7 @@ function goLanding(){
   document.querySelectorAll('.nb').forEach(n=>n.className='nb');
   const nbai=document.getElementById('nb-ai');if(nbai)nbai.className='nb ona';
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
-  const sai=document.getElementById('s-ai');if(sai)sai.classList.add('on');
+  const snote=document.getElementById('s-note');if(snote)snote.classList.add('on');
   // Reset student form selections
   document.querySelectorAll('.scard').forEach(c=>{c.className='scard';});
   document.querySelectorAll('.nbtn').forEach(b=>b.className='nbtn');
@@ -832,7 +888,7 @@ async function tryLogin(){
   if(!window._initDone){
     await window._initPromise;
   }
-  if(document.getElementById('pw-input').value===pw){showScreen('app');renderGrids();showSec('s-ai');}
+  if(document.getElementById('pw-input').value===pw){showScreen('app');renderGrids();showSec('s-note');}
   else document.getElementById('lerr').style.display='block';
 }
 
@@ -865,13 +921,19 @@ function confirmStu(){
 }
 async function tryStuLogin(){
   const entered=document.getElementById('stu-pw-input').value;
-  const stuPw=window._stuPw||'0000';
+  // Check individual pw first, fallback to global pw
+  const stuPws=window._stuPws||{};
+  const individualPw=stuPws[stuCls+':'+stuName];
+  const stuPw=individualPw||window._stuPw||'0000';
   if(entered===stuPw){
     // Make sure Firebase is ready and feedbacks are loaded
     if(!window._initDone){await window._initPromise;}
     // Reload feedbacks fresh to ensure latest data
     try{
-      const fbSnap=await db.collection('feedbacks').get();
+      // Load individual student passwords
+    const stuPwSnap=await db.collection('settings').doc('stuPws').get();
+    window._stuPws=stuPwSnap.exists?stuPwSnap.data():{};
+    const fbSnap=await db.collection('feedbacks').get();
       feedbacks=[];fbSnap.forEach(d=>feedbacks.push({id:d.id,...d.data()}));
       feedbacks.sort((a,b)=>(b.ts||0)-(a.ts||0));
     }catch(e){console.error('feedbacks reload error:',e);}
@@ -969,6 +1031,9 @@ async function renderStudentFBList(){
   el.innerHTML='<div class="empty"><div class="empty-ic">⏳</div><p>불러오는 중...</p></div>';
   // Always reload from Firebase for students to get latest
   try{
+    // Load individual student passwords
+    const stuPwSnap=await db.collection('settings').doc('stuPws').get();
+    window._stuPws=stuPwSnap.exists?stuPwSnap.data():{};
     const fbSnap=await db.collection('feedbacks').get();
     feedbacks=[];fbSnap.forEach(d=>feedbacks.push({id:d.id,...d.data()}));
     feedbacks.sort((a,b)=>(b.ts||0)-(a.ts||0));
@@ -988,8 +1053,8 @@ async function renderStudentFBList(){
 }
 
 // ── TEACHER SECTIONS ──
-const NM={'s-ai':'nb-ai','s-al':'nb-al','s-ki':'nb-ki','s-kl':'nb-kl','s-sinfo':'nb-sinfo','s-stu':'nb-stu','s-cfg':'nb-cfg'};
-const NC={'nb-ai':'ona','nb-al':'ona','nb-ki':'onk','nb-kl':'onk','nb-sinfo':'ona','nb-stu':'','nb-cfg':''};
+const NM={'s-note':'nb-note','s-ai':'nb-ai','s-al':'nb-al','s-ki':'nb-ki','s-kl':'nb-kl','s-sinfo':'nb-sinfo','s-stu':'nb-stu','s-cfg':'nb-cfg'};
+const NC={'nb-note':'ong','nb-ai':'ona','nb-al':'ona','nb-ki':'onk','nb-kl':'onk','nb-sinfo':'ona','nb-stu':'','nb-cfg':''};
 function toggleSidebar(){
   const sb=document.getElementById('main-sidebar');
   const ov=document.getElementById('sidebar-overlay');
@@ -1011,6 +1076,7 @@ function showSec(id){
   if(id==='s-kl')renderList('k');
   if(id==='s-stu')renderStuManage();
   if(id==='s-sinfo')initSinfoSection();
+  if(id==='s-note')renderNoteBoard();
   if(id==='s-cfg'){const el=document.getElementById('stu-pw-show');if(el)el.value=window._stuPw||'0000';}
   closeSidebarMobile();
 }
@@ -1243,12 +1309,25 @@ function renderStuManage(){
     const t=cls==='audition'?'a':'k';
     const list=document.getElementById('stu-list-'+t);
     document.getElementById(t+'-stu-cnt').textContent=STUDENTS[cls].length+'명';
+    const stuPws=window._stuPws||{};
     list.innerHTML=STUDENTS[cls].map((name,i)=>`
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--bg);border-radius:7px;font-size:13px;">
-        <span>${name}</span>
-        <button onclick="delStu('${cls}',${i})" style="background:none;border:none;cursor:pointer;color:var(--mt);font-size:13px;padding:2px 4px;border-radius:4px;" onmouseover="this.style.background='var(--rl)';this.style.color='var(--rd)'" onmouseout="this.style.background='none';this.style.color='var(--mt)'">✕</button>
+      <div style="background:var(--bg);border-radius:9px;padding:10px 12px;font-size:13px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-weight:700;">${name}</span>
+          <button onclick="delStu('${cls}',${i})" style="background:none;border:none;cursor:pointer;color:var(--mt);font-size:13px;padding:2px 4px;border-radius:4px;" onmouseover="this.style.background='var(--rl)';this.style.color='var(--rd)'" onmouseout="this.style.background='none';this.style.color='var(--mt)'">✕</button>
+        </div>
+        <div style="display:flex;gap:7px;align-items:center;">
+          <input class="ti-sm" type="text" placeholder="비밀번호" value="${stuPws[cls+':'+name]||''}" id="spw-${cls}-${i}" style="flex:1;font-size:12px;">
+          <button onclick="saveStuPw('${cls}','${name}',document.getElementById('spw-${cls}-${i}').value)" style="padding:6px 10px;border-radius:7px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;border:none;background:var(--a);color:#fff;white-space:nowrap;">저장</button>
+        </div>
       </div>`).join('');
   });
+}
+async function saveStuPw(cls,name,pw){
+  if(!window._stuPws)window._stuPws={};
+  window._stuPws[cls+':'+name]=pw;
+  await db.collection('settings').doc('stuPws').set(window._stuPws);
+  showMsg('stu-status-'+(cls==='audition'?'a':'k'),'✓ '+name+' 비밀번호 저장됨',true);
 }
 function addStu(cls){
   const t=cls==='audition'?'a':'k';
@@ -1504,6 +1583,91 @@ function showSinfoTab(i){
   document.querySelectorAll('.ssec[id^="sinfo-s"]').forEach((s,j)=>s.classList.toggle('on',i===j));
 }
 
+// ── NOTE BOARD ──
+let _noteTag='일반';
+function selectNoteTag(btn){
+  document.querySelectorAll('.note-tag-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');_noteTag=btn.dataset.tag;
+}
+function renderNoteBoard(){
+  // populate student select
+  const clsSel=document.getElementById('note-cls');
+  const stuSel=document.getElementById('note-stu');
+  clsSel.onchange=()=>updateNoteStuSelect();
+  updateNoteStuSelect();
+  renderNoteList();
+}
+function updateNoteStuSelect(){
+  const cls=document.getElementById('note-cls').value;
+  const sel=document.getElementById('note-stu');
+  sel.innerHTML='<option value="all">전체</option>';
+  if(cls==='all'){
+    ['audition','kids'].forEach(c=>STUDENTS[c].forEach(n=>{const o=document.createElement('option');o.value=n+'|'+c;o.textContent=n+' ('+CLS[c]+')';sel.appendChild(o);}));
+  } else {
+    STUDENTS[cls].forEach(n=>{const o=document.createElement('option');o.value=n+'|'+cls;o.textContent=n;sel.appendChild(o);});
+  }
+}
+async function saveNote(){
+  const text=document.getElementById('note-text').value.trim();
+  if(!text){showMsg('note-status','내용을 입력해주세요',false);return;}
+  const stuVal=document.getElementById('note-stu').value;
+  const [stuName,stuCls]=stuVal==='all'?['전체','all']:stuVal.split('|');
+  const note={id:Date.now()+'',text,tag:_noteTag,stuName,stuCls,date:new Date().toLocaleDateString('ko-KR'),ts:Date.now()};
+  try{
+    await db.collection('notes').doc(note.id).set(note);
+    document.getElementById('note-text').value='';
+    showMsg('note-status','✓ 저장되었습니다',true);
+    renderNoteList();
+  }catch(e){showMsg('note-status','저장 실패: '+e.message,false);}
+}
+async function renderNoteList(){
+  const list=document.getElementById('note-list');
+  list.innerHTML='<div style="color:var(--mt);font-size:13px;padding:10px 0;">불러오는 중...</div>';
+  try{
+    const snap=await db.collection('notes').get();
+    let notes=[];snap.forEach(d=>notes.push(d.data()));
+    notes.sort((a,b)=>b.ts-a.ts);
+    // filter bar
+    const bar=document.getElementById('note-filter-bar');
+    const tags=['전체','일반','2차오디션','집중관리','칭찬','주의'];
+    bar.innerHTML=tags.map(t=>`<button class="fbtn${t==='전체'?' fao':''}" onclick="filterNotes('${t}',this)">${t}</button>`).join('');
+    if(!notes.length){list.innerHTML='<div class="empty"><div class="empty-ic">📋</div><p>아직 메모가 없어요</p></div>';return;}
+    renderNoteItems(notes);
+    window._allNotes=notes;
+  }catch(e){list.innerHTML='<div style="color:var(--rd);font-size:13px;">불러오기 실패</div>';}
+}
+function filterNotes(tag,btn){
+  document.querySelectorAll('#note-filter-bar .fbtn').forEach(b=>{b.classList.remove('fao');b.classList.remove('fko');});
+  btn.classList.add('fao');
+  const notes=window._allNotes||[];
+  const filtered=tag==='전체'?notes:notes.filter(n=>n.tag===tag);
+  renderNoteItems(filtered);
+}
+function renderNoteItems(notes){
+  const tagColors={'일반':'#8C857C','2차오디션':'#E8A020','집중관리':'var(--rd)','칭찬':'var(--gr)','주의':'var(--dance)'};
+  document.getElementById('note-list').innerHTML=notes.map(n=>`
+    <div class="note-card tag-${n.tag}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+          <span class="note-badge" style="background:${tagColors[n.tag]||'var(--mt)'};color:#fff;">${n.tag}</span>
+          ${n.stuName!=='전체'?`<span style="font-size:13px;font-weight:700;">${n.stuName}</span><span style="font-size:11px;color:var(--mt);">${n.stuCls==='audition'?'오디션반':n.stuCls==='kids'?'키즈오디션반':''}</span>`:'<span style="font-size:12px;color:var(--mt);">전체</span>'}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:11px;color:var(--mt);">${n.date}</span>
+          <button onclick="delNote('${n.id}')" style="background:none;border:none;cursor:pointer;color:var(--mt);font-size:13px;padding:2px 4px;border-radius:4px;" onmouseover="this.style.background='var(--rl)'" onmouseout="this.style.background='none'">✕</button>
+        </div>
+      </div>
+      <div style="font-size:13px;line-height:1.7;white-space:pre-wrap;">${n.text}</div>
+    </div>`).join('');
+}
+async function delNote(id){
+  if(!confirm('이 메모를 삭제할까요?'))return;
+  await db.collection('notes').doc(id).delete();
+  renderNoteList();
+}
+
+// ── STUDENT PW (individual) ──
+
 // ── PW ──
 function changePW(){
   const cur=document.getElementById('cfg-cur').value;
@@ -1536,6 +1700,9 @@ async function initApp(){
     }else{
       await db.collection('settings').doc('main').set({pw:'1234',stuPw:'0000',agencies:[...DEFAULT_AGENCIES],students:JSON.parse(JSON.stringify(DEFAULT_STUDENTS))});
     }
+    // Load individual student passwords
+    const stuPwSnap=await db.collection('settings').doc('stuPws').get();
+    window._stuPws=stuPwSnap.exists?stuPwSnap.data():{};
     const fbSnap=await db.collection('feedbacks').get();
     feedbacks=[];fbSnap.forEach(d=>feedbacks.push({id:d.id,...d.data()}));
     feedbacks.sort((a,b)=>(b.ts||0)-(a.ts||0));
