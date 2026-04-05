@@ -367,8 +367,15 @@ select.ti-sm{cursor:pointer;}
           </div>
           <!-- 보컬 -->
           <div class="tsec" id="ta-vocal-sec">
-            <div class="fi" style="margin-bottom:8px;"><label>담당 보컬쌤 피드백</label></div>
-            <textarea class="ta" id="a-v-main" rows="5" placeholder="담당 보컬쌤 피드백 입력..."></textarea>
+            <div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-end;">
+              <div class="fi" style="flex:0 0 160px;">
+                <label>선생님 이름</label>
+                <input class="ti-sm" id="a-v-teacher" placeholder="예) 김선령쌤" style="width:100%;">
+              </div>
+              <div style="font-size:12px;color:var(--mt);padding-bottom:9px;">피드백 작성자 이름을 입력하세요</div>
+            </div>
+            <div class="fi" style="margin-bottom:8px;"><label>보컬 피드백</label></div>
+            <textarea class="ta" id="a-v-main" rows="5" placeholder="보컬 피드백 내용을 입력하세요..."></textarea>
           </div>
           <!-- 영상 링크 -->
           <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px;">
@@ -438,8 +445,15 @@ select.ti-sm{cursor:pointer;}
             <textarea class="ta" id="k-d-text" rows="5" placeholder="댄스 피드백 내용을 입력하세요..."></textarea>
           </div>
           <div class="tsec" id="tk-vocal-sec">
-            <div class="fi" style="margin-bottom:8px;"><label>담당 보컬쌤 피드백</label></div>
-            <textarea class="ta" id="k-v-main" rows="5" placeholder="담당 보컬쌤 피드백 입력..."></textarea>
+            <div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-end;">
+              <div class="fi" style="flex:0 0 160px;">
+                <label>선생님 이름</label>
+                <input class="ti-sm" id="k-v-teacher" placeholder="예) 김선령쌤" style="width:100%;">
+              </div>
+              <div style="font-size:12px;color:var(--mt);padding-bottom:9px;">피드백 작성자 이름을 입력하세요</div>
+            </div>
+            <div class="fi" style="margin-bottom:8px;"><label>보컬 피드백</label></div>
+            <textarea class="ta" id="k-v-main" rows="5" placeholder="보컬 피드백 내용을 입력하세요..."></textarea>
           </div>
           <!-- 영상 링크 -->
           <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px;">
@@ -1021,7 +1035,7 @@ function selectStu(t,name){
   document.getElementById('ftitle-'+t).textContent=name+' 피드백 작성';
   document.getElementById('form-'+t).classList.remove('hidden');
   // clear fields
-  ['d-teacher','d-text','v-main','video-dance','video-vocal'].forEach(s=>{const el=document.getElementById(t+'-'+s);if(el)el.value='';});
+  ['d-teacher','d-text','v-teacher','v-main','video-dance','video-vocal'].forEach(s=>{const el=document.getElementById(t+'-'+s);if(el)el.value='';});
   document.getElementById(t+'-status').innerHTML='';
   showTTab(t,'dance');
 }
@@ -1069,10 +1083,10 @@ function saveFB(t){
   const agency=getAgency(t);
   if(!date||!agency){showMsg(t+'-status','날짜와 기획사를 입력해주세요',false);return;}
   const dTeacher=gv(t+'-d-teacher'),dText=gv(t+'-d-text');
-  const vMain=gv(t+'-v-main');
+  const vTeacher=gv(t+'-v-teacher'),vMain=gv(t+'-v-main');
   if(!dText&&!vMain){showMsg(t+'-status','피드백 내용을 하나 이상 입력해주세요',false);return;}
   const videoDance=gv(t+'-video-dance'),videoVocal=gv(t+'-video-vocal');
-  const fb={id:Date.now(),cls,name,date,agency,dTeacher,dText,vMain,videoDance,videoVocal,ts:Date.now()};
+  const fb={id:Date.now(),cls,name,date,agency,dTeacher,dText,vTeacher,vMain,videoDance,videoVocal,ts:Date.now()};
   feedbacks.unshift(fb);
   dbSaveFB(fb).then(newId=>{fb.id=newId;renderGrid(t);});
   showMsg(t+'-status','저장되었습니다',true);
@@ -1171,7 +1185,7 @@ function renderFBCard(f,showDel,t){
       </div>`:''}
       ${hasV?`<div class="fb-sec vocal">
         <div class="fb-sec-title v">🎤 보컬</div>
-        ${f.vMain?`<div class="fb-teacher">담당 보컬쌤</div><div class="fb-text">${f.vMain}</div>`:''}
+        ${f.vMain?`${f.vTeacher?`<div class="fb-teacher">${f.vTeacher}</div>`:`<div class="fb-teacher">담당 보컬쌤</div>`}<div class="fb-text">${f.vMain}</div>`:''}
       </div>`:''}
     </div>
   </div>`;
