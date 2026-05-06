@@ -1,1724 +1,1464 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<!-- Firebase SDKs -->
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#C2621A">
+<title>JB IDOL Note</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --orange:#C2621A;--orange2:#e07830;--orange-bg:#FFF3EB;
+  --k:#3E7FA8;--k-bg:#EBF5FF;
+  --black:#111;--gray:#777;--gray2:#bbb;--light:#f5f5f7;--white:#fff;
+  --border:#e8e8e8;
+  --green:#16a34a;--green-bg:#f0fdf4;--green-bd:#bbf7d0;
+  --red:#ef4444;--red-bg:#fef2f2;--red-bd:#fecaca;
+  --blue:#2563eb;--blue-bg:#eff6ff;--blue-bd:#bfdbfe;
+  --amber:#b45309;--amber-bg:#fffbeb;--amber-bd:#fde68a;
+  --purple:#7c3aed;--purple-bg:#f5f3ff;--purple-bd:#ddd6fe;
+  --dance:#7B4FA0;--vocal:#1A6B5A;
+}
+body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;background:var(--light);color:var(--black);min-height:100vh;overflow-x:hidden;font-size:15px}
+.page{display:none;min-height:100vh;flex-direction:column}
+.page.active{display:flex}
+.header{background:var(--white);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
+.logo{font-size:18px;font-weight:900;color:var(--orange);letter-spacing:-1px}
+.header-sub{font-size:11px;color:var(--gray);margin-top:1px}
+.back-btn{background:none;border:none;font-size:22px;cursor:pointer;padding:4px 10px 4px 0;color:var(--black);line-height:1}
+.header-right{margin-left:auto;display:flex;gap:6px;align-items:center}
+.sbtn{background:none;border:1px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:12px;color:var(--gray);font-family:inherit;white-space:nowrap}
+.sbtn:active{background:var(--light)}
+.sbtn.orange{background:var(--orange);border-color:var(--orange);color:var(--white);font-weight:700}
+.sbtn.danger{border-color:var(--red-bd);color:var(--red)}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--border);display:flex;z-index:200;padding-bottom:env(safe-area-inset-bottom,0px)}
+.nav-btn{flex:1;background:none;border:none;padding:9px 0 7px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-size:10px;color:var(--gray2);font-family:inherit}
+.nav-btn.active{color:var(--orange)}
+.nav-icon{font-size:20px;line-height:1.2}
+.content{flex:1;padding:12px 12px 90px}
+.card{background:var(--white);border-radius:14px;border:1px solid var(--border);margin-bottom:10px;overflow:hidden}
+.card-head{padding:11px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);gap:8px}
+.card-title{font-size:14px;font-weight:700}
+.card-body{padding:13px 14px}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+.badge.orange{background:var(--orange-bg);color:var(--orange)}
+.badge.blue{background:var(--blue-bg);color:var(--blue)}
+.badge.green{background:var(--green-bg);color:var(--green)}
+.badge.amber{background:var(--amber-bg);color:var(--amber)}
+.badge.gray{background:var(--light);color:var(--gray);border:1px solid var(--border)}
+.badge.purple{background:var(--purple-bg);color:var(--purple)}
+.badge.red{background:var(--red-bg);color:var(--red)}
+.badge.k{background:var(--k-bg);color:var(--k)}
+.badge.dance{background:#EFE4F8;color:var(--dance)}
+.badge.vocal{background:#D4F0E8;color:var(--vocal)}
+input[type=text],input[type=password],input[type=number],input[type=date],input[type=time],textarea,select{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;background:var(--white);color:var(--black);outline:none;transition:border .15s;-webkit-appearance:none}
+input:focus,textarea:focus,select:focus{border-color:var(--orange)}
+textarea{resize:vertical;min-height:80px}
+.form-row{margin-bottom:11px}
+.form-label{font-size:12px;font-weight:700;color:var(--gray);margin-bottom:4px;display:block}
+.btn{width:100%;padding:13px;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-orange{background:var(--orange);color:var(--white)}
+.btn-orange:active{background:var(--orange2)}
+.btn-outline{background:var(--white);color:var(--orange);border:1.5px solid var(--orange)}
+.btn-gray{background:var(--light);color:var(--black);border:1px solid var(--border)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal{background:var(--white);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:88vh;display:flex;flex-direction:column}
+.modal-head{padding:15px 17px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);flex-shrink:0}
+.modal-title{font-size:16px;font-weight:800}
+.close-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--gray);line-height:1;font-family:inherit}
+.modal-body{overflow-y:auto;flex:1;padding:13px 17px}
+.modal-foot{padding:13px 17px;border-top:1px solid var(--border);flex-shrink:0}
+.lock-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 20px;background:linear-gradient(160deg,var(--orange-bg),#f5f5f7)}
+.lock-logo{font-size:26px;font-weight:900;color:var(--orange);letter-spacing:-1px;margin-bottom:3px}
+.lock-sub{font-size:12px;color:var(--gray);margin-bottom:24px}
+.lock-avatar{width:76px;height:76px;border-radius:50%;background:var(--orange-bg);border:3px solid var(--orange);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:32px;overflow:hidden;font-weight:700;color:var(--orange)}
+.lock-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.lock-box{background:var(--white);border-radius:20px;border:1px solid var(--border);padding:20px;width:100%;max-width:320px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.pin-dots{display:flex;gap:16px;justify-content:center;margin:12px 0}
+.pin-dot{width:13px;height:13px;border-radius:50%;border:2px solid var(--gray2);transition:all .15s}
+.pin-dot.filled{background:var(--orange);border-color:var(--orange)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:4px}
+.pin-key{background:var(--light);border:1px solid var(--border);border-radius:11px;padding:14px;font-size:20px;font-weight:700;cursor:pointer;text-align:center;font-family:inherit}
+.pin-key:active{background:var(--orange-bg);border-color:var(--orange);color:var(--orange)}
+.error-msg{color:var(--red);font-size:12px;text-align:center;min-height:17px;margin-top:3px}
+.tab-bar{display:flex;border-bottom:1px solid var(--border);overflow-x:auto;background:var(--white)}
+.tab-btn{padding:10px 15px;border:none;background:none;font-size:13px;font-weight:700;color:var(--gray);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:inherit;flex-shrink:0}
+.tab-btn.active{color:var(--orange);border-bottom-color:var(--orange)}
+.adm-section{background:var(--white);border-radius:13px;border:1px solid var(--border);margin-bottom:11px;overflow:hidden}
+.adm-row{padding:11px 13px;display:flex;align-items:center;border-bottom:1px solid var(--border);gap:9px}
+.adm-row:last-child{border-bottom:none}
+.del-btn{background:none;border:1px solid var(--red-bd);color:var(--red);border-radius:8px;padding:4px 9px;font-size:12px;cursor:pointer;font-family:inherit;flex-shrink:0}
+.edt-btn{background:none;border:1px solid var(--border);color:var(--gray);border-radius:8px;padding:4px 9px;font-size:12px;cursor:pointer;font-family:inherit;flex-shrink:0}
+.add-row{padding:9px 13px;display:flex;gap:6px;border-top:1px solid var(--border);flex-wrap:wrap}
+.add-row input,.add-row select{flex:1;min-width:70px;padding:8px 11px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;font-family:inherit;background:var(--white);outline:none}
+.add-row input:focus,.add-row select:focus{border-color:var(--orange)}
+.add-row button{background:var(--orange);color:var(--white);border:none;border-radius:9px;padding:8px 13px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit}
+.empty-msg{text-align:center;padding:26px;color:var(--gray);font-size:14px}
+.avatar{width:44px;height:44px;border-radius:50%;background:var(--orange-bg);border:2px solid var(--orange2);display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden;flex-shrink:0;font-weight:700;color:var(--orange)}
+.avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.avatar.kids{background:var(--k-bg);border-color:var(--k);color:var(--k)}
+.profile-avatar-wrap{width:86px;height:86px;border-radius:50%;background:var(--orange-bg);border:3px solid var(--orange);margin:0 auto 11px;display:flex;align-items:center;justify-content:center;font-size:34px;overflow:hidden;position:relative;cursor:pointer;font-weight:700;color:var(--orange)}
+.profile-avatar-wrap img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.notice-bar{background:linear-gradient(135deg,var(--orange-bg),#fce7d8);border:1px solid #f5c6a0;border-radius:12px;padding:11px 13px;margin-bottom:10px;cursor:pointer;display:flex;align-items:flex-start;gap:9px}
+.hint-box{background:var(--amber-bg);border:1px solid var(--amber-bd);border-radius:9px;padding:9px 11px;margin-bottom:9px;font-size:12px;color:var(--amber);line-height:1.5}
+.notice-content{font-size:15px;line-height:1.8;color:var(--black);white-space:pre-wrap}
+.postit-wrap{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:2px 0 4px}
+.postit{min-height:110px;border-radius:3px;padding:11px 10px 9px;position:relative;box-shadow:2px 3px 8px rgba(0,0,0,.13);display:flex;flex-direction:column;cursor:pointer;transition:transform .15s}
+.postit:active{transform:scale(0.97)}
+.postit::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:rgba(0,0,0,.08);border-radius:3px 3px 0 0}
+.postit-author{font-size:11px;font-weight:800;margin-bottom:6px;opacity:.8}
+.postit-content{font-size:12px;line-height:1.5;flex:1;word-break:break-all}
+.postit-footer{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.postit-time{font-size:10px;opacity:.6}
+.postit-reply-cnt{font-size:10px;font-weight:700;opacity:.75}
+.reply-item{padding:8px 12px;background:var(--light);border-radius:8px;margin-bottom:5px;display:flex;gap:8px;align-items:flex-start}
+.reply-author{font-size:12px;font-weight:800;flex-shrink:0}
+.reply-content{font-size:12px;color:var(--black);line-height:1.5;flex:1}
+.reply-time{font-size:10px;color:var(--gray2);flex-shrink:0}
+.sec-title{font-size:11px;font-weight:800;color:var(--gray);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 7px}
+.fw7{font-weight:700}.fw8{font-weight:800}.text-sm{font-size:12px}.text-gray{color:var(--gray)}.text-orange{color:var(--orange)}.mt6{margin-top:6px}.mt10{margin-top:10px}
+.divider{height:1px;background:var(--border);margin:12px 0}
+/* class tab */
+.class-tab-bar{display:flex;gap:0;margin-bottom:12px;border-radius:10px;overflow:hidden;border:1.5px solid var(--border)}
+.class-tab-btn{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;background:transparent;border:none;font-family:inherit;color:var(--gray);transition:all .15s}
+.class-tab-btn.active-a{background:var(--orange);color:white}
+.class-tab-btn.active-k{background:var(--k);color:white}
+/* class chips */
+.chip-dance{display:inline-block;background:#EFE4F8;border:1px solid #d4b8f0;border-radius:7px;padding:3px 9px;font-size:12px;margin:2px}
+.chip-vocal{display:inline-block;background:#D4F0E8;border:1px solid #a0d8c8;border-radius:7px;padding:3px 9px;font-size:12px;margin:2px}
+/* ib table */
+.ib-table{width:100%;border-collapse:collapse;font-size:12px}
+.ib-table th{padding:7px 7px;background:var(--light);font-weight:700;color:var(--gray);border-bottom:2px solid var(--border);text-align:left;white-space:nowrap}
+.ib-table td{padding:8px 7px;border-bottom:1px solid var(--border);vertical-align:middle}
+.ib-table tr:last-child td{border-bottom:none}
+/* profile cls grid */
+.cls-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.cls-item{background:var(--light);border-radius:9px;padding:9px 11px;border:1.5px solid var(--border);cursor:pointer;min-height:60px}
+.cls-item:active,.cls-item.selected{background:var(--orange-bg);border-color:var(--orange)}
+.cls-lbl{font-size:10px;color:var(--gray);margin-bottom:3px;font-weight:700}
+.cls-val{font-size:13px;font-weight:700;color:var(--black);line-height:1.3}
+.cls-val.empty{color:var(--gray2);font-weight:400;font-size:12px}
+.cls-teacher{font-size:11px;color:var(--orange);margin-top:2px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-<meta charset="UTF-8">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="JB IDOL Note">
-<meta name="theme-color" content="#F6F3EE">
-<link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;JB IDOL Note&quot;,&quot;short_name&quot;:&quot;IDOLNote&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%23F6F3EE&quot;,&quot;theme_color&quot;:&quot;%23C2621A&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='40' fill='%23C2621A'/%3E%3Ctext x='96' y='130' font-size='100' text-anchor='middle' fill='white' font-family='serif' font-style='italic'%3EN%3C/text%3E%3C/svg%3E&quot;,&quot;sizes&quot;:&quot;192x192&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;}]}">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JB IDOL Note</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#F6F3EE;--surface:#FFF;--sf2:#EFECE7;--bd:#E0DBD3;
-  --tx:#1C1917;--mt:#8C857C;
-  --a:#C2621A;--al:#F5E8D8;--ad:#9A4C12;
-  --k:#3E7FA8;--kl:#D6EAF5;--kd:#2C6080;
-  --gr:#3A7A56;--gl:#D8EFE4;
-  --rd:#B53A2A;--rl:#FDECEA;
-  --dance:#7B4FA0;--dancel:#EFE4F8;
-  --vocal:#1A6B5A;--vocall:#D4F0E8;
-}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;font-size:14px;line-height:1.6;}
-.screen{display:none;min-height:100vh;}
-.screen.active{display:flex;}
-
-/* ── LANDING ── */
-#landing{flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;gap:28px;}
-.logo-big{font-family:'DM Serif Display',serif;font-size:40px;letter-spacing:-1px;text-align:center;}
-.logo-big em{font-style:italic;color:var(--a);}
-.logo-sub{color:var(--mt);font-size:13px;text-align:center;margin-top:-16px;}
-.role-row{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;}
-.rcard{background:var(--surface);border:1.5px solid var(--bd);border-radius:18px;padding:30px 34px;cursor:pointer;transition:all .2s;text-align:center;min-width:190px;}
-.rcard:hover{border-color:#C8B8A8;transform:translateY(-3px);box-shadow:0 10px 28px rgba(0,0,0,.07);}
-.ricon{font-size:32px;margin-bottom:10px;}
-.rlabel{font-size:15px;font-weight:700;margin-bottom:3px;}
-.rsub{font-size:12px;color:var(--mt);}
-
-/* ── LOGIN ── */
-#login{flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;}
-.lbox{background:var(--surface);border:1px solid var(--bd);border-radius:20px;padding:36px;width:100%;max-width:370px;}
-.back{display:flex;align-items:center;gap:6px;color:var(--mt);font-size:13px;cursor:pointer;margin-bottom:22px;background:none;border:none;font-family:inherit;}
-.back:hover{color:var(--tx);}
-.ltitle{font-size:20px;font-weight:700;margin-bottom:3px;}
-.lsub{font-size:13px;color:var(--mt);margin-bottom:22px;}
-.ilabel{font-size:11px;font-weight:700;color:var(--mt);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px;display:block;}
-.ti{width:100%;padding:10px 13px;border:1.5px solid var(--bd);border-radius:9px;font-family:inherit;font-size:14px;background:var(--bg);color:var(--tx);transition:border-color .15s;}
-.ti:focus{outline:none;border-color:var(--a);}
-.bfull{width:100%;padding:11px;border-radius:9px;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;border:none;margin-top:12px;transition:all .15s;}
-.ba{background:var(--a);color:#fff;}.ba:hover{background:var(--ad);}
-.bk{background:var(--k);color:#fff;}.bk:hover{background:var(--kd);}
-.lerr{font-size:12px;color:var(--rd);margin-top:7px;display:none;}
-.hint{margin-top:14px;font-size:11px;color:var(--mt);text-align:center;}
-
-/* ── STUDENT PICK ── */
-#student-login{flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;}
-.pbox{background:var(--surface);border:1px solid var(--bd);border-radius:20px;padding:30px;width:100%;max-width:480px;}
-.ctabs{display:flex;border:1.5px solid var(--bd);border-radius:9px;overflow:hidden;margin-bottom:18px;}
-.ctab{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;background:transparent;border:none;font-family:inherit;color:var(--mt);transition:all .15s;}
-.ctab.ona{background:var(--a);color:#fff;}.ctab.onk{background:var(--k);color:#fff;}
-.ngrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-.nbtn{padding:10px 6px;border:1.5px solid var(--bd);border-radius:9px;background:var(--bg);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;color:var(--tx);text-align:center;}
-.nbtn:hover{border-color:#C8B8A8;background:var(--surface);}
-.nbtn.sa{border-color:var(--a);background:var(--al);color:var(--a);}
-.nbtn.sk{border-color:var(--k);background:var(--kl);color:var(--k);}
-
-/* ── APP LAYOUT ── */
-#app{flex-direction:row;}
-.sidebar{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--bd);display:flex;flex-direction:column;padding:22px 0;position:fixed;top:0;left:0;bottom:0;z-index:100;overflow-y:auto;transition:transform .25s ease;}
-.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99;}
-.hamburger{display:none;position:fixed;top:12px;left:12px;z-index:200;background:var(--surface);border:1.5px solid var(--bd);border-radius:8px;padding:7px 10px;cursor:pointer;font-size:18px;line-height:1;}
-@media(max-width:680px){
-  .hamburger{display:block;}
-  .sidebar{transform:translateX(-100%);}
-  .sidebar.open{transform:translateX(0);}
-  .sidebar-overlay.open{display:block;}
-  #app .mwrap{margin-left:0 !important;padding:16px;padding-top:52px;width:100%;}
-  .sgrid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
-  .meta-row{grid-template-columns:1fr;}
-  .scores-row{grid-template-columns:1fr 1fr;}
-  .goal-grid{grid-template-columns:1fr;}
-  .stats{flex-wrap:wrap;}
-  .stc{min-width:80px;}
-}
-.slogo{font-family:'DM Serif Display',serif;font-size:17px;padding:0 18px 18px;border-bottom:1px solid var(--bd);}
-.slogo em{font-style:italic;color:var(--a);}
-.ubadge{padding:11px 18px;border-bottom:1px solid var(--bd);font-size:12px;color:var(--mt);}
-.ubadge strong{display:block;font-size:13px;color:var(--tx);font-weight:700;margin-bottom:1px;}
-.snav{padding:10px 0;flex:1;}
-.nsec{padding:7px 18px 3px;font-size:10px;font-weight:700;color:var(--mt);letter-spacing:1.2px;text-transform:uppercase;}
-.nb{display:flex;align-items:center;gap:8px;padding:8px 18px;cursor:pointer;color:var(--mt);font-size:13px;font-weight:500;border-left:3px solid transparent;transition:all .15s;background:none;border-top:none;border-right:none;border-bottom:none;width:100%;text-align:left;font-family:inherit;}
-.nb:hover{background:var(--sf2);color:var(--tx);}
-.nb.ona{color:var(--a);background:var(--al);border-left-color:var(--a);}
-.nb.onk{color:var(--k);background:var(--kl);border-left-color:var(--k);}
-.nb.ong{color:#E8A020;background:#FEF3E0;border-left-color:#E8A020;}
-.nb.ong{color:var(--gr);background:var(--gl);border-left-color:var(--gr);}
-.ndot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.da{background:var(--a);}.dk{background:var(--k);}
-.logout{margin:0 14px 4px;padding:8px 13px;border-radius:8px;border:1.5px solid var(--bd);background:none;font-family:inherit;font-size:12px;color:var(--mt);cursor:pointer;text-align:left;width:calc(100% - 28px);}
-.logout:hover{background:var(--sf2);}
-.mwrap{margin-left:220px;flex:1;padding:30px;max-width:900px;}
-
-/* ── SECTIONS ── */
-.sec{display:none;}.sec.on{display:block;}
-.phd{margin-bottom:22px;}
-.phd h2{font-size:20px;font-weight:700;letter-spacing:-.3px;margin-bottom:3px;}
-.phd p{font-size:13px;color:var(--mt);}
-.bdg{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.3px;margin-left:8px;vertical-align:middle;}
-.bda{background:var(--al);color:var(--a);}.bdk{background:var(--kl);color:var(--k);}
-
-/* ── STUDENT GRID (teacher view) ── */
-.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px;margin-bottom:18px;}
-.scard{background:var(--surface);border:1.5px solid var(--bd);border-radius:12px;padding:13px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden;}
-.scard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--bd);transition:background .15s;}
-.scard:hover{border-color:#C8B8A8;transform:translateY(-1px);}
-.scard.sela{border-color:var(--a);}.scard.sela::before{background:var(--a);}
-.scard.selk{border-color:var(--k);}.scard.selk::before{background:var(--k);}
-.av{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-bottom:8px;}
-.ava{background:var(--al);color:var(--a);}.avk{background:var(--kl);color:var(--k);}
-.sname{font-size:13px;font-weight:700;margin-bottom:1px;}
-.ssub{font-size:11px;color:var(--mt);}
-.scnt{position:absolute;top:9px;right:9px;font-size:10px;font-weight:700;background:var(--sf2);color:var(--mt);padding:2px 6px;border-radius:7px;}
-
-/* ── AUDITION FORM ── */
-.fcard{background:var(--surface);border:1px solid var(--bd);border-radius:15px;padding:22px;margin-bottom:18px;}
-.fttl{font-size:15px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
-.ftag{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:700;}
-.ftag-d{background:var(--dancel);color:var(--dance);}
-.ftag-v{background:var(--vocall);color:var(--vocal);}
-
-/* meta row */
-.meta-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
-.meta-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
-.fi label{display:block;font-size:10px;font-weight:700;color:var(--mt);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px;}
-.ti-sm{width:100%;padding:8px 10px;border:1.5px solid var(--bd);border-radius:8px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--tx);transition:border-color .15s;}
-.ti-sm:focus{outline:none;border-color:var(--a);}
-select.ti-sm{cursor:pointer;}
-.ta{width:100%;padding:11px 13px;border:1.5px solid var(--bd);border-radius:9px;font-family:inherit;font-size:13px;line-height:1.7;background:var(--bg);color:var(--tx);resize:vertical;min-height:100px;transition:border-color .15s;}
-.ta:focus{outline:none;border-color:var(--a);}
-
-/* teacher tabs */
-.ttabs{display:flex;gap:0;border-bottom:1.5px solid var(--bd);margin-bottom:18px;}
-.ttab{padding:9px 20px;font-family:inherit;font-size:13px;font-weight:700;background:none;border:none;cursor:pointer;color:var(--mt);border-bottom:2px solid transparent;margin-bottom:-1.5px;transition:all .15s;}
-.ttab.tda.on{color:var(--dance);border-bottom-color:var(--dance);}
-.ttab.tvo.on{color:var(--vocal);border-bottom-color:var(--vocal);}
-.tsec{display:none;}.tsec.on{display:block;}
-
-.brow{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
-.btn{padding:8px 16px;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid var(--bd);background:var(--surface);color:var(--mt);transition:all .15s;}
-.btn:hover{background:var(--sf2);color:var(--tx);}
-.bpa{background:var(--a);color:#fff;border-color:var(--a);}.bpa:hover{background:var(--ad);}
-.bpd{background:var(--dance);color:#fff;border-color:var(--dance);}
-.bpv{background:var(--vocal);color:#fff;border-color:var(--vocal);}
-.bai{background:var(--al);color:var(--a);border-color:transparent;}
-.spin{display:inline-block;width:11px;height:11px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
-.smsg{font-size:12px;margin-top:8px;padding:6px 10px;border-radius:6px;display:inline-block;}
-.sok{background:var(--gl);color:var(--gr);}.serr{background:var(--rl);color:var(--rd);}
-
-/* ── LIST VIEW ── */
-.stats{display:flex;gap:10px;margin-bottom:18px;}
-.stc{flex:1;background:var(--surface);border:1px solid var(--bd);border-radius:10px;padding:11px 13px;text-align:center;}
-.stn{font-size:22px;font-weight:700;}.ca{color:var(--a);}.ck{color:var(--k);}
-.stl{font-size:10px;color:var(--mt);font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
-.fbar{display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap;}
-.fbtn{padding:5px 13px;border-radius:18px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--bd);background:var(--surface);color:var(--mt);transition:all .15s;}
-.fbtn.fao{background:var(--al);color:var(--a);border-color:var(--a);}
-.fbtn.fko{background:var(--kl);color:var(--k);border-color:var(--k);}
-.flist{display:flex;flex-direction:column;gap:10px;}
-
-/* audition record card */
-.acard{background:var(--surface);border:1px solid var(--bd);border-radius:13px;padding:15px 18px;transition:border-color .15s;}
-.acard:hover{border-color:#C8B8A8;}
-.acard-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
-.acard-left{display:flex;flex-direction:column;gap:3px;}
-.acard-agency{font-size:15px;font-weight:700;}
-.acard-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.acard-date{font-size:12px;color:var(--mt);}
-.acard-student{font-size:12px;font-weight:700;}
-.acard-right{display:flex;gap:6px;align-items:center;}
-.delbtn{background:none;border:none;cursor:pointer;color:var(--mt);font-size:14px;padding:2px 4px;opacity:0;transition:opacity .15s;border-radius:4px;}
-.acard:hover .delbtn{opacity:1;}.delbtn:hover{background:var(--rl);color:var(--rd);}
-.fb-sections{display:flex;flex-direction:column;gap:8px;}
-.fb-sec{border-radius:8px;padding:10px 12px;}
-.fb-sec.dance{background:var(--dancel);}
-.fb-sec.vocal{background:var(--vocall);}
-.fb-sec-title{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;}
-.fb-sec-title.d{color:var(--dance);}.fb-sec-title.v{color:var(--vocal);}
-.fb-teacher{font-size:11px;color:var(--mt);margin-bottom:3px;}
-.fb-text{font-size:13px;line-height:1.7;}
-.empty{text-align:center;padding:44px 20px;color:var(--mt);}
-.empty-ic{font-size:34px;margin-bottom:10px;}
-
-/* ── STUDENT APP ── */
-#student-app{flex-direction:column;min-height:100vh;}
-.sapp-top{background:var(--surface);border-bottom:1px solid var(--bd);padding:14px 24px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:50;}
-.sapp-logo{font-family:'DM Serif Display',serif;font-size:17px;}
-.sapp-logo em{font-style:italic;color:var(--a);}
-.sapp-body{padding:24px;max-width:760px;width:100%;margin:0 auto;}
-.stu-hdr{background:var(--surface);border:1px solid var(--bd);border-radius:15px;padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;gap:14px;}
-.shav{width:50px;height:50px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;}
-.shav.aa{background:var(--al);color:var(--a);}.shav.ak{background:var(--kl);color:var(--k);}
-.shname{font-size:17px;font-weight:700;margin-bottom:1px;}
-.shcls{font-size:12px;color:var(--mt);}
-
-/* student tabs */
-.stabs{display:flex;gap:0;border-bottom:1.5px solid var(--bd);margin-bottom:20px;overflow-x:auto;}
-.stab{padding:9px 18px;font-family:inherit;font-size:13px;font-weight:700;background:none;border:none;cursor:pointer;color:var(--mt);border-bottom:2px solid transparent;margin-bottom:-1.5px;transition:all .15s;white-space:nowrap;}
-.stab.on{color:var(--a);border-bottom-color:var(--a);}
-.ssec{display:none;}.ssec.on{display:block;}
-
-/* student audition cards */
-.aud-group{margin-bottom:22px;}
-.aud-group-hd{font-size:13px;font-weight:700;color:var(--mt);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
-.aud-group-hd::after{content:'';flex:1;height:1px;background:var(--bd);}
-
-/* repertoire */
-.rep-card{background:var(--surface);border:1px solid var(--bd);border-radius:13px;padding:16px 18px;margin-bottom:14px;}
-.rep-title{font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
-.rep-list{display:flex;flex-direction:column;gap:6px;}
-.rep-item{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--bg);border-radius:7px;font-size:13px;}
-.rep-del{background:none;border:none;cursor:pointer;color:var(--mt);font-size:13px;padding:2px;opacity:0;transition:opacity .15s;}
-.rep-item:hover .rep-del{opacity:1;}
-.rep-add{display:flex;gap:8px;margin-top:10px;}
-.rep-add input{flex:1;padding:8px 10px;border:1.5px solid var(--bd);border-radius:8px;font-family:inherit;font-size:13px;background:var(--bg);color:var(--tx);}
-.rep-add input:focus{outline:none;border-color:var(--a);}
-.rep-add button{padding:8px 14px;border-radius:8px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--a);color:#fff;}
-
-/* goals */
-.goal-card{background:var(--surface);border:1px solid var(--bd);border-radius:13px;padding:16px 18px;margin-bottom:14px;}
-.goal-title{font-size:14px;font-weight:700;margin-bottom:12px;}
-.goal-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-.goal-item label{display:block;font-size:11px;font-weight:700;color:var(--mt);letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px;}
-.goal-ta{width:100%;padding:9px 11px;border:1.5px solid var(--bd);border-radius:8px;font-family:inherit;font-size:13px;line-height:1.6;background:var(--bg);color:var(--tx);resize:vertical;min-height:80px;}
-.goal-ta:focus{outline:none;border-color:var(--a);}
-.memo-ta{width:100%;padding:9px 11px;border:1.5px solid var(--bd);border-radius:8px;font-family:inherit;font-size:13px;line-height:1.7;background:var(--bg);color:var(--tx);resize:vertical;min-height:100px;}
-.memo-ta:focus{outline:none;border-color:var(--a);}
-.save-row{display:flex;justify-content:flex-end;margin-top:10px;}
-
-/* cfg */
-.cfg-card{background:var(--surface);border:1px solid var(--bd);border-radius:15px;padding:22px;max-width:400px;}
-.cff{margin-bottom:13px;}
-.cff label{display:block;font-size:11px;font-weight:700;color:var(--mt);letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px;}
-
-.hidden{display:none!important;}
-.note-tag-btn{padding:5px 12px;border-radius:18px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid var(--bd);background:var(--surface);color:var(--mt);transition:all .15s;}
-.note-tag-btn.on{background:var(--a);color:#fff;border-color:var(--a);}
-.note-card{background:var(--surface);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;position:relative;}
-.note-card:hover{border-color:#C8B8A8;}
-.note-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;}
-.note-card.tag-일반::before{background:var(--mt);}
-.note-card.tag-2차오디션::before{background:#E8A020;}
-.note-card.tag-집중관리::before{background:var(--rd);}
-.note-card.tag-칭찬::before{background:var(--gr);}
-.note-card.tag-주의::before{background:var(--dance);}
-.note-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;}
-</style>
 </head>
 <body>
 
-<!-- LOADING -->
-<div id="loading-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
-  <div style="font-family:'DM Serif Display',serif;font-size:28px;"><span style="color:#FFD84D;font-style:normal;">JB</span> IDOL<em style="font-style:italic;color:var(--a);">Note</em></div>
-  <div style="display:flex;gap:6px;align-items:center;">
-    <div style="width:8px;height:8px;border-radius:50%;background:var(--a);animation:ldot 1s ease-in-out infinite;"></div>
-    <div style="width:8px;height:8px;border-radius:50%;background:var(--a);animation:ldot 1s ease-in-out 0.2s infinite;"></div>
-    <div style="width:8px;height:8px;border-radius:50%;background:var(--a);animation:ldot 1s ease-in-out 0.4s infinite;"></div>
-  </div>
-  <div style="font-size:13px;color:var(--mt);">데이터 불러오는 중...</div>
-</div>
-<style>@keyframes ldot{0%,100%{opacity:.3;transform:scale(.8);}50%{opacity:1;transform:scale(1);}}</style>
-
-<!-- LANDING -->
-<div id="landing" class="screen active">
-  <div>
-    <div class="logo-big"><span style="color:#FFD84D;font-style:normal;">JB</span> IDOL<em>Note</em></div>
-    <div class="logo-sub">오디션반 · 키즈오디션반 피드백 관리</div>
-  </div>
-  <div class="role-row">
-    <div class="rcard" onclick="goTeacher()">
-      <div class="ricon">🎹</div>
-      <div class="rlabel">선생님</div>
-      <div class="rsub">피드백 입력 및 관리</div>
-    </div>
-    <div class="rcard" onclick="goStudent()">
-      <div class="ricon">🌟</div>
-      <div class="rlabel">학생</div>
-      <div class="rsub">내 피드백 확인하기</div>
-    </div>
-  </div>
+<!-- 로딩 -->
+<div id="loading-overlay" style="position:fixed;inset:0;background:#fff;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px">
+  <div style="font-size:28px;font-weight:900;color:var(--orange);letter-spacing:-1px">JB IDOL</div>
+  <div style="font-size:13px;color:#888">오디션반 관리 시스템</div>
+  <div style="width:36px;height:36px;border:3px solid #f5c6a0;border-top-color:var(--orange);border-radius:50%;animation:spin .8s linear infinite"></div>
 </div>
 
-<!-- TEACHER LOGIN -->
-<div id="login" class="screen">
-  <div class="lbox">
-    <button class="back" onclick="goLanding()">← 뒤로</button>
-    <div class="ltitle">선생님 로그인</div>
-    <div class="lsub">비밀번호를 입력해주세요</div>
-    <label class="ilabel">비밀번호</label>
-    <input class="ti" type="password" id="pw-input" placeholder="비밀번호" onkeydown="if(event.key==='Enter')tryLogin()">
-    <div class="lerr" id="lerr">비밀번호가 올바르지 않습니다</div>
-    <button class="bfull ba" onclick="tryLogin()">로그인</button>
-    <div class="hint">초기 비밀번호: <strong>1234</strong></div>
+<!-- ===== MAIN ===== -->
+<div id="page-main" class="page active">
+  <div class="header">
+    <div><div class="logo">JB IDOL</div><div class="header-sub">오디션반 관리 시스템</div></div>
+    <div class="header-right">
+      <button class="sbtn" id="refresh-btn" onclick="refreshData()" style="font-size:16px">🔄</button>
+      <button class="sbtn" onclick="showPage('page-schedule')">📅</button>
+      <button class="sbtn" onclick="goAdmin()">⚙️</button>
+    </div>
+  </div>
+  <div class="content">
+    <div id="notice-bar-wrap"></div>
+    <div id="events-bar-wrap"></div>
+    <div id="resource-board-wrap"></div>
+    <div id="message-board-wrap"></div>
+    <div id="student-list-wrap"></div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn active" onclick="showPage('page-main')"><span class="nav-icon">🏠</span>명단</button>
+    <button class="nav-btn" onclick="showPage('page-schedule')"><span class="nav-icon">📅</span>스케줄</button>
+    <button class="nav-btn" onclick="goAdmin()"><span class="nav-icon">⚙️</span>관리</button>
   </div>
 </div>
 
-<!-- STUDENT PICK -->
-<div id="student-login" class="screen">
-  <div class="pbox">
-    <button class="back" onclick="goLanding()">← 뒤로</button>
-    <div class="ltitle" style="margin-bottom:3px;">학생 로그인</div>
-    <div class="lsub" style="margin-bottom:15px;">반과 이름을 선택해주세요</div>
-    <div class="ctabs">
-      <button class="ctab ona" id="stab-a" onclick="switchSC('audition')">오디션반</button>
-      <button class="ctab" id="stab-k" onclick="switchSC('kids')">키즈오디션반</button>
-    </div>
-    <div id="sng" class="ngrid"></div>
-    <button class="bfull ba" id="s-ok" style="margin-top:13px;" onclick="confirmStu()" disabled>확인</button>
+<!-- ===== SCHEDULE ===== -->
+<div id="page-schedule" class="page">
+  <div class="header">
+    <button class="back-btn" onclick="showPage('page-main')">←</button>
+    <div><div class="logo">스케줄</div><div class="header-sub">연간 행사 일정</div></div>
+  </div>
+  <div class="content">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:14px" id="year-cal"></div>
+    <div class="sec-title">📌 행사 목록</div>
+    <div id="event-list"></div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" onclick="showPage('page-main')"><span class="nav-icon">🏠</span>명단</button>
+    <button class="nav-btn active" onclick="showPage('page-schedule')"><span class="nav-icon">📅</span>스케줄</button>
+    <button class="nav-btn" onclick="goAdmin()"><span class="nav-icon">⚙️</span>관리</button>
   </div>
 </div>
 
-<!-- STUDENT PASSWORD -->
-<div id="student-pw" class="screen">
-  <div class="lbox">
-    <button class="back" onclick="goLanding()">← 뒤로</button>
-    <div class="ltitle">학생 로그인</div>
-    <div class="lsub" id="stu-pw-name">비밀번호를 입력해주세요</div>
-    <label class="ilabel">비밀번호</label>
-    <input class="ti" type="password" id="stu-pw-input" placeholder="비밀번호" onkeydown="if(event.key==='Enter')tryStuLogin()">
-    <div class="lerr" id="stu-pw-err">비밀번호가 올바르지 않습니다</div>
-    <button class="bfull ba" onclick="tryStuLogin()">확인</button>
+<!-- ===== STUDENT LOCK ===== -->
+<div id="page-student-lock" class="page">
+  <div class="lock-screen">
+    <div class="lock-logo">JB IDOL</div><div class="lock-sub">개인 페이지</div>
+    <div class="lock-avatar" id="lock-avatar">👤</div>
+    <div style="font-size:20px;font-weight:900;text-align:center;margin-bottom:18px" id="lock-name">-</div>
+    <div class="lock-box">
+      <div style="text-align:center;font-size:13px;color:var(--gray);margin-bottom:9px">비밀번호 4자리 입력</div>
+      <div class="pin-dots" id="pin-dots">
+        <div class="pin-dot" id="d0"></div><div class="pin-dot" id="d1"></div>
+        <div class="pin-dot" id="d2"></div><div class="pin-dot" id="d3"></div>
+      </div>
+      <div class="error-msg" id="pin-err"></div>
+      <div class="pin-pad">
+        <button class="pin-key" onclick="pinIn('1')">1</button><button class="pin-key" onclick="pinIn('2')">2</button><button class="pin-key" onclick="pinIn('3')">3</button>
+        <button class="pin-key" onclick="pinIn('4')">4</button><button class="pin-key" onclick="pinIn('5')">5</button><button class="pin-key" onclick="pinIn('6')">6</button>
+        <button class="pin-key" onclick="pinIn('7')">7</button><button class="pin-key" onclick="pinIn('8')">8</button><button class="pin-key" onclick="pinIn('9')">9</button>
+        <button class="pin-key" onclick="pinClr()" style="font-size:12px">지우기</button>
+        <button class="pin-key" onclick="pinIn('0')">0</button>
+        <button class="pin-key" onclick="pinBk()" style="font-size:18px">⌫</button>
+      </div>
+    </div>
+    <button class="btn btn-gray" style="max-width:320px;margin-top:13px" onclick="showPage('page-main')">← 돌아가기</button>
   </div>
 </div>
 
-<!-- MAIN APP (teacher) -->
-<div id="app" class="screen">
-  <button class="hamburger" onclick="toggleSidebar()">☰</button>
-  <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
-  <aside class="sidebar" id="main-sidebar">
-    <div class="slogo"><span style="color:#FFD84D;font-style:normal;">JB</span> IDOL<em>Note</em></div>
-    <div class="ubadge"><strong>선생님</strong>관리자 모드</div>
-    <nav class="snav">
-      <div class="nsec">대시보드</div>
-      <button class="nb ong" id="nb-note" onclick="showSec('s-note')"><span class="ndot" style="background:#E8A020;"></span>📋 NOTE</button>
-      <div class="nsec" style="margin-top:5px;">오디션반</div>
-      <button class="nb" id="nb-ai" onclick="showSec('s-ai')"><span class="ndot da"></span>피드백 입력</button>
-      <button class="nb" id="nb-al" onclick="showSec('s-al')"><span class="ndot da"></span>피드백 목록</button>
-      <div class="nsec" style="margin-top:5px;">키즈오디션반</div>
-      <button class="nb" id="nb-ki" onclick="showSec('s-ki')"><span class="ndot dk"></span>피드백 입력</button>
-      <button class="nb" id="nb-kl" onclick="showSec('s-kl')"><span class="ndot dk"></span>피드백 목록</button>
-      <div class="nsec" style="margin-top:5px;">학생 정보</div>
-      <button class="nb" id="nb-sinfo" onclick="showSec('s-sinfo')"><span class="ndot da"></span>학생 정보 보기</button>
-      <div class="nsec" style="margin-top:5px;">설정</div>
-      <button class="nb" id="nb-stu" onclick="showSec('s-stu')"><span class="ndot" style="background:var(--mt);"></span>학생 관리</button>
-      <button class="nb" id="nb-cfg" onclick="showSec('s-cfg')"><span class="ndot" style="background:var(--mt);"></span>비밀번호 변경</button>
-    </nav>
-    <button class="logout" onclick="goLanding()">← 나가기</button>
-  </aside>
-  <div class="mwrap">
+<!-- ===== PROFILE ===== -->
+<div id="page-profile" class="page">
+  <div class="header">
+    <button class="back-btn" onclick="showPage('page-main')">←</button>
+    <div><div class="logo" id="profile-hd">-</div><div class="header-sub">개인 페이지</div></div>
+  </div>
+  <!-- 프로필 탭 -->
+  <div class="tab-bar" id="profile-tabs">
+    <button class="tab-btn active" onclick="profileTab(0)">📋 기본정보</button>
+    <button class="tab-btn" onclick="profileTab(1)">🎬 오디션 피드백</button>
+    <button class="tab-btn" onclick="profileTab(2)">💃 댄스 레파토리</button>
+    <button class="tab-btn" onclick="profileTab(3)">🎤 보컬 레파토리</button>
+    <button class="tab-btn" onclick="profileTab(4)">📊 인바디</button>
+  </div>
+  <div class="content" id="profile-content"></div>
+</div>
 
-    <!-- 오디션반 입력 -->
-    <div class="sec" id="s-ai">
-      <div class="phd"><h2>피드백 입력 <span class="bdg bda">오디션반</span></h2><p>학생 선택 후 날짜와 기획사를 입력하고 댄스·보컬 피드백을 작성하세요</p></div>
-      <div class="sgrid" id="grid-a"></div>
-      <div id="form-a" class="hidden">
-        <div class="fcard">
-          <div class="fttl" id="ftitle-a">피드백 작성</div>
-          <!-- 날짜 / 기획사 -->
-          <div class="meta-row">
-            <div class="fi"><label>날짜</label><input class="ti-sm" type="date" id="a-date"></div>
-            <div class="fi">
-              <label>기획사</label>
-              <div style="display:flex;gap:6px;">
-                <select class="ti-sm" id="a-agency-sel" style="flex:1;" onchange="onAgencySel('a')">
-                  <option value="">직접 입력</option>
-                </select>
-                <input class="ti-sm" id="a-agency-txt" placeholder="기획사명" style="flex:1;">
-              </div>
-            </div>
-          </div>
-          <!-- 댄스/보컬 탭 -->
-          <div class="ttabs">
-            <button class="ttab tda on" id="ta-dance" onclick="showTTab('a','dance')">💃 댄스 피드백</button>
-            <button class="ttab tvo" id="ta-vocal" onclick="showTTab('a','vocal')">🎤 보컬 피드백</button>
-          </div>
-          <!-- 댄스 -->
-          <div class="tsec on" id="ta-dance-sec">
-            <div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-end;">
-              <div class="fi" style="flex:0 0 160px;">
-                <label>선생님 이름</label>
-                <input class="ti-sm" id="a-d-teacher" placeholder="예) 원장쌤, Foxxb쌤" style="width:100%;">
-              </div>
-              <div style="font-size:12px;color:var(--mt);padding-bottom:9px;">피드백 작성자 이름을 입력하세요</div>
-            </div>
-            <div class="fi" style="margin-bottom:8px;"><label>댄스 피드백</label></div>
-            <textarea class="ta" id="a-d-text" rows="5" placeholder="댄스 피드백 내용을 입력하세요..."></textarea>
-          </div>
-          <!-- 보컬 -->
-          <div class="tsec" id="ta-vocal-sec">
-            <div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-end;">
-              <div class="fi" style="flex:0 0 160px;">
-                <label>선생님 이름</label>
-                <input class="ti-sm" id="a-v-teacher" placeholder="예) 김선령쌤" style="width:100%;">
-              </div>
-              <div style="font-size:12px;color:var(--mt);padding-bottom:9px;">피드백 작성자 이름을 입력하세요</div>
-            </div>
-            <div class="fi" style="margin-bottom:8px;"><label>보컬 피드백</label></div>
-            <textarea class="ta" id="a-v-main" rows="5" placeholder="보컬 피드백 내용을 입력하세요..."></textarea>
-          </div>
-          <!-- 영상 링크 -->
-          <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px;">
-            <div>
-              <div class="fi" style="margin-bottom:6px;"><label>💃 댄스 영상 링크</label></div>
-              <input class="ti-sm" id="a-video-dance" placeholder="https://drive.google.com/..." style="width:100%;">
-            </div>
-            <div>
-              <div class="fi" style="margin-bottom:6px;"><label>🎤 보컬 영상 링크</label></div>
-              <input class="ti-sm" id="a-video-vocal" placeholder="https://drive.google.com/..." style="width:100%;">
-            </div>
-            <div style="font-size:11px;color:var(--mt);">드라이브에서 "공유 → 링크 복사" 후 붙여넣으세요</div>
-          </div>
-          <div class="brow">
-            <button class="btn bai" onclick="genAI('a')"><span id="a-ai-ico">✦</span> AI 피드백 생성</button>
-            <button class="btn bpa" onclick="saveFB('a')">저장하기</button>
-          </div>
-          <div id="a-status"></div>
-        </div>
-      </div>
+<!-- ===== ADMIN LOCK ===== -->
+<div id="page-admin-lock" class="page">
+  <div class="lock-screen">
+    <div class="lock-logo">JB IDOL</div><div class="lock-sub">관리자 페이지</div>
+    <div style="font-size:50px;margin-bottom:14px">🔐</div>
+    <div class="lock-box">
+      <div style="text-align:center;font-size:13px;color:var(--gray);margin-bottom:12px">관리자 비밀번호 입력</div>
+      <div class="form-row"><input type="password" id="admin-pw-input" placeholder="비밀번호" onkeydown="if(event.key==='Enter')checkAdminPw()"></div>
+      <div class="error-msg" id="admin-pw-err"></div>
+      <button class="btn btn-orange" onclick="checkAdminPw()" style="margin-top:7px">로그인</button>
     </div>
-
-    <!-- 오디션반 목록 -->
-    <div class="sec" id="s-al">
-      <div class="phd"><h2>피드백 목록 <span class="bdg bda">오디션반</span></h2><p>날짜 · 기획사별로 정리된 피드백을 확인하세요</p></div>
-      <div class="stats">
-        <div class="stc"><div class="stn ca" id="a-tot">0</div><div class="stl">총 오디션</div></div>
-        <div class="stc"><div class="stn ca" id="a-stus">0</div><div class="stl">참여 학생</div></div>
-        <div class="stc"><div class="stn ca" id="a-agencies">0</div><div class="stl">기획사 수</div></div>
-      </div>
-      <div class="fbar" id="fbar-a"></div>
-      <div id="list-a" class="flist"></div>
-    </div>
-
-    <!-- 키즈 입력 -->
-    <div class="sec" id="s-ki">
-      <div class="phd"><h2>피드백 입력 <span class="bdg bdk">키즈오디션반</span></h2><p>학생 선택 후 날짜와 기획사를 입력하고 댄스·보컬 피드백을 작성하세요</p></div>
-      <div class="sgrid" id="grid-k"></div>
-      <div id="form-k" class="hidden">
-        <div class="fcard">
-          <div class="fttl" id="ftitle-k">피드백 작성</div>
-          <div class="meta-row">
-            <div class="fi"><label>날짜</label><input class="ti-sm" type="date" id="k-date"></div>
-            <div class="fi">
-              <label>기획사</label>
-              <div style="display:flex;gap:6px;">
-                <select class="ti-sm" id="k-agency-sel" style="flex:1;" onchange="onAgencySel('k')">
-                  <option value="">직접 입력</option>
-                </select>
-                <input class="ti-sm" id="k-agency-txt" placeholder="기획사명" style="flex:1;">
-              </div>
-            </div>
-          </div>
-          <div class="ttabs">
-            <button class="ttab tda on" id="tk-dance" onclick="showTTab('k','dance')">💃 댄스 피드백</button>
-            <button class="ttab tvo" id="tk-vocal" onclick="showTTab('k','vocal')">🎤 보컬 피드백</button>
-          </div>
-          <div class="tsec on" id="tk-dance-sec">
-            <div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-end;">
-              <div class="fi" style="flex:0 0 160px;">
-                <label>선생님 이름</label>
-                <input class="ti-sm" id="k-d-teacher" placeholder="예) 원장쌤, Foxxb쌤" style="width:100%;">
-              </div>
-              <div style="font-size:12px;color:var(--mt);padding-bottom:9px;">피드백 작성자 이름을 입력하세요</div>
-            </div>
-            <div class="fi" style="margin-bottom:8px;"><label>댄스 피드백</label></div>
-            <textarea class="ta" id="k-d-text" rows="5" placeholder="댄스 피드백 내용을 입력하세요..."></textarea>
-          </div>
-          <div class="tsec" id="tk-vocal-sec">
-            <div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-end;">
-              <div class="fi" style="flex:0 0 160px;">
-                <label>선생님 이름</label>
-                <input class="ti-sm" id="k-v-teacher" placeholder="예) 김선령쌤" style="width:100%;">
-              </div>
-              <div style="font-size:12px;color:var(--mt);padding-bottom:9px;">피드백 작성자 이름을 입력하세요</div>
-            </div>
-            <div class="fi" style="margin-bottom:8px;"><label>보컬 피드백</label></div>
-            <textarea class="ta" id="k-v-main" rows="5" placeholder="보컬 피드백 내용을 입력하세요..."></textarea>
-          </div>
-          <!-- 영상 링크 -->
-          <div style="margin-top:14px;display:flex;flex-direction:column;gap:10px;">
-            <div>
-              <div class="fi" style="margin-bottom:6px;"><label>💃 댄스 영상 링크</label></div>
-              <input class="ti-sm" id="k-video-dance" placeholder="https://drive.google.com/..." style="width:100%;">
-            </div>
-            <div>
-              <div class="fi" style="margin-bottom:6px;"><label>🎤 보컬 영상 링크</label></div>
-              <input class="ti-sm" id="k-video-vocal" placeholder="https://drive.google.com/..." style="width:100%;">
-            </div>
-            <div style="font-size:11px;color:var(--mt);">드라이브에서 "공유 → 링크 복사" 후 붙여넣으세요</div>
-          </div>
-          <div class="brow">
-            <button class="btn bai" onclick="genAI('k')"><span id="k-ai-ico">✦</span> AI 피드백 생성</button>
-            <button class="btn bpa" onclick="saveFB('k')">저장하기</button>
-          </div>
-          <div id="k-status"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 키즈 목록 -->
-    <div class="sec" id="s-kl">
-      <div class="phd"><h2>피드백 목록 <span class="bdg bdk">키즈오디션반</span></h2><p>날짜 · 기획사별로 정리된 피드백을 확인하세요</p></div>
-      <div class="stats">
-        <div class="stc"><div class="stn ck" id="k-tot">0</div><div class="stl">총 오디션</div></div>
-        <div class="stc"><div class="stn ck" id="k-stus">0</div><div class="stl">참여 학생</div></div>
-        <div class="stc"><div class="stn ck" id="k-agencies">0</div><div class="stl">기획사 수</div></div>
-      </div>
-      <div class="fbar" id="fbar-k"></div>
-      <div id="list-k" class="flist"></div>
-    </div>
-
-    <!-- 설정 -->
-    <!-- 학생 정보 보기 -->
-    <div class="sec" id="s-sinfo">
-      <div class="phd"><h2>학생 정보 보기</h2><p>학생을 선택해서 레파토리, 목표, 메모, 인바디 정보를 확인하세요</p></div>
-      <!-- 반 탭 -->
-      <div style="display:flex;gap:0;border:1.5px solid var(--bd);border-radius:9px;overflow:hidden;margin-bottom:16px;max-width:300px;">
-        <button id="sinfo-tab-a" onclick="switchSinfoClass('audition')" style="flex:1;padding:9px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--a);color:#fff;">오디션반</button>
-        <button id="sinfo-tab-k" onclick="switchSinfoClass('kids')" style="flex:1;padding:9px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;border:none;background:transparent;color:var(--mt);">키즈오디션반</button>
-      </div>
-      <!-- 학생 선택 -->
-      <div class="sgrid" id="sinfo-grid" style="margin-bottom:20px;"></div>
-      <!-- 학생 상세 정보 -->
-      <div id="sinfo-detail" class="hidden">
-        <div style="display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--bd);border-radius:15px;padding:16px 20px;margin-bottom:16px;">
-          <div id="sinfo-av" class="shav aa" style="width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;"></div>
-          <div><div id="sinfo-name" style="font-size:17px;font-weight:700;"></div><div id="sinfo-cls" style="font-size:12px;color:var(--mt);"></div></div>
-        </div>
-        <!-- 기본 정보 -->
-        <div class="fcard" style="margin-bottom:14px;">
-          <div class="fttl" style="margin-bottom:12px;">📋 기본 정보</div>
-          <div id="sinfo-basic" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;"></div>
-        </div>
-        <!-- 탭 -->
-        <div class="stabs" style="margin-bottom:16px;">
-          <button class="stab on" onclick="showSinfoTab(0)">💃 댄스 레파토리</button>
-          <button class="stab" onclick="showSinfoTab(1)">🎤 보컬 레파토리</button>
-          <button class="stab" onclick="showSinfoTab(2)">🎯 목표</button>
-          <button class="stab" onclick="showSinfoTab(3)">📝 메모</button>
-          <button class="stab" onclick="showSinfoTab(4)">📊 인바디</button>
-        </div>
-        <div class="ssec on" id="sinfo-s0">
-          <div class="rep-card"><div class="rep-title"><span style="color:var(--dance);">💃</span> 댄스 레파토리</div><div id="sinfo-dance-list" class="rep-list"></div></div>
-        </div>
-        <div class="ssec" id="sinfo-s1">
-          <div class="rep-card"><div class="rep-title"><span style="color:var(--vocal);">🎤</span> 보컬 레파토리</div><div id="sinfo-vocal-list" class="rep-list"></div></div>
-        </div>
-        <div class="ssec" id="sinfo-s2">
-          <div class="goal-card">
-            <div class="goal-title" style="margin-bottom:12px;">🎯 목표</div>
-            <div class="goal-grid">
-              <div><label style="font-size:11px;font-weight:700;color:var(--mt);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">단기 목표</label><div id="sinfo-goal-short" style="font-size:13px;line-height:1.7;background:var(--bg);border-radius:8px;padding:10px 12px;min-height:60px;">—</div></div>
-              <div><label style="font-size:11px;font-weight:700;color:var(--mt);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;">장기 목표</label><div id="sinfo-goal-long" style="font-size:13px;line-height:1.7;background:var(--bg);border-radius:8px;padding:10px 12px;min-height:60px;">—</div></div>
-            </div>
-          </div>
-        </div>
-        <div class="ssec" id="sinfo-s3">
-          <div class="goal-card"><div class="goal-title" style="margin-bottom:10px;">📝 메모</div><div id="sinfo-memo" style="font-size:13px;line-height:1.7;background:var(--bg);border-radius:8px;padding:12px;min-height:80px;white-space:pre-wrap;">—</div></div>
-        </div>
-        <div class="ssec" id="sinfo-s4">
-          <div class="goal-card"><div class="goal-title" style="margin-bottom:14px;">📊 인바디 기록</div><div id="sinfo-inbody-list" style="display:flex;flex-direction:column;gap:10px;"></div></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- NOTE 게시판 -->
-    <div class="sec on" id="s-note">
-      <div class="phd"><h2>📋 NOTE</h2><p>학생별 현황과 메모를 한눈에 확인하세요</p></div>
-      <!-- 새 메모 추가 -->
-      <div class="fcard" style="margin-bottom:20px;">
-        <div class="fttl" style="margin-bottom:14px;">+ 새 메모 추가</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-          <div class="fi">
-            <label>반</label>
-            <select class="ti-sm" id="note-cls">
-              <option value="all">전체</option>
-              <option value="audition">오디션반</option>
-              <option value="kids">키즈오디션반</option>
-            </select>
-          </div>
-          <div class="fi">
-            <label>학생 (선택)</label>
-            <select class="ti-sm" id="note-stu">
-              <option value="all">전체</option>
-            </select>
-          </div>
-        </div>
-        <div class="fi" style="margin-bottom:10px;">
-          <label>태그</label>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button class="note-tag-btn on" data-tag="일반" onclick="selectNoteTag(this)">일반</button>
-            <button class="note-tag-btn" data-tag="2차오디션" onclick="selectNoteTag(this)">2차오디션</button>
-            <button class="note-tag-btn" data-tag="집중관리" onclick="selectNoteTag(this)">집중관리</button>
-            <button class="note-tag-btn" data-tag="칭찬" onclick="selectNoteTag(this)">칭찬</button>
-            <button class="note-tag-btn" data-tag="주의" onclick="selectNoteTag(this)">주의</button>
-          </div>
-        </div>
-        <textarea class="ta" id="note-text" rows="3" placeholder="메모 내용을 입력하세요..."></textarea>
-        <div class="brow"><button class="btn bpa" onclick="saveNote()">메모 저장</button></div>
-        <div id="note-status"></div>
-      </div>
-      <!-- 필터 -->
-      <div class="fbar" id="note-filter-bar" style="margin-bottom:14px;"></div>
-      <!-- 메모 목록 -->
-      <div id="note-list" style="display:flex;flex-direction:column;gap:10px;"></div>
-    </div>
-
-    <!-- 학생 관리 -->
-    <div class="sec" id="s-stu">
-      <div class="phd"><h2>학생 관리</h2><p>오디션반과 키즈오디션반 학생 목록을 관리합니다</p></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-        <!-- 오디션반 -->
-        <div class="cfg-card" style="max-width:none;">
-          <div class="fttl" style="margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-            <span>오디션반</span><span class="bdg bda" id="a-stu-cnt">0명</span>
-          </div>
-          <div id="stu-list-a" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;"></div>
-          <div style="display:flex;gap:7px;">
-            <input class="ti-sm" id="stu-add-a" placeholder="학생 이름 입력" style="flex:1;" onkeydown="if(event.key==='Enter')addStu('audition')">
-            <button class="btn bpa" style="white-space:nowrap;" onclick="addStu('audition')">+ 추가</button>
-          </div>
-          <div id="stu-status-a"></div>
-        </div>
-        <!-- 키즈오디션반 -->
-        <div class="cfg-card" style="max-width:none;">
-          <div class="fttl" style="margin-bottom:14px;display:flex;align-items:center;gap:8px;">
-            <span>키즈오디션반</span><span class="bdg bdk" id="k-stu-cnt">0명</span>
-          </div>
-          <div id="stu-list-k" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;"></div>
-          <div style="display:flex;gap:7px;">
-            <input class="ti-sm" id="stu-add-k" placeholder="학생 이름 입력" style="flex:1;" onkeydown="if(event.key==='Enter')addStu('kids')">
-            <button class="btn" style="white-space:nowrap;background:var(--k);color:#fff;border-color:var(--k);" onclick="addStu('kids')">+ 추가</button>
-          </div>
-          <div id="stu-status-k"></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="sec" id="s-cfg">
-      <div class="phd"><h2>비밀번호 변경</h2><p>선생님 및 학생 로그인 비밀번호를 관리합니다</p></div>
-      <div style="display:flex;flex-direction:column;gap:16px;max-width:420px;">
-        <div class="cfg-card">
-          <div class="fttl" style="margin-bottom:16px;">🔑 선생님 비밀번호</div>
-          <div class="cff"><label>현재 비밀번호</label><input class="ti" type="password" id="cfg-cur" placeholder="현재 비밀번호"></div>
-          <div class="cff"><label>새 비밀번호</label><input class="ti" type="password" id="cfg-new" placeholder="새 비밀번호"></div>
-          <div class="cff"><label>새 비밀번호 확인</label><input class="ti" type="password" id="cfg-conf" placeholder="재입력"></div>
-          <div class="brow"><button class="btn bpa" onclick="changePW()">변경하기</button></div>
-          <div id="cfg-status"></div>
-        </div>
-        <div class="cfg-card">
-          <div class="fttl" style="margin-bottom:8px;">🌟 학생 비밀번호</div>
-          <div style="font-size:12px;color:var(--mt);margin-bottom:14px;">모든 학생이 공통으로 사용하는 비밀번호입니다</div>
-          <div class="cff"><label>현재 학생 비밀번호</label>
-            <input class="ti" type="text" id="stu-pw-show" readonly style="background:var(--sf2);cursor:default;" placeholder="로딩 중...">
-          </div>
-          <div class="cff"><label>새 학생 비밀번호</label><input class="ti" type="text" id="stu-pw-new" placeholder="새 비밀번호 입력"></div>
-          <div class="brow"><button class="btn bpa" onclick="changeStuPW()">변경하기</button></div>
-          <div id="stu-pw-status"></div>
-        </div>
-      </div>
-    </div>
-
+    <button class="btn btn-gray" style="max-width:320px;margin-top:13px" onclick="showPage('page-main')">← 돌아가기</button>
   </div>
 </div>
 
-<!-- STUDENT APP -->
-<div id="student-app" class="screen">
-  <div class="sapp-top">
-    <div class="sapp-logo"><span style="color:#FFD84D;font-style:normal;">JB</span> IDOL<em>Note</em></div>
-    <button class="btn" onclick="goLanding()">← 나가기</button>
+<!-- ===== ADMIN ===== -->
+<div id="page-admin" class="page">
+  <div class="header">
+    <button class="back-btn" onclick="showPage('page-main')">←</button>
+    <div><div class="logo">관리자</div><div class="header-sub">JB IDOL 오디션반</div></div>
+    <div class="header-right"><button class="sbtn danger" onclick="adminOut()">로그아웃</button></div>
   </div>
-  <div class="sapp-body">
-    <div class="stu-hdr" id="s-header"></div>
-    <div id="stu-info-card" class="goal-card" style="margin-bottom:16px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <div class="goal-title" style="margin:0;">📋 기본 정보</div>
-        <button class="btn" id="stu-info-edit-btn" onclick="toggleInfoEdit()">수정</button>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="admTab(this,'students')">학생</button>
+    <button class="tab-btn" onclick="admTab(this,'classes')">수업</button>
+    <button class="tab-btn" onclick="admTab(this,'schedule')">스케줄</button>
+    <button class="tab-btn" onclick="admTab(this,'notice')">공지</button>
+    <button class="tab-btn" onclick="admTab(this,'resource')">영상/지식</button>
+    <button class="tab-btn" onclick="admTab(this,'settings')">설정</button>
+  </div>
+  <div class="content" id="admin-content" style="padding-top:9px"></div>
+</div>
+
+<!-- MODALS -->
+<!-- Message write -->
+<div class="modal-overlay" id="modal-msg" onclick="if(event.target===this)closeM('modal-msg')">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">✍️ 한마디 남기기</div><button class="close-btn" onclick="closeM('modal-msg')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label class="form-label">누구세요?</label>
+        <select id="msg-role" onchange="updateMsgAuthorUI()"><option value="student">학생</option><option value="teacher">선생님 (관리자)</option></select>
       </div>
-      <div id="stu-info-view" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;"></div>
-      <div id="stu-info-edit" style="display:none;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
-          <div><label style="font-size:11px;font-weight:700;color:var(--mt);letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:5px;">생년월일</label>
-            <input class="ti-sm" type="date" id="info-birth"></div>
-          <div><label style="font-size:11px;font-weight:700;color:var(--mt);letter-spacing:.5px;text-transform:uppercase;display:block;margin-bottom:5px;">키 (cm)</label>
-            <input class="ti-sm" type="number" id="info-height" placeholder="예) 165"></div>
-        </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn bpa" onclick="saveStudentInfo()">저장</button>
-          <button class="btn" onclick="toggleInfoEdit()">취소</button>
-        </div>
-        <div id="info-status"></div>
+      <div id="msg-student-row" class="form-row">
+        <label class="form-label">이름 선택</label>
+        <select id="msg-author"><option value="">— 이름 선택 —</option></select>
       </div>
+      <div id="msg-teacher-row" class="form-row" style="display:none">
+        <label class="form-label">선생님 이름</label>
+        <input type="text" id="msg-teacher-name" placeholder="이름 입력">
+      </div>
+      <div class="form-row"><label class="form-label">비밀번호</label><input type="password" id="msg-pw" placeholder="비밀번호" maxlength="20"></div>
+      <div class="form-row"><label class="form-label">내용</label><textarea id="msg-content" placeholder="자유롭게 남겨보세요!" style="min-height:100px"></textarea></div>
+      <div class="error-msg" id="msg-err"></div>
     </div>
-    <div class="stabs">
-      <button class="stab on" onclick="showSTab(0)">📋 오디션 피드백</button>
-      <button class="stab" onclick="showSTab(1)">💃 댄스 레파토리</button>
-      <button class="stab" onclick="showSTab(2)">🎤 보컬 레파토리</button>
-      <button class="stab" onclick="showSTab(3)">🎯 목표</button>
-      <button class="stab" onclick="showSTab(4)">📝 메모</button>
-      <button class="stab" onclick="showSTab(5)">📊 인바디</button>
-    </div>
-    <!-- 오디션 피드백 -->
-    <div class="ssec on" id="ss-0">
-      <div id="s-fb-list" class="flist"></div>
-    </div>
-    <!-- 댄스 레파토리 -->
-    <div class="ssec" id="ss-1">
-      <div class="rep-card">
-        <div class="rep-title"><span style="color:var(--dance);">💃</span> 댄스 레파토리</div>
-        <div class="rep-list" id="dance-rep-list"></div>
-        <div class="rep-add">
-          <input type="text" id="dance-rep-input" placeholder="곡명 또는 안무명 입력" onkeydown="if(event.key==='Enter')addRep('dance')">
-          <button onclick="addRep('dance')" style="background:var(--dance);">+ 추가</button>
-        </div>
+    <div class="modal-foot"><button class="btn btn-orange" onclick="submitMsg()">올리기</button></div>
+  </div>
+</div>
+<!-- Reply -->
+<div class="modal-overlay" id="modal-reply" onclick="if(event.target===this)closeM('modal-reply')">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">💬 댓글 달기</div><button class="close-btn" onclick="closeM('modal-reply')">✕</button></div>
+    <div class="modal-body">
+      <div id="reply-orig" style="background:var(--light);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:13px;color:var(--gray)"></div>
+      <div class="form-row"><label class="form-label">누구세요?</label>
+        <select id="reply-role" onchange="updateReplyAuthorUI()"><option value="student">학생</option><option value="teacher">선생님</option></select>
       </div>
+      <div id="reply-student-row" class="form-row"><label class="form-label">이름</label><select id="reply-author"><option value="">— 이름 선택 —</option></select></div>
+      <div id="reply-teacher-row" class="form-row" style="display:none"><label class="form-label">선생님 이름</label><input type="text" id="reply-teacher-name" placeholder="이름 입력"></div>
+      <div class="form-row"><label class="form-label">비밀번호</label><input type="password" id="reply-pw" placeholder="비밀번호" maxlength="20"></div>
+      <div class="form-row"><label class="form-label">댓글</label><textarea id="reply-content" style="min-height:80px"></textarea></div>
+      <div class="error-msg" id="reply-err"></div>
     </div>
-    <!-- 보컬 레파토리 -->
-    <div class="ssec" id="ss-2">
-      <div class="rep-card">
-        <div class="rep-title"><span style="color:var(--vocal);">🎤</span> 보컬 레파토리</div>
-        <div class="rep-list" id="vocal-rep-list"></div>
-        <div class="rep-add">
-          <input type="text" id="vocal-rep-input" placeholder="곡명 입력" onkeydown="if(event.key==='Enter')addRep('vocal')">
-          <button onclick="addRep('vocal')" style="background:var(--vocal);">+ 추가</button>
-        </div>
-      </div>
+    <div class="modal-foot"><button class="btn btn-orange" onclick="submitReply()">댓글 달기</button></div>
+  </div>
+</div>
+<!-- Notice view -->
+<div class="modal-overlay" id="modal-notice" onclick="if(event.target===this)closeM('modal-notice')">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="notice-view-title">공지사항</div><button class="close-btn" onclick="closeM('modal-notice')">✕</button></div>
+    <div class="modal-body"><div class="notice-content" id="notice-txt"></div></div>
+    <div class="modal-foot"><button class="btn btn-gray" onclick="closeM('modal-notice')">닫기</button></div>
+  </div>
+</div>
+<!-- Event -->
+<div class="modal-overlay" id="modal-ev" onclick="if(event.target===this)closeM('modal-ev')">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="ev-title">행사 추가</div><button class="close-btn" onclick="closeM('modal-ev')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label class="form-label">날짜</label><input type="date" id="ev-date"></div>
+      <div class="form-row"><label class="form-label">행사명</label><input type="text" id="ev-name" placeholder="예: YG 오디션"></div>
+      <div class="form-row"><label class="form-label">메모 (선택)</label><input type="text" id="ev-memo" placeholder="상세 내용"></div>
     </div>
-    <!-- 목표 -->
-    <div class="ssec" id="ss-3">
-      <div class="goal-card">
-        <div class="goal-title">🎯 나의 목표</div>
-        <div class="goal-grid">
-          <div>
-            <label>단기 목표</label>
-            <textarea class="goal-ta" id="goal-short" placeholder="예) 이번 달 안에 보컬 음정 안정화하기"></textarea>
-          </div>
-          <div>
-            <label>장기 목표</label>
-            <textarea class="goal-ta" id="goal-long" placeholder="예) 연말 전에 YG 오디션 합격하기"></textarea>
-          </div>
-        </div>
-        <div class="save-row"><button class="btn bpa" onclick="saveGoals()">저장</button></div>
-        <div id="goal-status"></div>
+    <div class="modal-foot"><button class="btn btn-orange" onclick="saveEv()">저장하기</button></div>
+  </div>
+</div>
+<!-- Add student -->
+<div class="modal-overlay" id="modal-add-s" onclick="if(event.target===this)closeM('modal-add-s')">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">학생 추가</div><button class="close-btn" onclick="closeM('modal-add-s')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label class="form-label">이름</label><input type="text" id="ns-name" placeholder="이름"></div>
+      <div class="form-row"><label class="form-label">반</label>
+        <select id="ns-class"><option value="audition">오디션반</option><option value="kids">키즈오디션반</option></select>
       </div>
+      <div class="form-row"><label class="form-label">생년월일</label><input type="date" id="ns-birth"></div>
+      <div class="form-row"><label class="form-label">비밀번호 (4자리)</label><input type="password" id="ns-pw" placeholder="4자리 숫자" maxlength="4"></div>
     </div>
-    <!-- 메모 -->
-    <div class="ssec" id="ss-4">
-      <div class="goal-card">
-        <div class="goal-title">📝 기타 메모</div>
-        <textarea class="memo-ta" id="memo-ta" placeholder="연습 일지, 참고사항, 선생님께 전할 말 등 자유롭게 작성하세요"></textarea>
-        <div class="save-row"><button class="btn bpa" onclick="saveMemo()">저장</button></div>
-        <div id="memo-status"></div>
-      </div>
+    <div class="modal-foot"><button class="btn btn-orange" onclick="addStudent()">추가하기</button></div>
+  </div>
+</div>
+<!-- PW change -->
+<div class="modal-overlay" id="modal-pw" onclick="if(event.target===this)closeM('modal-pw')">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">비밀번호 변경</div><button class="close-btn" onclick="closeM('modal-pw')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label class="form-label">학생</label><div id="pw-sname" style="padding:7px 0;font-weight:800;font-size:15px"></div></div>
+      <div class="form-row"><label class="form-label">새 비밀번호 (4자리)</label><input type="password" id="new-pw" placeholder="4자리 숫자" maxlength="4"></div>
     </div>
-    <!-- 인바디 -->
-    <div class="ssec" id="ss-5">
-      <!-- 주간 체크 -->
-      <div class="goal-card" style="margin-bottom:14px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <div class="goal-title" style="margin:0;">📊 이번 주 인바디 측정</div>
-          <div id="inbody-week-status" style="font-size:12px;"></div>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px;">
-          <button id="inbody-check-btn" onclick="toggleWeeklyCheck()" style="width:44px;height:44px;border-radius:50%;border:2px solid var(--bd);background:var(--bg);font-size:20px;cursor:pointer;transition:all .2s;flex-shrink:0;">○</button>
-          <div style="font-size:13px;color:var(--mt);" id="inbody-check-label">이번 주 인바디 측정을 완료했나요?</div>
-        </div>
+    <div class="modal-foot"><button class="btn btn-orange" onclick="saveStudentPw()">변경하기</button></div>
+  </div>
+</div>
+<!-- Inbody -->
+<div class="modal-overlay" id="modal-ib" onclick="if(event.target===this)closeM('modal-ib')">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">인바디 입력</div><button class="close-btn" onclick="closeM('modal-ib')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label class="form-label">측정일</label><input type="date" id="ib-date2"></div>
+      <div class="form-row"><label class="form-label">인바디 점수</label><input type="number" id="ib-score2" placeholder="점수"></div>
+      <div class="form-row"><label class="form-label">체중 (kg)</label><input type="number" id="ib-weight2" placeholder="kg" step="0.1"></div>
+      <div class="form-row"><label class="form-label">골격근량 (kg)</label><input type="number" id="ib-muscle2" placeholder="kg" step="0.1"></div>
+      <div class="form-row"><label class="form-label">체지방량 (kg)</label><input type="number" id="ib-fat2" placeholder="kg" step="0.1"></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-orange" onclick="saveIb2()">저장하기</button></div>
+  </div>
+</div>
+<!-- Resource detail -->
+<div class="modal-overlay" id="modal-resource-detail" onclick="if(event.target===this)closeM('modal-resource-detail')">
+  <div class="modal" style="max-height:85vh;display:flex;flex-direction:column">
+    <div class="modal-head"><div class="modal-title" id="res-detail-title">영상/지식</div><button class="close-btn" onclick="closeM('modal-resource-detail')">✕</button></div>
+    <div class="modal-body" id="res-detail-body"></div>
+    <div class="modal-foot">
+      <div style="display:flex;gap:8px;width:100%;margin-bottom:8px">
+        <select id="res-comment-role" onchange="updateResCommentUI()" style="padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit">
+          <option value="student">학생</option><option value="teacher">선생님</option>
+        </select>
+        <select id="res-comment-author" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit"></select>
       </div>
-      <!-- 기록 입력 -->
-      <div class="goal-card" style="margin-bottom:14px;">
-        <div class="goal-title" style="margin-bottom:14px;">➕ 측정 기록 추가</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-          <div><label style="font-size:10px;font-weight:700;color:var(--mt);letter-spacing:.8px;text-transform:uppercase;display:block;margin-bottom:5px;">날짜</label>
-            <input class="ti-sm" type="date" id="ib-date"></div>
-          <div><label style="font-size:10px;font-weight:700;color:var(--mt);letter-spacing:.8px;text-transform:uppercase;display:block;margin-bottom:5px;">인바디 점수</label>
-            <input class="ti-sm" type="number" id="ib-score" placeholder="예) 75"></div>
-          <div><label style="font-size:10px;font-weight:700;color:var(--mt);letter-spacing:.8px;text-transform:uppercase;display:block;margin-bottom:5px;">체중 (kg)</label>
-            <input class="ti-sm" type="number" step="0.1" id="ib-weight" placeholder="예) 52.3"></div>
-          <div><label style="font-size:10px;font-weight:700;color:var(--mt);letter-spacing:.8px;text-transform:uppercase;display:block;margin-bottom:5px;">골격근량 (kg)</label>
-            <input class="ti-sm" type="number" step="0.1" id="ib-muscle" placeholder="예) 22.1"></div>
-          <div style="grid-column:span 2;"><label style="font-size:10px;font-weight:700;color:var(--mt);letter-spacing:.8px;text-transform:uppercase;display:block;margin-bottom:5px;">체지방량 (kg)</label>
-            <input class="ti-sm" type="number" step="0.1" id="ib-fat" placeholder="예) 12.5"></div>
-        </div>
-        <!-- 사진 업로드 -->
-        <div style="margin-bottom:12px;">
-          <label style="font-size:10px;font-weight:700;color:var(--mt);letter-spacing:.8px;text-transform:uppercase;display:block;margin-bottom:8px;">원본 결과지 사진</label>
-          <label style="display:flex;align-items:center;gap:8px;padding:10px 14px;border:1.5px dashed var(--bd);border-radius:9px;cursor:pointer;font-size:13px;color:var(--mt);background:var(--bg);">
-            <span style="font-size:18px;">📎</span>
-            <span id="ib-file-label">사진 선택 (jpg, png)</span>
-            <input type="file" id="ib-file" accept="image/*" style="display:none;" onchange="onIBFileChange()">
-          </label>
-          <img id="ib-preview" style="display:none;margin-top:10px;width:100%;border-radius:10px;border:1px solid var(--bd);">
-        </div>
-        <div class="brow">
-          <button class="btn bpa" onclick="saveInbody()">기록 저장</button>
-        </div>
-        <div id="ib-status"></div>
+      <div id="res-comment-teacher-row" style="display:none;width:100%;margin-bottom:8px">
+        <input type="text" id="res-comment-teacher-name" placeholder="선생님 이름" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;box-sizing:border-box">
       </div>
-      <!-- 기록 목록 -->
-      <div class="goal-card">
-        <div class="goal-title" style="margin-bottom:14px;">📈 측정 기록</div>
-        <div id="ib-list" style="display:flex;flex-direction:column;gap:12px;"></div>
+      <div style="display:flex;gap:8px;width:100%">
+        <input type="password" id="res-comment-pw" placeholder="비밀번호" maxlength="20" style="width:80px;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit">
+        <textarea id="res-comment-input" placeholder="댓글을 입력하세요" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;resize:none;min-height:40px"></textarea>
+        <button onclick="submitResourceComment()" class="btn btn-orange" style="padding:8px 14px;font-size:12px;flex-shrink:0;width:auto">등록</button>
       </div>
     </div>
   </div>
 </div>
+<!-- Teacher msg -->
+<div class="modal-overlay" id="modal-teacher-msg" onclick="if(event.target===this)closeM('modal-teacher-msg')">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">💌 선생님의 한마디</div><button class="close-btn" onclick="closeM('modal-teacher-msg')">✕</button></div>
+    <div class="modal-body">
+      <div id="teacher-msg-student-name" style="font-size:14px;font-weight:800;margin-bottom:12px;color:var(--orange)"></div>
+      <div id="teacher-msg-history" style="max-height:200px;overflow-y:auto;margin-bottom:12px"></div>
+      <div class="form-row"><label class="form-label">새 메시지</label><textarea id="teacher-msg-input" placeholder="학생에게 전하고 싶은 말" style="min-height:100px"></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-orange" onclick="sendTeacherMsg()">전송하기</button></div>
+  </div>
+</div>
+<!-- Broadcast -->
+<div class="modal-overlay" id="modal-broadcast" onclick="if(event.target===this)closeM('modal-broadcast')">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">📢 전체 메시지</div><button class="close-btn" onclick="closeM('modal-broadcast')">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row"><label class="form-label">선생님 이름</label><input type="text" id="broadcast-teacher-name" placeholder="이름"></div>
+      <div class="form-row"><label class="form-label">메시지</label><textarea id="broadcast-content" style="min-height:120px"></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-orange" onclick="sendBroadcast()">전체 전송</button></div>
+  </div>
+</div>
+
+<input type="file" id="profile-img-inp" accept="image/*" style="display:none" onchange="handleProfileImg(this)">
 
 <script>
-// Wait for Firebase SDKs then init
-const firebaseConfig={apiKey:"AIzaSyA7dzYsell9CdH-g7MPBQ6j57sLrqMtFgE",authDomain:"jb-idol.firebaseapp.com",projectId:"jb-idol",storageBucket:"jb-idol.firebasestorage.app",messagingSenderId:"994936936733",appId:"1:994936936733:web:ea47cbd7e3ede3607c29f4"};
+// ═══ FIREBASE ═══
+const firebaseConfig={
+  apiKey:"AIzaSyA7dzYsell9CdH-g7MPBQ6j57sLrqMtFgE",
+  authDomain:"jb-idol.firebaseapp.com",
+  projectId:"jb-idol",
+  storageBucket:"jb-idol.firebasestorage.app",
+  messagingSenderId:"994936936733",
+  appId:"1:994936936733:web:ea47cbd7e3ede3607c29f4"
+};
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 const storage=firebase.storage();
 
-// ── APP DATA ──
-const DEFAULT_STUDENTS={
-  audition:['송찬호','이유이','조한','최민경'],
-  kids:['김하율','박다솜','서루희','양소미','유나경','이다은','이소윤','임사랑','최소민']
+// ═══ DATA ═══
+window.DB={
+  adminPw:'1234',
+  students:[
+    {id:1,name:'송찬호',cls:'audition',birth:'',pw:'0000',photo:'',classes:{},inbody:[],teacherMessages:[]},
+    {id:2,name:'이유이',cls:'audition',birth:'',pw:'0000',photo:'',classes:{},inbody:[],teacherMessages:[]},
+    {id:3,name:'조한',cls:'audition',birth:'',pw:'0000',photo:'',classes:{},inbody:[],teacherMessages:[]},
+    {id:4,name:'최민경',cls:'audition',birth:'',pw:'0000',photo:'',classes:{},inbody:[],teacherMessages:[]},
+    {id:5,name:'김하율',cls:'kids',birth:'',pw:'0000',photo:'',classes:{},inbody:[],teacherMessages:[]},
+    {id:6,name:'박다솜',cls:'kids',birth:'',pw:'0000',photo:'',classes:{},inbody:[],teacherMessages:[]},
+    {id:7,name:'서루희',cls:'kids',birth:'',pw:'0000',photo:'',classes:{},inbody:[],teacherMessages:[]},
+    {id:8,name:'양소미',cls:'kids',birth:'',pw:'0000',photo:'',classes:{},inbody:[],teacherMessages:[]},
+    {id:9,name:'유나경',cls:'kids',birth:'',pw:'0000',photo:'',classes:{},inbody:[],teacherMessages:[]},
+    {id:10,name:'이다은',cls:'kids',birth:'',pw:'0000',photo:'',classes:{},inbody:[],teacherMessages:[]},
+    {id:11,name:'이소윤',cls:'kids',birth:'',pw:'0000',photo:'',classes:{},inbody:[],teacherMessages:[]},
+    {id:12,name:'임사랑',cls:'kids',birth:'',pw:'0000',photo:'',classes:{},inbody:[],teacherMessages:[]},
+    {id:13,name:'최소민',cls:'kids',birth:'',pw:'0000',photo:'',classes:{},inbody:[],teacherMessages:[]}
+  ],
+  danceClasses:[
+    {id:'d1',name:'코레오그래피',teacher:'Foxxb쌤',day:'월',timeStart:'19:00',timeEnd:'20:00'},
+    {id:'d2',name:'걸스힙합',teacher:'송예림쌤',day:'화',timeStart:'20:00',timeEnd:'21:00'},
+  ],
+  vocalClasses:[
+    {id:'v1',name:'보컬기초',teacher:'김선령쌤',day:'수',timeStart:'18:00',timeEnd:'19:00'},
+  ],
+  notices:[],events:[],messages:[],resources:[],
+  notice:''
 };
-const DEFAULT_AGENCIES=['SM엔터테인먼트','JYP엔터테인먼트','YG엔터테인먼트','HYBE','더블랙레이블','FNC엔터테인먼트','스타쉽엔터테인먼트','카카오엔터테인먼트','빅히트뮤직','WM엔터테인먼트'];
-const CLS={audition:'오디션반',kids:'키즈오디션반'};
-let pw='1234';
-let feedbacks=[];
-let agencies=[...DEFAULT_AGENCIES];
-let STUDENTS=JSON.parse(JSON.stringify(DEFAULT_STUDENTS));
-let selStu={a:null,k:null};
-let stuCls='audition',stuName=null;
-let fltStu={a:'all',k:'all'};
-let curStuKey=null;
-let _stuDataCache={};
+let DB=window.DB;
 
-// ── FIREBASE HELPERS ──
-async function dbSaveSettings(){
-  await db.collection('settings').doc('main').set({pw,agencies,students:STUDENTS,stuPw:window._stuPw||'0000'});
-}
-async function dbSaveFB(fbData){
-  const {id,...data}=fbData;
-  if(id&&typeof id==='string'&&id.length>15){await db.collection('feedbacks').doc(id).set(data);return id;}
-  else{const r=await db.collection('feedbacks').add(data);return r.id;}
-}
-async function dbDelFB(id){await db.collection('feedbacks').doc(id).delete();}
-async function dbLoadStuData(key){
-  const snap=await db.collection('studentData').doc(key).get();
-  return snap.exists?snap.data():{danceRep:[],vocalRep:[],goalShort:'',goalLong:'',memo:''};
-}
-async function dbSaveStuData(key,data){await db.collection('studentData').doc(key).set(data);}
-async function uploadInbodyPhoto(path,base64){
-  const r=storage.ref(path);
-  await r.putString(base64,'data_url');
-  return await r.getDownloadURL();
+// ═══ FIREBASE HELPERS ═══
+async function fbSave(col,id,data){try{await db.collection(col).doc(String(id)).set(data);}catch(e){console.warn(col+' 저장 실패:',e);}}
+async function fbDel(col,id){try{await db.collection(col).doc(String(id)).delete();}catch(e){}}
+async function fbSaveConfig(){
+  try{await db.collection('idol_config').doc('main').set({
+    adminPw:DB.adminPw,notices:DB.notices||[],events:DB.events||[],
+    danceClasses:DB.danceClasses||[],vocalClasses:DB.vocalClasses||[],
+    updatedAt:Date.now()
+  });}catch(e){console.warn('config 저장 실패:',e);}
 }
 
-// Apply Firebase loaded data when available
-function applyFirebaseData(){
-  // Data is loaded directly by initApp - nothing needed here
+async function loadAll(){
+  try{
+    // config
+    const cSnap=await db.collection('idol_config').doc('main').get();
+    if(cSnap.exists()){
+      const c=cSnap.data();
+      DB.adminPw=c.adminPw||DB.adminPw;
+      DB.notices=c.notices||[];
+      DB.events=c.events||[];
+      if(c.danceClasses&&c.danceClasses.length) DB.danceClasses=c.danceClasses;
+      if(c.vocalClasses&&c.vocalClasses.length) DB.vocalClasses=c.vocalClasses;
+    } else {await fbSaveConfig();}
+    // students
+    const sSnap=await db.collection('idol_students').get();
+    if(!sSnap.empty){DB.students=[];sSnap.forEach(d=>DB.students.push(d.data()));}
+    else{for(const s of DB.students) await fbSave('idol_students',s.id,s);}
+    // messages
+    const mSnap=await db.collection('idol_messages').get();
+    DB.messages=[];mSnap.forEach(d=>DB.messages.push(d.data()));
+    DB.messages.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+    // resources
+    try{const rSnap=await db.collection('idol_resources').get();DB.resources=[];rSnap.forEach(d=>DB.resources.push(d.data()));}catch(e){DB.resources=[];}
+    window.DB=DB;
+    console.log('✅ 로드 완료 - 학생',DB.students.length,'명');
+  }catch(e){console.warn('Firebase 로드 실패:',e);}
+  renderMain();
+  const ov=document.getElementById('loading-overlay');
+  if(ov){ov.style.opacity='0';ov.style.transition='opacity .3s';setTimeout(()=>ov.remove(),300);}
 }
-
-// ── SCREENS ──
-function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0);}
-function goLanding(){
-  selStu={a:null,k:null};
-  stuName=null;curStuKey=null;
-  try{_stuDataCache={};}catch(e){}
-  // Reset teacher nav to default (feedback input tab)
-  document.querySelectorAll('.nb').forEach(n=>n.className='nb');
-  const nbai=document.getElementById('nb-ai');if(nbai)nbai.className='nb ona';
-  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
-  const snote=document.getElementById('s-note');if(snote)snote.classList.add('on');
-  // Reset student form selections
-  document.querySelectorAll('.scard').forEach(c=>{c.className='scard';});
-  document.querySelectorAll('.nbtn').forEach(b=>b.className='nbtn');
-  showScreen('landing');
-}
-
-// ── TEACHER ──
-function goTeacher(){showScreen('login');document.getElementById('pw-input').value='';document.getElementById('lerr').style.display='none';}
-async function tryLogin(){
-  // Wait for Firebase data to be ready
-  if(!window._initDone){
-    await window._initPromise;
-  }
-  if(document.getElementById('pw-input').value===pw){showScreen('app');renderGrids();showSec('s-note');}
-  else document.getElementById('lerr').style.display='block';
-}
-
-// ── STUDENT PICK ──
-async function goStudent(){
-  if(!window._initDone){await window._initPromise;}
-  showScreen('student-login');stuName=null;document.getElementById('s-ok').disabled=true;switchSC('audition');
-}
-function switchSC(cls){
-  stuCls=cls;stuName=null;
-  document.getElementById('s-ok').disabled=true;
-  document.getElementById('s-ok').className='bfull '+(cls==='audition'?'ba':'bk');
-  document.getElementById('stab-a').className='ctab'+(cls==='audition'?' ona':'');
-  document.getElementById('stab-k').className='ctab'+(cls==='kids'?' onk':'');
-  const g=document.getElementById('sng');g.innerHTML='';
-  STUDENTS[cls].forEach(n=>{
-    const b=document.createElement('button');b.className='nbtn';b.textContent=n;
-    b.onclick=()=>{document.querySelectorAll('.nbtn').forEach(x=>x.className='nbtn');b.className='nbtn '+(cls==='audition'?'sa':'sk');stuName=n;document.getElementById('s-ok').disabled=false;};
-    g.appendChild(b);
+// message realtime
+function startMsgSync(){
+  db.collection('idol_messages').onSnapshot(snap=>{
+    snap.docChanges().forEach(change=>{
+      const m=change.doc.data();
+      if(change.type==='removed') DB.messages=DB.messages.filter(x=>x.id!==m.id);
+      else{const i=DB.messages.findIndex(x=>x.id===m.id);if(i>=0)DB.messages[i]=m;else DB.messages.push(m);}
+    });
+    DB.messages.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+    if(document.getElementById('page-main').classList.contains('active')) renderMain();
   });
 }
-function confirmStu(){
-  if(!stuName)return;
-  curStuKey=stuCls+':'+stuName;
-  // show password screen
-  document.getElementById('stu-pw-name').textContent=stuName+'님, 비밀번호를 입력해주세요';
-  document.getElementById('stu-pw-input').value='';
-  document.getElementById('stu-pw-err').style.display='none';
-  showScreen('student-pw');
-}
-async function tryStuLogin(){
-  const entered=document.getElementById('stu-pw-input').value;
-  // Check individual pw first, fallback to global pw
-  const stuPws=window._stuPws||{};
-  const individualPw=stuPws[stuCls+':'+stuName];
-  const stuPw=individualPw||window._stuPw||'0000';
-  if(entered===stuPw){
-    // Make sure Firebase is ready and feedbacks are loaded
-    if(!window._initDone){await window._initPromise;}
-    // Reload feedbacks fresh to ensure latest data
-    try{
-      // Load individual student passwords
-    const stuPwSnap=await db.collection('settings').doc('stuPws').get();
-    window._stuPws=stuPwSnap.exists?stuPwSnap.data():{};
-    const fbSnap=await db.collection('feedbacks').get();
-      feedbacks=[];fbSnap.forEach(d=>feedbacks.push({id:d.id,...d.data()}));
-      feedbacks.sort((a,b)=>(b.ts||0)-(a.ts||0));
-    }catch(e){console.error('feedbacks reload error:',e);}
-    showScreen('student-app');renderStudentHeader();showSTab(0);loadStudentData();loadStudentInfo();
-  } else {
-    document.getElementById('stu-pw-err').style.display='block';
-  }
+async function refreshData(){
+  const btn=document.getElementById('refresh-btn');
+  if(btn){btn.style.animation='spin .6s linear infinite';btn.disabled=true;}
+  await loadAll();showToast('✅ 최신 데이터로 업데이트됐어요!');
+  if(btn){btn.style.animation='';btn.disabled=false;}
 }
 
-// ── STUDENT APP ──
-function renderStudentHeader(){
-  const isK=stuCls==='kids';
-  document.getElementById('s-header').innerHTML=`<div class="shav ${isK?'ak':'aa'}">${stuName.slice(0,2)}</div><div><div class="shname">${stuName}</div><div class="shcls">${CLS[stuCls]}</div></div>`;
+// ═══ UTILS ═══
+const POSTIT_COLORS=['#fef08a','#bbf7d0','#bfdbfe','#fecdd3','#e9d5ff','#fed7aa','#a5f3fc','#fde68a'];
+function esc(s){if(!s) return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showToast(msg){let t=document.getElementById('toast');if(!t){t=document.createElement('div');t.id='toast';t.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;z-index:9999;white-space:nowrap;pointer-events:none';document.body.appendChild(t);}t.textContent=msg;t.style.opacity='1';clearTimeout(t._t);t._t=setTimeout(()=>t.style.opacity='0',2500);}
+function openM(id){document.getElementById(id).classList.add('active');}
+function closeM(id){document.getElementById(id).classList.remove('active');}
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='page-main') renderMain();
+  if(id==='page-schedule') renderSchedule();
 }
-function showSTab(i){
-  // Only target student-app tabs and sections
-  const stuApp=document.getElementById('student-app');
-  stuApp.querySelectorAll('.stab').forEach((t,j)=>t.classList.toggle('on',i===j));
-  stuApp.querySelectorAll('.ssec').forEach((s,j)=>s.classList.toggle('on',i===j));
-  if(i===0)renderStudentFBList();
-  if(i===5)loadInbody();
-}
-async function loadStudentData(){
-  const key=curStuKey;
-  const d=await dbLoadStuData(key);
-  _stuDataCache[key]=d;
-  renderRepList('dance',d.danceRep||[]);
-  renderRepList('vocal',d.vocalRep||[]);
-  document.getElementById('goal-short').value=d.goalShort||'';
-  document.getElementById('goal-long').value=d.goalLong||'';
-  document.getElementById('memo-ta').value=d.memo||'';
-}
-function getStuData(){try{return (_stuDataCache&&_stuDataCache[curStuKey])||{danceRep:[],vocalRep:[],goalShort:'',goalLong:'',memo:''};}catch(e){return {danceRep:[],vocalRep:[],goalShort:'',goalLong:'',memo:''};}}
-function setStuData(d){_stuDataCache[curStuKey]=d;dbSaveStuData(curStuKey,d);}
+function today(){const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');}
+function nowTime(){const n=new Date();return (n.getMonth()+1)+'/'+n.getDate()+' '+String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');}
 
-// rep
-function renderRepList(type,items){
-  const el=document.getElementById(type+'-rep-list');
-  if(!items.length){el.innerHTML='<div style="font-size:13px;color:var(--mt);padding:6px 0;">아직 없음</div>';return;}
-  el.innerHTML=items.map((it,i)=>`<div class="rep-item"><span>${it}</span><button class="rep-del" onclick="delRep('${type}',${i})">✕</button></div>`).join('');
+// ═══ MAIN RENDER ═══
+function renderMain(){
+  renderNoticeBar();renderEventsBar();renderResourceBoard();renderMsgBoard();renderStudentList();
 }
-async function addRep(type){
-  const inp=document.getElementById(type+'-rep-input');
-  const val=inp.value.trim();if(!val)return;
-  // Reload from Firebase first to avoid overwriting
-  let d;
-  try{d=await dbLoadStuData(curStuKey);}catch(e){d=getStuData();}
-  const key=type==='dance'?'danceRep':'vocalRep';
-  d[key]=[...(d[key]||[]),val];
-  _stuDataCache[curStuKey]=d;
-  renderRepList(type,d[key]);
-  inp.value='';
-  try{
-    await dbSaveStuData(curStuKey,d);
-  }catch(e){console.error('rep save error',e);}
-}
-async function delRep(type,i){
-  let d;
-  try{d=await dbLoadStuData(curStuKey);}catch(e){d=getStuData();}
-  const key=type==='dance'?'danceRep':'vocalRep';
-  d[key]=(d[key]||[]).filter((_,j)=>j!==i);
-  _stuDataCache[curStuKey]=d;
-  renderRepList(type,d[key]);
-  try{await dbSaveStuData(curStuKey,d);}
-  catch(e){console.error('rep del error',e);}
-}
-async function saveGoals(){
-  // Always fetch latest from Firebase to avoid overwriting other fields
-  let d;
-  try{d=await dbLoadStuData(curStuKey);}catch(e){d=getStuData();}
-  d.goalShort=document.getElementById('goal-short').value;
-  d.goalLong=document.getElementById('goal-long').value;
-  _stuDataCache[curStuKey]=d;
-  showMsg('goal-status','저장 중...',true);
-  try{
-    await dbSaveStuData(curStuKey,d);
-    showMsg('goal-status','✓ 저장되었습니다',true);
-  }catch(e){console.error(e);showMsg('goal-status','저장 실패: '+e.message,false);}
-}
-async function saveMemo(){
-  let d;
-  try{d=await dbLoadStuData(curStuKey);}catch(e){d=getStuData();}
-  d.memo=document.getElementById('memo-ta').value;
-  _stuDataCache[curStuKey]=d;
-  showMsg('memo-status','저장 중...',true);
-  try{
-    await dbSaveStuData(curStuKey,d);
-    showMsg('memo-status','✓ 저장되었습니다',true);
-  }catch(e){console.error(e);showMsg('memo-status','저장 실패: '+e.message,false);}
-}
+window.renderMain=renderMain;
 
-// student fb list
-async function renderStudentFBList(){
-  const el=document.getElementById('s-fb-list');
-  el.innerHTML='<div class="empty"><div class="empty-ic">⏳</div><p>불러오는 중...</p></div>';
-  // Always reload from Firebase for students to get latest
-  try{
-    // Load individual student passwords
-    const stuPwSnap=await db.collection('settings').doc('stuPws').get();
-    window._stuPws=stuPwSnap.exists?stuPwSnap.data():{};
-    const fbSnap=await db.collection('feedbacks').get();
-    feedbacks=[];fbSnap.forEach(d=>feedbacks.push({id:d.id,...d.data()}));
-    feedbacks.sort((a,b)=>(b.ts||0)-(a.ts||0));
-  }catch(e){console.error('fb reload:',e);}
-  const myFbs=feedbacks.filter(f=>f.cls===stuCls&&f.name===stuName).sort((a,b)=>b.ts-a.ts);
-  if(!myFbs.length){el.innerHTML='<div class="empty"><div class="empty-ic">📋</div><p>아직 피드백이 없어요</p></div>';return;}
-  // group by date+agency
-  const groups={};
-  myFbs.forEach(f=>{const gk=f.date+'|'+f.agency;if(!groups[gk])groups[gk]=[];groups[gk].push(f);});
-  el.innerHTML=Object.entries(groups).map(([gk,items])=>{
-    const [date,agency]=gk.split('|');
-    return `<div class="aud-group">
-      <div class="aud-group-hd">${date} &nbsp;·&nbsp; ${agency}</div>
-      ${items.map(f=>renderFBCard(f,false)).join('')}
-    </div>`;
-  }).join('');
-}
-
-// ── TEACHER SECTIONS ──
-const NM={'s-note':'nb-note','s-ai':'nb-ai','s-al':'nb-al','s-ki':'nb-ki','s-kl':'nb-kl','s-sinfo':'nb-sinfo','s-stu':'nb-stu','s-cfg':'nb-cfg'};
-const NC={'nb-note':'ong','nb-ai':'ona','nb-al':'ona','nb-ki':'onk','nb-kl':'onk','nb-sinfo':'ona','nb-stu':'','nb-cfg':''};
-function toggleSidebar(){
-  const sb=document.getElementById('main-sidebar');
-  const ov=document.getElementById('sidebar-overlay');
-  sb.classList.toggle('open');
-  ov.classList.toggle('open');
-}
-function closeSidebarMobile(){
-  if(window.innerWidth<=680){
-    document.getElementById('main-sidebar').classList.remove('open');
-    document.getElementById('sidebar-overlay').classList.remove('open');
-  }
-}
-function showSec(id){
-  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
-  document.getElementById(id).classList.add('on');
-  document.querySelectorAll('.nb').forEach(n=>n.className='nb');
-  const nb=NM[id];if(nb)document.getElementById(nb).className='nb '+(NC[nb]||'');
-  if(id==='s-al')renderList('a');
-  if(id==='s-kl')renderList('k');
-  if(id==='s-stu')renderStuManage();
-  if(id==='s-sinfo')initSinfoSection();
-  if(id==='s-note')renderNoteBoard();
-  if(id==='s-cfg'){const el=document.getElementById('stu-pw-show');if(el)el.value=window._stuPw||'0000';}
-  closeSidebarMobile();
-}
-
-// teacher tabs (dance/vocal)
-function showTTab(t,tab){
-  const ids=['dance','vocal'];
-  ids.forEach(d=>{
-    document.getElementById('t'+t+'-'+d).className='ttab t'+d[0]+'a'+(d===tab?' on':'');
-    document.getElementById('t'+t+'-'+d+'-sec').className='tsec'+(d===tab?' on':'');
+// 공지사항
+function renderNoticeBar(){
+  const w=document.getElementById('notice-bar-wrap');if(!w) return;
+  const notices=DB.notices||[];if(!notices.length){w.innerHTML='';return;}
+  const showAll=window._noticeShowAll||false;
+  const display=showAll?notices:notices.slice(0,3);
+  let html='<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:800;color:var(--gray);margin-bottom:6px;padding:0 2px">📢 공지사항</div>';
+  display.forEach((n,i)=>{
+    html+=`<div onclick="viewNotice(${i})" style="background:var(--white);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:10px;padding:10px 13px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:10px">
+      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800;color:var(--orange)">${esc(n.title)}</div>
+      <div style="font-size:11px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((n.content||'').replace(/\n/g,' ').substring(0,40))}</div></div>
+      <div style="color:var(--gray2);font-size:18px">›</div></div>`;
   });
-  // special: 'da' for dance tab class
-  document.getElementById('t'+t+'-dance').className='ttab tda'+(tab==='dance'?' on':'');
-  document.getElementById('t'+t+'-vocal').className='ttab tvo'+(tab==='vocal'?' on':'');
+  if(notices.length>3) html+=`<div style="text-align:center;margin-top:4px"><button onclick="window._noticeShowAll=!window._noticeShowAll;renderNoticeBar()" style="background:none;border:1px solid var(--border);border-radius:20px;padding:5px 16px;font-size:11px;color:var(--gray);cursor:pointer;font-family:inherit">${showAll?'▲ 접기':'▼ 더보기'}</button></div>`;
+  html+='</div>';w.innerHTML=html;
 }
+function viewNotice(i){const n=(DB.notices||[])[i];if(!n) return;document.getElementById('notice-view-title').textContent=n.title;document.getElementById('notice-txt').textContent=n.content||'';openM('modal-notice');}
 
-// agency select
-function buildAgencySel(t){
-  const sel=document.getElementById(t+'-agency-sel');
-  sel.innerHTML='<option value="">직접 입력</option>'+agencies.map(a=>`<option value="${a}">${a}</option>`).join('');
-}
-function onAgencySel(t){
-  const sel=document.getElementById(t+'-agency-sel');
-  const txt=document.getElementById(t+'-agency-txt');
-  txt.value=sel.value;
-  txt.style.display=sel.value?'none':'';
-}
-
-// ── GRIDS ──
-function renderGrids(){renderGrid('a');renderGrid('k');buildAgencySel('a');buildAgencySel('k');setTodayDate();}
-function setTodayDate(){
-  const today=new Date().toISOString().slice(0,10);
-  document.getElementById('a-date').value=today;
-  document.getElementById('k-date').value=today;
-}
-function renderGrid(t){
-  const cls=t==='a'?'audition':'kids';
-  const g=document.getElementById('grid-'+t);g.innerHTML='';
-  STUDENTS[cls].forEach(name=>{
-    const cnt=feedbacks.filter(f=>f.cls===cls&&f.name===name).length;
-    const d=document.createElement('div');d.className='scard';d.id='sc-'+t+'-'+name;
-    d.innerHTML=`${cnt?`<div class="scnt">${cnt}</div>`:''}
-      <div class="av av${t}">${name.slice(0,2)}</div>
-      <div class="sname">${name}</div><div class="ssub">${CLS[cls]}</div>`;
-    d.onclick=()=>selectStu(t,name);g.appendChild(d);
+// 다가오는 행사
+function renderEventsBar(){
+  const w=document.getElementById('events-bar-wrap');if(!w) return;
+  const now=new Date();const todayStr=today();
+  const events=(DB.events||[]).filter(e=>e.date>=todayStr).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
+  if(!events.length){w.innerHTML='';return;}
+  let html='<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:800;color:var(--gray);margin-bottom:6px;padding:0 2px">📅 다가오는 행사</div>';
+  events.forEach(ev=>{
+    const d=new Date(ev.date);const diff=Math.round((d-now)/(1000*60*60*24));
+    const diffTxt=diff===0?'오늘':diff===1?'내일':diff+'일 후';
+    const urgent=diff<=3;
+    html+=`<div onclick="showPage('page-schedule')" style="background:var(--white);border:1px solid var(--border);border-left:3px solid ${urgent?'var(--red)':'var(--blue)'};border-radius:10px;padding:9px 13px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:10px">
+      <div style="min-width:36px;text-align:center;font-size:10px;font-weight:800;color:${urgent?'var(--red)':'var(--blue)'}">${diffTxt}</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:800">${esc(ev.name)}</div><div style="font-size:11px;color:var(--gray)">${ev.date}${ev.memo?' · '+esc(ev.memo):''}</div></div>
+      <div style="color:var(--gray2);font-size:18px">›</div></div>`;
   });
-}
-function selectStu(t,name){
-  selStu[t]=name;
-  document.querySelectorAll('#grid-'+t+' .scard').forEach(c=>c.className='scard');
-  document.getElementById('sc-'+t+'-'+name).className='scard sel'+t;
-  document.getElementById('ftitle-'+t).textContent=name+' 피드백 작성';
-  document.getElementById('form-'+t).classList.remove('hidden');
-  // clear fields
-  ['d-teacher','d-text','v-teacher','v-main','video-dance','video-vocal'].forEach(s=>{const el=document.getElementById(t+'-'+s);if(el)el.value='';});
-  document.getElementById(t+'-status').innerHTML='';
-  showTTab(t,'dance');
+  html+='</div>';w.innerHTML=html;
 }
 
-// ── AI GENERATE ──
-async function genAI(t){
-  const name=selStu[t];if(!name)return;
-  const cls=t==='a'?'audition':'kids';
-  const agency=getAgency(t);
-  const ico=document.getElementById(t+'-ai-ico');
-  const sta=document.getElementById(t+'-status');
-  ico.innerHTML='<span class="spin"></span>';sta.innerHTML='';
-  const teacher=document.getElementById(t+'-d-teacher').value.trim()||'선생님';
-  const prompt=`오디션반 학생 "${name}"의 ${agency||'오디션'} 내방 오디션 피드백을 작성해주세요.\n댄스와 보컬 각각 3-4문장씩, 따뜻하고 구체적인 한국어로 작성하세요. 다음 형식으로 출력:\n[댄스]\n(피드백 내용)\n\n[보컬]\n담당쌤: (피드백)\n김선령쌤: (피드백)`;
-  try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
-    const data=await res.json();
-    const text=data.content?.map(b=>b.text||'').join('')||'';
-    const danceMatch=text.match(/\[댄스\]([\s\S]*?)(?=\[보컬\]|$)/);
-    const vocalMatch=text.match(/\[보컬\]([\s\S]*?)$/);
-    if(danceMatch){const el=document.getElementById(t+'-d-text');if(el)el.value=danceMatch[1].trim();}
-    if(vocalMatch){
-      const el=document.getElementById(t+'-v-main');if(el)el.value=vocalMatch[1].trim();
-    }
-    ico.textContent='✦';
-  }catch(e){sta.innerHTML='<span class="smsg serr">오류가 발생했습니다</span>';ico.textContent='✦';}
-}
-function fillTA(id,text,teacher){
-  const m=text.match(new RegExp(teacher+'[:\\s]+(.*?)(?=\\n[가-힣A-Za-z]+쌤:|$)','s'));
-  if(m)document.getElementById(id).value=m[1].trim();
-}
-
-// ── SAVE ──
-function getAgency(t){
-  const sel=document.getElementById(t+'-agency-sel');
-  const txt=document.getElementById(t+'-agency-txt');
-  const v=txt.value.trim()||sel.value;
-  if(v&&!agencies.includes(v)){agencies.push(v);dbSaveSettings();buildAgencySel('a');buildAgencySel('k');}
-  return v;
-}
-function saveFB(t){
-  const name=selStu[t];if(!name){showMsg(t+'-status','학생을 선택해주세요',false);return;}
-  const cls=t==='a'?'audition':'kids';
-  const date=document.getElementById(t+'-date').value;
-  const agency=getAgency(t);
-  if(!date||!agency){showMsg(t+'-status','날짜와 기획사를 입력해주세요',false);return;}
-  const dTeacher=gv(t+'-d-teacher'),dText=gv(t+'-d-text');
-  const vTeacher=gv(t+'-v-teacher'),vMain=gv(t+'-v-main');
-  if(!dText&&!vMain){showMsg(t+'-status','피드백 내용을 하나 이상 입력해주세요',false);return;}
-  const videoDance=gv(t+'-video-dance'),videoVocal=gv(t+'-video-vocal');
-  const fb={id:Date.now(),cls,name,date,agency,dTeacher,dText,vTeacher,vMain,videoDance,videoVocal,ts:Date.now()};
-  feedbacks.unshift(fb);
-  dbSaveFB(fb).then(newId=>{fb.id=newId;renderGrid(t);});
-  showMsg(t+'-status','저장되었습니다',true);
-}
-function gv(id){return document.getElementById(id)?.value?.trim()||'';}
-function showMsg(id,msg,ok){
-  document.getElementById(id).innerHTML=`<span class="smsg ${ok?'sok':'serr'}">${ok?'✓ ':''} ${msg}</span>`;
-  if(ok)setTimeout(()=>document.getElementById(id).innerHTML='',2500);
-}
-
-// ── LIST ──
-function renderList(t){
-  const cls=t==='a'?'audition':'kids';
-  const fbs=feedbacks.filter(f=>f.cls===cls);
-  const flt=fltStu[t];
-  document.getElementById(t+'-tot').textContent=fbs.length;
-  document.getElementById(t+'-stus').textContent=[...new Set(fbs.map(f=>f.name))].length;
-  document.getElementById(t+'-agencies').textContent=[...new Set(fbs.map(f=>f.agency))].length;
-  // filter bar
-  const bar=document.getElementById('fbar-'+t);bar.innerHTML='';
-  const ab=mkFBtn('전체',flt==='all',()=>{fltStu[t]='all';renderList(t);},t);bar.appendChild(ab);
-  STUDENTS[cls].forEach(name=>{
-    const cnt=fbs.filter(f=>f.name===name).length;if(!cnt)return;
-    bar.appendChild(mkFBtn(`${name} (${cnt})`,flt===name,()=>{fltStu[t]=name;renderList(t);},t));
+// 영상/지식
+function renderResourceBoard(){
+  const w=document.getElementById('resource-board-wrap');if(!w) return;
+  const allRes=(DB.resources||[]).slice().reverse();
+  if(!allRes.length){w.innerHTML='';return;}
+  const showAll=window._resShowAll||false;
+  const display=showAll?allRes:allRes.slice(0,3);
+  let html='<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:800;color:var(--gray);margin-bottom:6px;padding:0 2px">🎬 영상/지식 공유</div>';
+  display.forEach(r=>{
+    const ytMatch=r.url&&r.url.match(/(?:v=|youtu\.be\/)([^&?]+)/);
+    const ytId=ytMatch?ytMatch[1]:'';
+    const cnt=(r.comments||[]).length;
+    html+=`<div onclick="openResourceDetail('${r.id}')" style="background:var(--white);border:1px solid var(--border);border-radius:12px;padding:11px 13px;margin-bottom:7px;cursor:pointer;display:flex;gap:10px;align-items:center">
+      ${ytId?`<img src="https://img.youtube.com/vi/${ytId}/mqdefault.jpg" style="width:60px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0">`:
+      r.url?`<div style="width:40px;height:40px;background:var(--light);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🔗</div>`:
+      `<div style="width:40px;height:40px;background:var(--light);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">📝</div>`}
+      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.title)}</div>
+      <div style="font-size:10px;color:var(--gray)">${r.time||''}${cnt?' · 💬 '+cnt:''}</div></div>
+      <div style="color:var(--gray2);font-size:18px">›</div></div>`;
   });
-  // items
-  const shown=(flt==='all'?fbs:fbs.filter(f=>f.name===flt));
-  // group by date+agency
-  const list=document.getElementById('list-'+t);
-  if(!shown.length){list.innerHTML='<div class="empty"><div class="empty-ic">📋</div><p>피드백이 없습니다</p></div>';return;}
-  const groups={};
-  shown.forEach(f=>{const gk=f.date+'|'+f.agency;if(!groups[gk])groups[gk]=[];groups[gk].push(f);});
-  const sortedGroups=Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0]));
-  list.innerHTML=sortedGroups.map(([gk,items])=>{
-    const [date,agency]=gk.split('|');
-    return `<div class="aud-group">
-      <div class="aud-group-hd">${date} &nbsp;·&nbsp; ${agency}</div>
-      ${items.map(f=>renderFBCard(f,true,t)).join('')}
-    </div>`;
-  }).join('');
+  if(allRes.length>3) html+=`<div style="text-align:center;margin-top:4px"><button onclick="window._resShowAll=!window._resShowAll;renderResourceBoard()" style="background:none;border:1px solid var(--border);border-radius:20px;padding:5px 16px;font-size:11px;color:var(--gray);cursor:pointer;font-family:inherit">${showAll?'▲ 접기':'▼ 더보기'}</button></div>`;
+  html+='</div>';w.innerHTML=html;
 }
-function mkFBtn(label,active,fn,t){
-  const b=document.createElement('button');b.className='fbtn'+(active?' f'+t+'o':'');b.textContent=label;b.onclick=fn;return b;
+
+// 오늘의 한마디
+function renderMsgBoard(){
+  const w=document.getElementById('message-board-wrap');if(!w) return;
+  const msgs=(DB.messages||[]).slice().reverse().slice(0,50);
+  const showAll=window._msgShowAll||false;
+  const display=showAll?msgs:msgs.slice(0,6);
+  w.innerHTML=`<div style="margin-bottom:10px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:0 2px">
+      <div><div style="font-size:14px;font-weight:800">📌 오늘의 한마디</div>
+      <div style="font-size:11px;color:var(--gray)">자유롭게 소통해요</div></div>
+      <button class="sbtn orange" onclick="openMsgModal()">+ 남기기</button>
+    </div>
+    ${!msgs.length?`<div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:20px;text-align:center;font-size:13px;color:var(--gray)">첫 한마디를 남겨보세요! 😊</div>`:
+    `<div class="postit-wrap">${display.map((m,i)=>{
+      const col=POSTIT_COLORS[i%POSTIT_COLORS.length];const replies=(m.replies||[]).length;
+      return `<div class="postit" style="background:${col}" onclick="openMsgDetail('${m.id}')">
+        <div class="postit-author" style="color:${m.isTeacher?'#b5156d':'#333'}">${m.isTeacher?'👑 ':''}${esc(m.author)}</div>
+        <div class="postit-content">${esc(m.content).replace(/\n/g,'<br>')}</div>
+        <div class="postit-footer"><span class="postit-time">${m.time}</span>${replies?`<span class="postit-reply-cnt">💬 ${replies}</span>`:''}</div>
+      </div>`;
+    }).join('')}</div>
+    ${msgs.length>6?`<div style="text-align:center;margin-top:8px"><button onclick="window._msgShowAll=!window._msgShowAll;renderMsgBoard()" style="background:none;border:1px solid var(--border);border-radius:20px;padding:6px 18px;font-size:12px;color:var(--gray);cursor:pointer;font-family:inherit">${showAll?'▲ 접기':'▼ 더보기'}</button></div>`:''}`}
+  </div>`;
 }
-function getEmbedUrl(url){
-  if(!url)return null;
-  // YouTube
-  const yt=url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
-  if(yt)return 'https://www.youtube.com/embed/'+yt[1];
-  return null; // drive links open in new tab
-}
-function renderFBCard(f,showDel,t){
-  const hasD=f.dText;
-  const hasV=f.vMain;
-  const embedDance=getEmbedUrl(f.videoDance||f.videoLink);
-  const embedVocal=getEmbedUrl(f.videoVocal);
-  const rawDance=f.videoDance||f.videoLink||'';
-  const rawVocal=f.videoVocal||'';
-  const cardId='fb-'+f.id;
-  return `<div class="acard" id="${cardId}">
-    <div class="acard-hd">
-      <div class="acard-left">
-        <div class="acard-agency">${f.agency}</div>
-        <div class="acard-meta">
-          <span class="acard-date">${f.date}</span>
-          <span class="acard-student" style="color:var(--a)">${f.name}</span>
+
+// ═══ STUDENT LIST ═══
+let _activeClass='audition';
+function renderStudentList(){
+  const w=document.getElementById('student-list-wrap');if(!w) return;
+  const all=DB.students||[];
+  const aud=all.filter(s=>s.cls==='audition'||!s.cls);
+  const kids=all.filter(s=>s.cls==='kids');
+  let html=`<div class="class-tab-bar">
+    <button class="class-tab-btn ${_activeClass==='audition'?'active-a':''}" onclick="switchClassTab('audition')">오디션반 (${aud.length}명)</button>
+    <button class="class-tab-btn ${_activeClass==='kids'?'active-k':''}" onclick="switchClassTab('kids')">키즈오디션반 (${kids.length}명)</button>
+  </div>`;
+  const list=_activeClass==='audition'?aud:kids;
+  const clsLabel=_activeClass==='audition'?'오디션반':'키즈오디션반';
+  if(!list.length){w.innerHTML=html+'<div class="empty-msg">등록된 학생이 없습니다</div>';return;}
+  html+=`<div style="font-size:11px;font-weight:800;color:var(--gray);letter-spacing:.5px;margin-bottom:7px;padding:0 2px">🌟 ${clsLabel} 명단 · ${list.length}명</div>`;
+  list.sort((a,b)=>a.name.localeCompare(b.name,'ko')).forEach((s,i)=>{
+    const lastIb=s.inbody&&s.inbody.length?s.inbody[s.inbody.length-1]:null;
+    const dCnt=Object.keys(s.classes||{}).filter(k=>k.startsWith('d')).filter(k=>s.classes[k]).length;
+    const vCnt=Object.keys(s.classes||{}).filter(k=>k.startsWith('v')).filter(k=>s.classes[k]).length;
+    const total=dCnt+vCnt;
+    const cardId='sc-'+s.id;
+    const isKids=s.cls==='kids';
+    html+=`<div class="card" style="margin-bottom:9px">
+      <div style="padding:12px 13px;display:flex;align-items:center;gap:11px">
+        <div style="font-size:12px;color:var(--gray2);min-width:19px;font-weight:700;text-align:center">${i+1}</div>
+        <div class="avatar${isKids?' kids':''}" onclick="openStudentLock(${s.id})" style="cursor:pointer">${s.photo?`<img src="${s.photo}">`:`${s.name[0]}`}</div>
+        <div style="flex:1;min-width:0;cursor:pointer" onclick="openStudentLock(${s.id})">
+          <div style="font-size:16px;font-weight:800">${esc(s.name)}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;align-items:center">
+            ${lastIb?`<span class="badge green">📊 ${lastIb.score}점</span>`:''}
+            ${dCnt?`<span class="badge dance">💃 댄스 ${dCnt}</span>`:''}
+            ${vCnt?`<span class="badge vocal">🎤 보컬 ${vCnt}</span>`:''}
+            ${!lastIb&&!total?`<span class="badge gray">수업 미배정</span>`:''}
+          </div>
         </div>
+        ${total?`<button onclick="toggleStudentClasses('${cardId}')" id="btn-${cardId}" style="background:none;border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:12px;color:var(--gray);cursor:pointer;flex-shrink:0;font-family:inherit">▼ 수업</button>`:
+        `<div style="color:var(--gray2);font-size:20px;cursor:pointer" onclick="openStudentLock(${s.id})">›</div>`}
       </div>
-      <div class="acard-right">
-        ${showDel?`<button class="delbtn" onclick="delFB('${f.id}','${t}')">✕</button>`:''}
+      ${total?`<div id="${cardId}" style="display:none;padding:9px 12px 11px;border-top:1px solid var(--border)">
+        ${dCnt?renderClassChips(s,'dance'):''}
+        ${vCnt?renderClassChips(s,'vocal'):''}
+        <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">
+          <button onclick="openStudentLock(${s.id})" style="width:100%;background:var(--orange-bg);border:1px solid #f5c6a0;border-radius:8px;padding:7px;font-size:12px;font-weight:700;color:var(--orange);cursor:pointer;font-family:inherit">개인 페이지 →</button>
+        </div>
+      </div>`:''}
+    </div>`;
+  });
+  w.innerHTML=html;
+}
+function switchClassTab(cls){_activeClass=cls;renderStudentList();}
+function renderClassChips(s,type){
+  const classes=type==='dance'?DB.danceClasses:DB.vocalClasses;
+  const prefix=type==='dance'?'d':'v';
+  const chips=[];
+  Object.keys(s.classes||{}).filter(k=>k.startsWith(prefix)).forEach(k=>{
+    const cid=s.classes[k];const c=classes.find(x=>x.id===cid);
+    if(c) chips.push(c);
+  });
+  if(!chips.length) return '';
+  const color=type==='dance'?'var(--dance)':'var(--vocal)';
+  const bg=type==='dance'?'#EFE4F8':'#D4F0E8';
+  const bd=type==='dance'?'#d4b8f0':'#a0d8c8';
+  const label=type==='dance'?'💃 댄스':'🎤 보컬';
+  return `<div style="font-size:10px;font-weight:800;color:${color};margin-bottom:5px">${label}</div>
+  <div style="display:flex;flex-wrap:wrap;margin-bottom:8px">${chips.map(c=>{
+    const t=c.day?` ${c.day}${c.timeStart?' '+c.timeStart:''}${c.timeEnd?'~'+c.timeEnd:''}`.trim():'';
+    return `<span style="display:inline-block;background:${bg};border:1px solid ${bd};border-radius:7px;padding:3px 9px;font-size:12px;margin:2px"><span style="font-weight:700;color:var(--black)">${esc(c.name)}</span><span style="color:${color};font-size:11px"> · ${esc(c.teacher)}</span>${t?`<span style="color:var(--gray);font-size:10px"> ${t}</span>`:''}</span>`;
+  }).join('')}</div>`;
+}
+function toggleStudentClasses(cardId){
+  const el=document.getElementById(cardId);const btn=document.getElementById('btn-'+cardId);
+  if(!el) return;const isOpen=el.style.display!=='none';
+  el.style.display=isOpen?'none':'block';if(btn) btn.textContent=isOpen?'▼ 수업':'▲ 닫기';
+}
+
+// ═══ STUDENT LOCK ═══
+let curSid=null,pinVal='',isAdmin=false;
+function openStudentLock(id){
+  curSid=id;const s=DB.students.find(x=>x.id===id);if(!s) return;
+  document.getElementById('lock-name').textContent=s.name;
+  document.getElementById('lock-avatar').innerHTML=s.photo?`<img src="${s.photo}">`:`${s.name[0]}`;
+  pinVal='';updPin();document.getElementById('pin-err').textContent='';
+  showPage('page-student-lock');
+}
+function pinIn(d){if(pinVal.length>=4) return;pinVal+=d;updPin();if(pinVal.length===4) setTimeout(chkPin,200);}
+function pinBk(){pinVal=pinVal.slice(0,-1);updPin();}
+function pinClr(){pinVal='';updPin();}
+function updPin(){for(let i=0;i<4;i++) document.getElementById('d'+i).classList.toggle('filled',i<pinVal.length);}
+function chkPin(){
+  const s=DB.students.find(x=>x.id===curSid);
+  if(s&&(pinVal===s.pw||pinVal==='7878')) openProfile(s.id);
+  else{document.getElementById('pin-err').textContent='비밀번호가 틀렸습니다';pinVal='';updPin();setTimeout(()=>document.getElementById('pin-err').textContent='',2000);}
+}
+
+// ═══ PROFILE ═══
+let _profileTab=0;
+function openProfile(id){
+  curSid=id;const s=DB.students.find(x=>x.id===id);if(!s) return;
+  document.getElementById('profile-hd').textContent=s.name;
+  _profileTab=0;
+  document.querySelectorAll('#profile-tabs .tab-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
+  renderProfileTab(s,0);
+  showPage('page-profile');
+}
+function profileTab(i){
+  _profileTab=i;
+  const s=DB.students.find(x=>x.id===curSid);if(!s) return;
+  document.querySelectorAll('#profile-tabs .tab-btn').forEach((b,j)=>b.classList.toggle('active',i===j));
+  renderProfileTab(s,i);
+}
+function renderProfileTab(s,tab){
+  const c=document.getElementById('profile-content');
+  if(tab===0) c.innerHTML=renderProfileMain(s);
+  else if(tab===1) renderAuditionFeedbacks(s,c);
+  else if(tab===2) renderStudentRep(s,'dance',c);
+  else if(tab===3) renderStudentRep(s,'vocal',c);
+  else if(tab===4) c.innerHTML=renderInbodyTab(s);
+}
+
+function renderProfileMain(s){
+  const lastIb=s.inbody&&s.inbody.length?s.inbody[s.inbody.length-1]:null;
+  const isKids=s.cls==='kids';
+  return `
+  <div class="card">
+    <div style="padding:18px 14px;text-align:center">
+      <div class="profile-avatar-wrap" onclick="document.getElementById('profile-img-inp').click()" style="${isKids?'background:var(--k-bg);border-color:var(--k);color:var(--k)':''}">
+        ${s.photo?`<img src="${s.photo}">`:`<span>${s.name[0]}</span>`}
+        <div style="position:absolute;bottom:0;right:0;background:${isKids?'var(--k)':'var(--orange)'};color:#fff;border-radius:50%;width:23px;height:23px;display:flex;align-items:center;justify-content:center;font-size:12px">📷</div>
+      </div>
+      <div style="font-size:21px;font-weight:900">${esc(s.name)}</div>
+      <div style="font-size:12px;color:var(--gray);margin-top:3px">${s.birth||''}</div>
+      <div style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:8px">
+        <span class="badge ${isKids?'k':'orange'}">${isKids?'키즈오디션반':'오디션반'}</span>
+        ${lastIb?`<span class="badge green">📊 인바디 ${lastIb.score}점</span>`:''}
       </div>
     </div>
-    ${(rawDance||rawVocal)?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-      ${rawDance?`
-        ${embedDance
-          ? `<div style="width:100%;border-radius:10px;overflow:hidden;border:1.5px solid var(--dancel);">
-              <div id="vid-toggle-${f.id}-d" style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--dancel);cursor:pointer;font-size:13px;font-weight:700;color:var(--dance);" onclick="toggleVideo('${f.id}-d','${embedDance}')">💃 댄스 영상 보기</div>
-              <div id="vid-frame-${f.id}-d" style="display:none;"><iframe width="100%" height="220" style="border:none;display:block;" allowfullscreen></iframe></div>
-             </div>`
-          : `<a href="${rawDance}" target="_blank" style="display:flex;align-items:center;gap:6px;padding:9px 16px;background:var(--dancel);color:var(--dance);font-size:13px;font-weight:700;border-radius:10px;text-decoration:none;border:1.5px solid var(--dancel);">💃 댄스 영상 열기 ↗</a>`
-        }`:''}
-      ${rawVocal?`
-        ${embedVocal
-          ? `<div style="width:100%;border-radius:10px;overflow:hidden;border:1.5px solid var(--vocall);">
-              <div id="vid-toggle-${f.id}-v" style="display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--vocall);cursor:pointer;font-size:13px;font-weight:700;color:var(--vocal);" onclick="toggleVideo('${f.id}-v','${embedVocal}')">🎤 보컬 영상 보기</div>
-              <div id="vid-frame-${f.id}-v" style="display:none;"><iframe width="100%" height="220" style="border:none;display:block;" allowfullscreen></iframe></div>
-             </div>`
-          : `<a href="${rawVocal}" target="_blank" style="display:flex;align-items:center;gap:6px;padding:9px 16px;background:var(--vocall);color:var(--vocal);font-size:13px;font-weight:700;border-radius:10px;text-decoration:none;border:1.5px solid var(--vocall);">🎤 보컬 영상 열기 ↗</a>`
-        }`:''}
-    </div>`:''}
-    <div class="fb-sections">
-      ${hasD?`<div class="fb-sec dance">
-        <div class="fb-sec-title d">💃 댄스</div>
-        ${f.dTeacher?`<div class="fb-teacher">${f.dTeacher}</div>`:''}
-        <div class="fb-text">${f.dText}</div>
-      </div>`:''}
-      ${hasV?`<div class="fb-sec vocal">
-        <div class="fb-sec-title v">🎤 보컬</div>
-        ${f.vMain?`${f.vTeacher?`<div class="fb-teacher">${f.vTeacher}</div>`:`<div class="fb-teacher">담당 보컬쌤</div>`}<div class="fb-text">${f.vMain}</div>`:''}
-      </div>`:''}
+  </div>
+  <!-- 목표 -->
+  <div class="card">
+    <div class="card-head"><div class="card-title">✨ 나의 목표</div></div>
+    <div class="card-body">
+      <div class="form-row"><label class="form-label">단기 목표</label>
+        <textarea id="goal-short-${s.id}" placeholder="단기 목표를 입력하세요">${esc(s.goalShort||'')}</textarea>
+      </div>
+      <div class="form-row"><label class="form-label">장기 목표</label>
+        <textarea id="goal-long-${s.id}" placeholder="장기 목표를 입력하세요">${esc(s.goalLong||'')}</textarea>
+      </div>
+      <button class="btn btn-orange" onclick="saveGoal(${s.id})">저장하기</button>
+    </div>
+  </div>
+  <!-- 수업 -->
+  <div class="card">
+    <div class="card-head"><div class="card-title">📚 댄스 수업</div></div>
+    <div class="card-body">
+      <div class="cls-grid">${renderClsGrid(s,'dance')}</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><div class="card-title">🎤 보컬 수업</div></div>
+    <div class="card-body">
+      <div class="cls-grid">${renderClsGrid(s,'vocal')}</div>
+    </div>
+  </div>
+  <!-- 선생님 한마디 -->
+  ${renderTeacherMessages(s)}
+  <!-- 메모 -->
+  <div class="card">
+    <div class="card-head"><div class="card-title">📝 메모</div></div>
+    <div class="card-body">
+      <textarea id="memo-${s.id}" placeholder="메모 입력...">${esc(s.memo||'')}</textarea>
+      <button class="btn btn-orange" style="margin-top:8px" onclick="saveMemo(${s.id})">저장</button>
     </div>
   </div>`;
 }
-function toggleVideo(id,embedUrl){
-  const toggle=document.getElementById('vid-toggle-'+id);
-  const frame=document.getElementById('vid-frame-'+id);
-  const iframe=frame.querySelector('iframe');
-  if(frame.style.display==='none'){
-    iframe.src=embedUrl;
-    frame.style.display='block';
-    toggle.innerHTML='⏸ 영상 닫기';
-    toggle.style.background='var(--sf2)';
-  }else{
-    iframe.src='';
-    frame.style.display='none';
-    toggle.innerHTML='▶ 영상 보기';
-  }
-}
-function delFB(id,t){feedbacks=feedbacks.filter(f=>String(f.id)!==String(id));dbDelFB(id);renderList(t);renderGrid(t);}
 
-// ── STUDENT MANAGEMENT ──
-function renderStuManage(){
-  ['audition','kids'].forEach(cls=>{
-    const t=cls==='audition'?'a':'k';
-    const list=document.getElementById('stu-list-'+t);
-    document.getElementById(t+'-stu-cnt').textContent=STUDENTS[cls].length+'명';
-    const stuPws=window._stuPws||{};
-    list.innerHTML=STUDENTS[cls].map((name,i)=>`
-      <div style="background:var(--bg);border-radius:9px;padding:10px 12px;font-size:13px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-          <span style="font-weight:700;">${name}</span>
-          <button onclick="delStu('${cls}',${i})" style="background:none;border:none;cursor:pointer;color:var(--mt);font-size:13px;padding:2px 4px;border-radius:4px;" onmouseover="this.style.background='var(--rl)';this.style.color='var(--rd)'" onmouseout="this.style.background='none';this.style.color='var(--mt)'">✕</button>
-        </div>
-        <div style="display:flex;gap:7px;align-items:center;">
-          <input class="ti-sm" type="text" placeholder="비밀번호" value="${stuPws[cls+':'+name]||''}" id="spw-${cls}-${i}" style="flex:1;font-size:12px;">
-          <button onclick="saveStuPw('${cls}','${name}',document.getElementById('spw-${cls}-${i}').value)" style="padding:6px 10px;border-radius:7px;font-family:inherit;font-size:11px;font-weight:700;cursor:pointer;border:none;background:var(--a);color:#fff;white-space:nowrap;">저장</button>
-        </div>
-      </div>`).join('');
-  });
-}
-async function saveStuPw(cls,name,pw){
-  if(!window._stuPws)window._stuPws={};
-  window._stuPws[cls+':'+name]=pw;
-  await db.collection('settings').doc('stuPws').set(window._stuPws);
-  showMsg('stu-status-'+(cls==='audition'?'a':'k'),'✓ '+name+' 비밀번호 저장됨',true);
-}
-function addStu(cls){
-  const t=cls==='audition'?'a':'k';
-  const inp=document.getElementById('stu-add-'+t);
-  const name=inp.value.trim();
-  if(!name){showMsg('stu-status-'+t,'이름을 입력해주세요',false);return;}
-  if(STUDENTS[cls].includes(name)){showMsg('stu-status-'+t,'이미 있는 학생입니다',false);return;}
-  STUDENTS[cls].push(name);dbSaveSettings();
-  inp.value='';renderStuManage();renderGrid(t);
-  // rebuild student pick list if visible
-  switchSC(stuCls);
-  showMsg('stu-status-'+t,'추가되었습니다',true);
-}
-function delStu(cls,i){
-  const t=cls==='audition'?'a':'k';
-  const name=STUDENTS[cls][i];
-  if(!confirm(name+'을(를) 삭제할까요? 관련 피드백은 유지됩니다.'))return;
-  STUDENTS[cls].splice(i,1);dbSaveSettings();
-  renderStuManage();renderGrid(t);switchSC(stuCls);
-}
-
-// ── STUDENT INFO ──
-async function loadStudentInfo(){
-  const d=await dbLoadStuData(curStuKey+'_info');
-  const card=document.getElementById('stu-info-card');
-  card.style.display='block';
-  document.getElementById('info-birth').value=d.birth||'';
-  document.getElementById('info-height').value=d.height||'';
-  document.getElementById('info-weight').value=d.weight||'';
-  renderInfoView(d);
-}
-function renderInfoView(d){
-  const view=document.getElementById('stu-info-view');
-  const age=d.birth?calcAge(d.birth):'';
-  view.innerHTML=`
-    <div style="background:var(--bg);border-radius:8px;padding:10px 12px;">
-      <div style="font-size:10px;font-weight:700;color:var(--mt);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;">생년월일</div>
-      <div style="font-size:14px;font-weight:500;">${d.birth||'—'}${age?' ('+age+'세)':''}</div>
-    </div>
-    <div style="background:var(--bg);border-radius:8px;padding:10px 12px;">
-      <div style="font-size:10px;font-weight:700;color:var(--mt);letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;">키</div>
-      <div style="font-size:14px;font-weight:500;">${d.height?d.height+'cm':'—'}</div>
+function renderClsGrid(s,type){
+  const classes=type==='dance'?DB.danceClasses:DB.vocalClasses;
+  const prefix=type==='dance'?'d':'v';
+  const slots=[{key:prefix+'0',label:'수업1'},{key:prefix+'1',label:'수업2'},{key:prefix+'2',label:'수업3'}];
+  return slots.map(slot=>{
+    const sel=s.classes&&s.classes[slot.key];
+    const cls=sel?classes.find(x=>x.id===sel):null;
+    const t=cls&&cls.day?`${cls.day}${cls.timeStart?' '+cls.timeStart:''}${cls.timeEnd?'~'+cls.timeEnd:''}`:'';
+    return `<div class="cls-item${cls?' selected':''}" onclick="openClsModal(${s.id},'${slot.key}','${slot.label}','${type}')">
+      <div class="cls-lbl">${slot.label}</div>
+      ${cls?`<div class="cls-val">${esc(cls.name)}</div><div class="cls-teacher">• ${esc(cls.teacher)}</div>${t?`<div style="font-size:10px;color:var(--gray);margin-top:2px">⏰ ${t}</div>`:''}`
+           :`<div class="cls-val empty">탭하여 선택</div>`}
     </div>`;
-}
-function calcAge(birth){
-  const b=new Date(birth);const today=new Date();
-  let age=today.getFullYear()-b.getFullYear();
-  const m=today.getMonth()-b.getMonth();
-  if(m<0||(m===0&&today.getDate()<b.getDate()))age--;
-  return age;
-}
-function toggleInfoEdit(){
-  const edit=document.getElementById('stu-info-edit');
-  const view=document.getElementById('stu-info-view');
-  const btn=document.getElementById('stu-info-edit-btn');
-  const isEdit=edit.style.display==='block';
-  edit.style.display=isEdit?'none':'block';
-  view.style.display=isEdit?'grid':'none';
-  btn.textContent=isEdit?'수정':'취소';
-}
-async function saveStudentInfo(){
-  const d={birth:document.getElementById('info-birth').value,height:document.getElementById('info-height').value};
-  await dbSaveStuData(curStuKey+'_info',d);
-  renderInfoView(d);
-  document.getElementById('stu-info-edit').style.display='none';
-  document.getElementById('stu-info-view').style.display='grid';
-  document.getElementById('stu-info-edit-btn').textContent='수정';
-  showMsg('info-status','저장되었습니다',true);
+  }).join('');
 }
 
-// ── INBODY ──
-let _ibFileBase64=null;
-function onIBFileChange(){
-  const file=document.getElementById('ib-file').files[0];
-  if(!file)return;
-  document.getElementById('ib-file-label').textContent=file.name;
+// 수업 선택 모달
+let _clsModal={sid:null,slotKey:null,type:null};
+function openClsModal(sid,slotKey,label,type){
+  _clsModal={sid,slotKey,type};
+  const classes=type==='dance'?DB.danceClasses:DB.vocalClasses;
+  const s=DB.students.find(x=>x.id===sid);
+  const cur=s&&s.classes&&s.classes[slotKey];
+  let det=document.getElementById('modal-cls-sel');
+  if(!det){
+    det=document.createElement('div');det.id='modal-cls-sel';det.className='modal-overlay';
+    det.onclick=function(e){if(e.target===this)closeM('modal-cls-sel');};
+    document.body.appendChild(det);
+  }
+  det.innerHTML=`<div class="modal">
+    <div class="modal-head"><div class="modal-title">${label} 선택</div><button class="close-btn" onclick="closeM('modal-cls-sel')">✕</button></div>
+    <div class="modal-body">
+      <div onclick="saveClsSel(null)" style="padding:12px;border-radius:10px;border:1.5px solid var(--border);margin-bottom:6px;cursor:pointer;color:var(--gray)">❌ 없음 (초기화)</div>
+      ${classes.map(c=>{
+        const t=c.day?` ${c.day}${c.timeStart?' '+c.timeStart:''}${c.timeEnd?'~'+c.timeEnd:''}`.trim():'';
+        return `<div onclick="saveClsSel('${c.id}')" style="padding:12px;border-radius:10px;border:1.5px solid ${cur===c.id?'var(--orange)':'var(--border)'};background:${cur===c.id?'var(--orange-bg)':'var(--white)'};margin-bottom:6px;cursor:pointer">
+          <div style="font-weight:800">${esc(c.name)}</div>
+          <div style="font-size:12px;color:var(--orange)">• ${esc(c.teacher)}</div>
+          ${t?`<div style="font-size:11px;color:var(--gray)">⏰ ${t}</div>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+  det.classList.add('active');
+}
+function saveClsSel(cid){
+  const s=DB.students.find(x=>x.id===_clsModal.sid);if(!s) return;
+  if(!s.classes) s.classes={};
+  if(cid) s.classes[_clsModal.slotKey]=cid;
+  else delete s.classes[_clsModal.slotKey];
+  fbSave('idol_students',s.id,s);
+  closeM('modal-cls-sel');
+  renderProfileTab(s,0);
+  showToast('✅ 수업 저장됨');
+}
+
+// 목표/메모 저장
+function saveGoal(sid){
+  const s=DB.students.find(x=>x.id===sid);if(!s) return;
+  s.goalShort=(document.getElementById('goal-short-'+sid)||{value:''}).value||'';
+  s.goalLong=(document.getElementById('goal-long-'+sid)||{value:''}).value||'';
+  fbSave('idol_students',s.id,s);showToast('✅ 목표 저장됨');
+}
+function saveMemo(sid){
+  const s=DB.students.find(x=>x.id===sid);if(!s) return;
+  s.memo=(document.getElementById('memo-'+sid)||{value:''}).value||'';
+  fbSave('idol_students',s.id,s);showToast('✅ 메모 저장됨');
+}
+
+// 오디션 피드백 탭 (기존 Firebase 데이터)
+async function renderAuditionFeedbacks(s,container){
+  container.innerHTML='<div style="padding:20px;text-align:center;color:var(--gray)">불러오는 중...</div>';
+  try{
+    const snap=await db.collection('feedbacks').get();
+    const all=[];snap.forEach(d=>all.push({id:d.id,...d.data()}));
+    const mine=all.filter(f=>f.name===s.name).sort((a,b)=>(b.ts||0)-(a.ts||0));
+    if(!mine.length){container.innerHTML='<div class="empty-msg" style="padding:40px">아직 오디션 피드백이 없어요</div>';return;}
+    const groups={};
+    mine.forEach(f=>{const k=(f.date||'')+'|'+(f.agency||'');if(!groups[k])groups[k]=[];groups[k].push(f);});
+    let html='';
+    Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).forEach(([k,items])=>{
+      const [date,agency]=k.split('|');
+      html+=`<div style="font-size:12px;font-weight:800;color:var(--gray);margin:14px 0 7px;display:flex;align-items:center;gap:8px">${date} · ${agency}<div style="flex:1;height:1px;background:var(--border)"></div></div>`;
+      items.forEach(f=>{
+        const hasD=f.dText;const hasV=f.vMain;
+        html+=`<div class="card" style="margin-bottom:9px">
+          <div style="padding:12px 14px">
+            ${f.videoDance||f.videoLink?`<a href="${f.videoDance||f.videoLink}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:#EFE4F8;color:var(--dance);font-size:12px;font-weight:700;border-radius:8px;text-decoration:none;margin-bottom:8px">💃 댄스 영상 ↗</a>`:''}
+            ${f.videoVocal?`<a href="${f.videoVocal}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:#D4F0E8;color:var(--vocal);font-size:12px;font-weight:700;border-radius:8px;text-decoration:none;margin-bottom:8px;margin-left:6px">🎤 보컬 영상 ↗</a>`:''}
+            ${hasD?`<div style="background:#EFE4F8;border-radius:9px;padding:10px 12px;margin-bottom:7px">
+              <div style="font-size:11px;font-weight:800;color:var(--dance);margin-bottom:4px">💃 댄스${f.dTeacher?' · '+esc(f.dTeacher):''}</div>
+              <div style="font-size:13px;line-height:1.7">${esc(f.dText)}</div>
+            </div>`:''}
+            ${hasV?`<div style="background:#D4F0E8;border-radius:9px;padding:10px 12px">
+              <div style="font-size:11px;font-weight:800;color:var(--vocal);margin-bottom:4px">🎤 보컬${f.vTeacher?' · '+esc(f.vTeacher):''}</div>
+              <div style="font-size:13px;line-height:1.7">${esc(f.vMain)}</div>
+            </div>`:''}
+          </div>
+        </div>`;
+      });
+    });
+    container.innerHTML=html;
+  }catch(e){container.innerHTML='<div class="empty-msg">피드백을 불러오지 못했어요</div>';}
+}
+
+// 레파토리 탭 (기존 Firebase studentData)
+async function renderStudentRep(s,type,container){
+  container.innerHTML='<div style="padding:20px;text-align:center;color:var(--gray)">불러오는 중...</div>';
+  const key=s.cls+':'+s.name;
+  try{
+    const snap=await db.collection('studentData').doc(key).get();
+    const data=snap.exists()?snap.data():{};
+    const list=type==='dance'?(data.danceRep||[]):(data.vocalRep||[]);
+    const label=type==='dance'?'💃 댄스 레파토리':'🎤 보컬 레파토리';
+    const color=type==='dance'?'var(--dance)':'var(--vocal)';
+    container.innerHTML=`<div class="card">
+      <div class="card-head"><div class="card-title">${label}</div></div>
+      <div class="card-body">
+        ${!list.length?'<div style="text-align:center;padding:16px;color:var(--gray);font-size:13px">아직 없어요</div>':
+        list.map(r=>`<div style="padding:9px 11px;background:var(--light);border-radius:8px;margin-bottom:6px;font-size:13px;font-weight:700;color:var(--black)">• ${esc(r)}</div>`).join('')}
+      </div>
+    </div>`;
+  }catch(e){container.innerHTML='<div class="empty-msg">불러오지 못했어요</div>';}
+}
+
+// 인바디 탭
+function renderInbodyTab(s){
+  const ibs=(s.inbody||[]).slice().reverse();
+  return `<div class="card">
+    <div class="card-head"><div class="card-title">📊 인바디 기록</div>
+      ${isAdmin?`<button class="sbtn orange" onclick="openIbModal2(${s.id})">+ 추가</button>`:''}
+    </div>
+    ${!ibs.length?'<div class="empty-msg">인바디 기록이 없어요</div>':
+    `<div style="overflow-x:auto"><table class="ib-table">
+      <thead><tr><th>날짜</th><th>점수</th><th>체중</th><th>골격근량</th><th>체지방</th>${isAdmin?'<th></th>':''}</tr></thead>
+      <tbody>${ibs.map((ib,i)=>`<tr>
+        <td style="font-weight:700">${ib.date}</td>
+        <td><span style="font-weight:800;color:var(--green)">${ib.score||'-'}</span></td>
+        <td>${ib.weight?ib.weight+'kg':'-'}</td>
+        <td>${ib.muscle?ib.muscle+'kg':'-'}</td>
+        <td>${ib.fat?ib.fat+'kg':'-'}</td>
+        ${isAdmin?`<td><button onclick="delIb(${s.id},${ibs.length-1-i})" class="del-btn">삭제</button></td>`:''}
+      </tr>`).join('')}</tbody>
+    </table></div>`}
+  </div>`;
+}
+function openIbModal2(sid){
+  const n=new Date();document.getElementById('ib-date2').value=today();
+  document.getElementById('ib-score2').value='';document.getElementById('ib-weight2').value='';
+  document.getElementById('ib-muscle2').value='';document.getElementById('ib-fat2').value='';
+  window._ibSid=sid;openM('modal-ib');
+}
+function saveIb2(){
+  const sid=window._ibSid;const s=DB.students.find(x=>x.id===sid);if(!s) return;
+  const ib={date:document.getElementById('ib-date2').value,score:document.getElementById('ib-score2').value,weight:document.getElementById('ib-weight2').value,muscle:document.getElementById('ib-muscle2').value,fat:document.getElementById('ib-fat2').value,ts:Date.now()};
+  if(!ib.date){alert('날짜를 입력해주세요');return;}
+  if(!s.inbody) s.inbody=[];
+  s.inbody.push(ib);fbSave('idol_students',s.id,s);
+  closeM('modal-ib');renderProfileTab(s,4);showToast('✅ 인바디 저장됨');
+}
+function delIb(sid,idx){
+  const s=DB.students.find(x=>x.id===sid);if(!s) return;
+  if(!confirm('삭제할까요?')) return;
+  s.inbody.splice(idx,1);fbSave('idol_students',s.id,s);
+  renderProfileTab(s,4);showToast('✅ 삭제됨');
+}
+
+// 선생님 한마디
+let _teacherMsgSid=null;
+function renderTeacherMessages(s){
+  const msgs=(s.teacherMessages||[]).slice().reverse().slice(0,5);
+  const unread=msgs.filter(m=>!m.read).length;
+  return `<div class="card">
+    <div class="card-head">
+      <div class="card-title">💌 선생님의 한마디${unread?`<span style="background:var(--red);color:#fff;border-radius:20px;padding:1px 7px;font-size:11px;font-weight:800;margin-left:6px">${unread}</span>`:''}</div>
+    </div>
+    <div class="card-body">
+      ${!msgs.length?'<div style="text-align:center;padding:14px;color:var(--gray);font-size:13px">아직 메시지가 없어요</div>':
+      msgs.map(m=>`<div style="padding:10px 12px;background:${m.read?'var(--light)':'var(--orange-bg)'};border-radius:9px;margin-bottom:7px;border:1px solid ${m.read?'var(--border)':'#f5c6a0'}">
+        <div style="font-size:12px;font-weight:800;color:var(--orange);margin-bottom:5px">${m.date}</div>
+        <div style="font-size:13px;line-height:1.6;white-space:pre-wrap">${esc(m.content)}</div>
+        ${!m.read?`<button onclick="markMsgRead(${s.id},'${m.id}')" style="margin-top:6px;background:none;border:1px solid var(--orange);color:var(--orange);border-radius:7px;padding:3px 10px;font-size:11px;cursor:pointer;font-family:inherit">확인</button>`:''}
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+function markMsgRead(sid,mid){
+  const s=DB.students.find(x=>x.id===sid);if(!s) return;
+  const m=(s.teacherMessages||[]).find(x=>x.id===mid);if(!m) return;
+  m.read=true;fbSave('idol_students',s.id,s);renderProfileTab(s,0);
+}
+function openTeacherMsg(sid){
+  _teacherMsgSid=sid;const s=DB.students.find(x=>x.id===sid);if(!s) return;
+  document.getElementById('teacher-msg-student-name').textContent=s.name;
+  document.getElementById('teacher-msg-input').value='';
+  const hist=(s.teacherMessages||[]).slice().reverse().slice(0,10);
+  document.getElementById('teacher-msg-history').innerHTML=hist.map(m=>
+    `<div style="padding:8px 10px;background:var(--light);border-radius:8px;margin-bottom:5px;font-size:12px">
+      <div style="color:var(--orange);font-weight:700;font-size:11px;margin-bottom:3px">${m.date}</div>
+      <div style="white-space:pre-wrap">${esc(m.content)}</div>
+    </div>`).join('');
+  openM('modal-teacher-msg');
+}
+function sendTeacherMsg(){
+  const content=document.getElementById('teacher-msg-input').value.trim();
+  if(!content){alert('내용을 입력해주세요');return;}
+  const s=DB.students.find(x=>x.id===_teacherMsgSid);if(!s) return;
+  if(!s.teacherMessages) s.teacherMessages=[];
+  s.teacherMessages.push({id:'tm'+Date.now(),content,date:nowTime(),read:false});
+  fbSave('idol_students',s.id,s);showToast('✅ 전송됨');closeM('modal-teacher-msg');
+}
+
+// 프로필 사진
+function handleProfileImg(inp){
+  const file=inp.files[0];if(!file) return;
   const reader=new FileReader();
-  reader.onload=e=>{
-    _ibFileBase64=e.target.result;
-    const img=document.getElementById('ib-preview');
-    img.src=_ibFileBase64;img.style.display='block';
+  reader.onload=async e=>{
+    const s=DB.students.find(x=>x.id===curSid);if(!s) return;
+    try{
+      const ref=storage.ref('idol_profiles/'+curSid+'.jpg');
+      await ref.putString(e.target.result,'data_url');
+      s.photo=await ref.getDownloadURL();
+    }catch(err){s.photo=e.target.result;}
+    fbSave('idol_students',s.id,s);renderProfileTab(s,0);showToast('✅ 사진 저장됨');
   };
   reader.readAsDataURL(file);
 }
-async function saveInbody(){
-  const date=document.getElementById('ib-date').value;
-  if(!date){showMsg('ib-status','날짜를 입력해주세요',false);return;}
-  const saveBtn=document.querySelector('[onclick="saveInbody()"]');
-  saveBtn.disabled=true;saveBtn.textContent='저장 중...';
-  document.getElementById('ib-status').innerHTML='<span class="smsg" style="background:var(--al);color:var(--a);">⏳ 저장하는 중...</span>';
-  try{
-    let imgUrl=null;
-    // upload photo to Firebase Storage if selected
-    if(_ibFileBase64){
-      try{
-        const r=storage.ref('inbody/'+curStuKey+'/'+Date.now()+'.jpg');
-        await r.putString(_ibFileBase64,'data_url');
-        imgUrl=await r.getDownloadURL();
-      }catch(se){
-        console.error('Storage error:',se);
-        showMsg('ib-status','사진 업로드 실패: Firebase Storage 규칙을 확인해주세요.',false);
-        saveBtn.disabled=false;saveBtn.textContent='기록 저장';return;
-      }
-    }
-    const rec={date,score:document.getElementById('ib-score').value,weight:document.getElementById('ib-weight').value,muscle:document.getElementById('ib-muscle').value,fat:document.getElementById('ib-fat').value,imgUrl,ts:Date.now()};
-    const existing=await dbLoadStuData(curStuKey+'_inbody');
-    const list=existing.list||[];
-    list.unshift(rec);
-    await dbSaveStuData(curStuKey+'_inbody',{list,weeklyCheck:existing.weeklyCheck||{}});
-    // reset form
-    ['ib-date','ib-score','ib-weight','ib-muscle','ib-fat'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-    document.getElementById('ib-file-label').textContent='사진 선택 (jpg, png)';
-    document.getElementById('ib-preview').style.display='none';
-    _ibFileBase64=null;
-    showMsg('ib-status','✓ 저장되었습니다',true);
-    loadInbody();
-  }catch(e){
-    console.error(e);
-    showMsg('ib-status','저장 실패: '+e.message,false);
-  }finally{
-    saveBtn.disabled=false;saveBtn.textContent='기록 저장';
+
+// ═══ MSG BOARD ═══
+function openMsgModal(){
+  document.getElementById('msg-role').value='student';updateMsgAuthorUI();
+  const sel=document.getElementById('msg-author');
+  sel.innerHTML=`<option value="">— 이름 선택 —</option>${DB.students.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}`;
+  document.getElementById('msg-pw').value='';document.getElementById('msg-content').value='';
+  document.getElementById('msg-err').textContent='';
+  if(document.getElementById('msg-teacher-name')) document.getElementById('msg-teacher-name').value='';
+  openM('modal-msg');
+}
+function updateMsgAuthorUI(){
+  const isT=document.getElementById('msg-role').value==='teacher';
+  document.getElementById('msg-student-row').style.display=isT?'none':'block';
+  document.getElementById('msg-teacher-row').style.display=isT?'block':'none';
+}
+function updateReplyAuthorUI(){
+  const isT=document.getElementById('reply-role').value==='teacher';
+  document.getElementById('reply-student-row').style.display=isT?'none':'block';
+  document.getElementById('reply-teacher-row').style.display=isT?'block':'none';
+}
+function submitMsg(){
+  const role=document.getElementById('msg-role').value;
+  const pw=document.getElementById('msg-pw').value;
+  const content=document.getElementById('msg-content').value.trim();
+  const errEl=document.getElementById('msg-err');
+  if(!content){errEl.textContent='내용을 입력해주세요';return;}
+  let authorName='';let isTeacher=false;
+  if(role==='teacher'){
+    const tname=(document.getElementById('msg-teacher-name').value||'').trim();
+    if(!tname){errEl.textContent='선생님 이름을 입력해주세요';return;}
+    if(!pw){errEl.textContent='비밀번호를 입력해주세요';return;}
+    if(pw!==DB.adminPw){errEl.textContent='관리자 비밀번호가 틀렸습니다';return;}
+    authorName=tname;isTeacher=true;
+  }else{
+    const sid=document.getElementById('msg-author').value;
+    if(!sid){errEl.textContent='이름을 선택해주세요';return;}
+    if(!pw){errEl.textContent='비밀번호를 입력해주세요';return;}
+    const s=DB.students.find(x=>x.id==sid);
+    if(!s||s.pw!==pw){errEl.textContent='비밀번호가 틀렸습니다';return;}
+    authorName=s.name;
   }
+  const newMsg={id:'msg'+Date.now(),author:authorName,isTeacher,content,time:nowTime(),replies:[]};
+  DB.messages.push(newMsg);
+  db.collection('idol_messages').doc(String(newMsg.id)).set(newMsg).catch(e=>console.warn(e));
+  closeM('modal-msg');renderMsgBoard();
 }
-async function loadInbody(){
-  const today=new Date().toISOString().slice(0,10);
-  document.getElementById('ib-date').value=today;
-  const d=await dbLoadStuData(curStuKey+'_inbody');
-  const list=d.list||[];
-  const weeklyCheck=d.weeklyCheck||{};
-  // weekly check
-  const weekKey=getWeekKey();
-  const checked=!!weeklyCheck[weekKey];
-  const btn=document.getElementById('inbody-check-btn');
-  const lbl=document.getElementById('inbody-check-label');
-  btn.textContent=checked?'✅':'○';
-  btn.style.borderColor=checked?'var(--gr)':'var(--bd)';
-  btn.style.background=checked?'var(--gl)':'var(--bg)';
-  lbl.textContent=checked?'이번 주 인바디 측정 완료! 👍':'이번 주 인바디 측정을 완료했나요?';
-  lbl.style.color=checked?'var(--gr)':'var(--mt)';
-  document.getElementById('inbody-week-status').innerHTML=checked?'<span style="color:var(--gr);font-weight:700;">✓ 완료</span>':'<span style="color:var(--rd);">미완료</span>';
-  // list
-  const el=document.getElementById('ib-list');
-  if(!list.length){el.innerHTML='<div style="text-align:center;padding:24px;color:var(--mt);font-size:13px;">아직 기록이 없어요</div>';return;}
-  el.innerHTML=list.map((r,i)=>`
-    <div style="background:var(--bg);border-radius:10px;padding:14px 16px;position:relative;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div style="font-size:14px;font-weight:700;">${r.date}</div>
-        <button onclick="delInbody(${i})" style="background:none;border:none;cursor:pointer;color:var(--mt);font-size:13px;padding:2px 4px;border-radius:4px;">✕</button>
+let currentMsgId=null;
+function openMsgDetail(id){
+  currentMsgId=id;const m=(DB.messages||[]).find(x=>x.id===id);if(!m) return;
+  const replies=m.replies||[];
+  let det=document.getElementById('modal-msg-detail');
+  if(!det){det=document.createElement('div');det.id='modal-msg-detail';det.className='modal-overlay';det.onclick=function(e){if(e.target===this)closeM('modal-msg-detail');};document.body.appendChild(det);}
+  const col=POSTIT_COLORS[(DB.messages||[]).indexOf(m)%POSTIT_COLORS.length]||'#fef08a';
+  det.innerHTML=`<div class="modal">
+    <div class="modal-head"><div class="modal-title">📌 ${esc(m.author)}의 한마디</div><button class="close-btn" onclick="closeM('modal-msg-detail')">✕</button></div>
+    <div class="modal-body">
+      <div style="background:${col};border-radius:12px;padding:14px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:800;margin-bottom:6px;color:${m.isTeacher?'var(--orange)':'var(--black)'}">${m.isTeacher?'👑 ':''}${esc(m.author)} · ${m.time}</div>
+        <div style="font-size:14px;line-height:1.6">${esc(m.content).replace(/\n/g,'<br>')}</div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:${r.img?'10px':'0'};">
-        ${r.score?`<div style="text-align:center;"><div style="font-size:10px;color:var(--mt);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">점수</div><div style="font-size:16px;font-weight:700;color:var(--a);">${r.score}</div></div>`:''}
-        ${r.weight?`<div style="text-align:center;"><div style="font-size:10px;color:var(--mt);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">체중</div><div style="font-size:16px;font-weight:700;">${r.weight}kg</div></div>`:''}
-        ${r.muscle?`<div style="text-align:center;"><div style="font-size:10px;color:var(--mt);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">골격근량</div><div style="font-size:16px;font-weight:700;color:var(--k);">${r.muscle}kg</div></div>`:''}
-        ${r.fat?`<div style="text-align:center;"><div style="font-size:10px;color:var(--mt);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;">체지방</div><div style="font-size:16px;font-weight:700;color:var(--dance);">${r.fat}kg</div></div>`:''}
-      </div>
-      ${r.imgUrl?`<img src="${r.imgUrl}" style="width:100%;border-radius:8px;border:1px solid var(--bd);margin-top:4px;">`:''}
-    </div>`).join('');
+      <div style="font-size:12px;font-weight:800;color:var(--gray);margin-bottom:8px">💬 댓글 ${replies.length}개</div>
+      ${replies.map(r=>`<div class="reply-item">
+        <div><div style="display:flex;align-items:center;gap:5px;margin-bottom:2px">
+          <span class="reply-author" style="color:${r.isTeacher?'var(--orange)':'var(--black)'}">${r.isTeacher?'👑 ':''}${esc(r.author)}</span>
+          <span class="reply-time">${r.time}</span></div>
+          <div class="reply-content">${esc(r.content).replace(/\n/g,'<br>')}</div>
+        </div></div>`).join('')}
+    </div>
+    <div class="modal-foot" style="display:flex;gap:8px">
+      <button class="btn btn-outline" onclick="closeM('modal-msg-detail')" style="flex:1;padding:11px;font-size:13px">닫기</button>
+      <button class="btn btn-orange" onclick="openReplyModal('${id}')" style="flex:1;padding:11px;font-size:13px">💬 댓글</button>
+    </div>
+  </div>`;
+  openM('modal-msg-detail');
 }
-async function toggleWeeklyCheck(){
-  const d=await dbLoadStuData(curStuKey+'_inbody');
-  const weeklyCheck=d.weeklyCheck||{};
-  const weekKey=getWeekKey();
-  weeklyCheck[weekKey]=!weeklyCheck[weekKey];
-  await dbSaveStuData(curStuKey+'_inbody',{list:d.list||[],weeklyCheck});
-  loadInbody();
+function openReplyModal(msgId){
+  currentMsgId=msgId;
+  document.getElementById('reply-role').value='student';updateReplyAuthorUI();
+  const sel=document.getElementById('reply-author');
+  sel.innerHTML=`<option value="">— 이름 선택 —</option>${DB.students.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}`;
+  document.getElementById('reply-pw').value='';document.getElementById('reply-content').value='';
+  document.getElementById('reply-err').textContent='';
+  const m=(DB.messages||[]).find(x=>x.id===msgId);
+  if(m) document.getElementById('reply-orig').textContent=m.author+': '+m.content;
+  closeM('modal-msg-detail');openM('modal-reply');
 }
-async function delInbody(i){
-  if(!confirm('이 기록을 삭제할까요?'))return;
-  const d=await dbLoadStuData(curStuKey+'_inbody');
-  const list=d.list||[];list.splice(i,1);
-  await dbSaveStuData(curStuKey+'_inbody',{list,weeklyCheck:d.weeklyCheck||{}});
-  loadInbody();
-}
-function getWeekKey(){
-  const d=new Date();const day=d.getDay();const diff=d.getDate()-day+(day===0?-6:1);
-  const mon=new Date(d.setDate(diff));return mon.toISOString().slice(0,10);
+function submitReply(){
+  const role=document.getElementById('reply-role').value;
+  const pw=document.getElementById('reply-pw').value;
+  const content=document.getElementById('reply-content').value.trim();
+  const errEl=document.getElementById('reply-err');
+  if(!content){errEl.textContent='내용을 입력해주세요';return;}
+  let authorName='';let isTeacher=false;
+  if(role==='teacher'){
+    const tname=(document.getElementById('reply-teacher-name').value||'').trim();
+    if(!tname){errEl.textContent='선생님 이름을 입력해주세요';return;}
+    if(!pw){errEl.textContent='비밀번호를 입력해주세요';return;}
+    if(pw!==DB.adminPw){errEl.textContent='관리자 비밀번호가 틀렸습니다';return;}
+    authorName=tname;isTeacher=true;
+  }else{
+    const sid=document.getElementById('reply-author').value;
+    if(!sid){errEl.textContent='이름을 선택해주세요';return;}
+    if(!pw){errEl.textContent='비밀번호를 입력해주세요';return;}
+    const s=DB.students.find(x=>x.id==sid);
+    if(!s||s.pw!==pw){errEl.textContent='비밀번호가 틀렸습니다';return;}
+    authorName=s.name;
+  }
+  const m=(DB.messages||[]).find(x=>x.id===currentMsgId);if(!m) return;
+  if(!m.replies) m.replies=[];
+  m.replies.push({id:'rep'+Date.now(),author:authorName,isTeacher,content,time:nowTime()});
+  db.collection('idol_messages').doc(String(m.id)).set(m).catch(e=>console.warn(e));
+  closeM('modal-reply');renderMsgBoard();setTimeout(()=>openMsgDetail(currentMsgId),100);
 }
 
-// ── STUDENT INFO VIEWER (teacher) ──
-let _sinfoClass='audition';
-let _sinfoStu=null;
+// ═══ RESOURCE ═══
+function openResourceDetail(id){
+  const r=(DB.resources||[]).find(x=>x.id===id);if(!r) return;
+  document.getElementById('res-detail-title').textContent=r.title;
+  const ytMatch=r.url&&r.url.match(/(?:v=|youtu\.be\/)([^&?]+)/);const ytId=ytMatch?ytMatch[1]:'';
+  const comments=(r.comments||[]);
+  document.getElementById('res-detail-body').innerHTML=`
+    ${ytId?`<div style="position:relative;padding-bottom:56.25%;height:0;border-radius:10px;overflow:hidden;margin-bottom:12px"><iframe src="https://www.youtube.com/embed/${ytId}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none" allowfullscreen></iframe></div>`:
+    r.url?`<div style="margin-bottom:12px"><a href="${r.url}" target="_blank" style="display:block;padding:12px;background:var(--orange-bg);border:1px solid #f5c6a0;border-radius:10px;text-align:center;color:var(--orange);font-weight:800;text-decoration:none">🔗 링크 열기 ↗</a></div>`:''}
+    ${r.content?`<div style="font-size:14px;line-height:1.7;white-space:pre-wrap;margin-bottom:12px">${esc(r.content)}</div>`:''}
+    <div style="font-size:12px;font-weight:800;color:var(--gray);margin-bottom:8px">💬 댓글 ${comments.length}개</div>
+    ${comments.map(c=>`<div style="padding:8px 10px;background:var(--light);border-radius:8px;margin-bottom:6px">
+      <div style="font-size:11px;font-weight:800;color:${c.isTeacher?'var(--orange)':'var(--black)'};margin-bottom:3px">${c.isTeacher?'👑 ':''}${esc(c.author)} · ${c.time}</div>
+      <div style="font-size:13px;line-height:1.5">${esc(c.content)}</div>
+    </div>`).join('')}`;
+  // populate comment author select
+  const sel=document.getElementById('res-comment-author');
+  sel.innerHTML=`<option value="">— 이름 선택 —</option>${DB.students.map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}`;
+  document.getElementById('res-comment-pw').value='';document.getElementById('res-comment-input').value='';
+  window._resDetailId=id;openM('modal-resource-detail');
+}
+function updateResCommentUI(){
+  const isT=document.getElementById('res-comment-role').value==='teacher';
+  document.getElementById('res-comment-teacher-row').style.display=isT?'block':'none';
+  const sel=document.getElementById('res-comment-author');sel.style.display=isT?'none':'';
+}
+function submitResourceComment(){
+  const role=document.getElementById('res-comment-role').value;
+  const pw=document.getElementById('res-comment-pw').value;
+  const content=document.getElementById('res-comment-input').value.trim();
+  if(!content){alert('댓글을 입력해주세요');return;}
+  let authorName='';let isTeacher=false;
+  if(role==='teacher'){
+    const tname=(document.getElementById('res-comment-teacher-name').value||'').trim();
+    if(!tname){alert('선생님 이름을 입력해주세요');return;}
+    if(pw!==DB.adminPw){alert('관리자 비밀번호가 틀렸습니다');return;}
+    authorName=tname;isTeacher=true;
+  }else{
+    const sid=document.getElementById('res-comment-author').value;
+    if(!sid){alert('이름을 선택해주세요');return;}
+    const s=DB.students.find(x=>x.id==sid);
+    if(!s||s.pw!==pw){alert('비밀번호가 틀렸습니다');return;}
+    authorName=s.name;
+  }
+  const r=(DB.resources||[]).find(x=>x.id===window._resDetailId);if(!r) return;
+  if(!r.comments) r.comments=[];
+  r.comments.push({id:'rc'+Date.now(),author:authorName,isTeacher,content,time:nowTime()});
+  fbSave('idol_resources',r.id,r);openResourceDetail(r.id);document.getElementById('res-comment-input').value='';showToast('✅ 댓글 등록됨');
+}
 
-function initSinfoSection(){
-  switchSinfoClass('audition');
+// ═══ SCHEDULE ═══
+function renderSchedule(){
+  const evEl=document.getElementById('event-list');
+  const cal=document.getElementById('year-cal');
+  const events=(DB.events||[]).sort((a,b)=>a.date.localeCompare(b.date));
+  if(!events.length){evEl.innerHTML='<div class="empty-msg">등록된 행사가 없어요</div>';cal.innerHTML='';return;}
+  const now=new Date();
+  evEl.innerHTML=events.map(ev=>{
+    const d=new Date(ev.date);const diff=Math.round((d-now)/(1000*60*60*24));
+    const past=diff<0;
+    return `<div style="background:var(--white);border-radius:12px;border:1px solid var(--border);padding:13px 15px;margin-bottom:9px;display:flex;align-items:center;gap:12px;opacity:${past?0.5:1}">
+      <div style="text-align:center;min-width:42px;background:${past?'var(--light)':'var(--orange-bg)'};border-radius:10px;padding:6px 4px">
+        <div style="font-size:16px;font-weight:900;color:${past?'var(--gray)':'var(--orange)'}">${d.getDate()}</div>
+        <div style="font-size:10px;font-weight:700;color:${past?'var(--gray2)':'var(--orange)'}">${d.getMonth()+1}월</div>
+      </div>
+      <div style="flex:1"><div style="font-size:14px;font-weight:800">${esc(ev.name)}</div>
+      ${ev.memo?`<div style="font-size:12px;color:var(--gray);margin-top:2px">${esc(ev.memo)}</div>`:''}
+      <div style="font-size:11px;color:${past?'var(--gray2)':diff<=3?'var(--red)':'var(--blue)'};margin-top:3px">${past?'지남':diff===0?'오늘!':diff===1?'내일':diff+'일 후'}</div></div>
+      ${isAdmin?`<button onclick="delEv('${ev.id}')" class="del-btn">삭제</button>`:''}
+    </div>`;
+  }).join('');
 }
-function switchSinfoClass(cls){
-  _sinfoClass=cls;_sinfoStu=null;
-  document.getElementById('sinfo-tab-a').style.background=cls==='audition'?'var(--a)':'transparent';
-  document.getElementById('sinfo-tab-a').style.color=cls==='audition'?'#fff':'var(--mt)';
-  document.getElementById('sinfo-tab-k').style.background=cls==='kids'?'var(--k)':'transparent';
-  document.getElementById('sinfo-tab-k').style.color=cls==='kids'?'#fff':'var(--mt)';
-  document.getElementById('sinfo-detail').classList.add('hidden');
-  renderSinfoGrid();
+
+// ═══ ADMIN ═══
+function goAdmin(){showPage('page-admin-lock');document.getElementById('admin-pw-input').value='';document.getElementById('admin-pw-err').textContent='';}
+function checkAdminPw(){
+  const pw=document.getElementById('admin-pw-input').value;
+  if(pw===DB.adminPw){isAdmin=true;showPage('page-admin');admTab(document.querySelector('#page-admin .tab-btn'),'students');}
+  else{document.getElementById('admin-pw-err').textContent='비밀번호가 틀렸습니다';}
 }
-function renderSinfoGrid(){
-  const g=document.getElementById('sinfo-grid');g.innerHTML='';
-  const isK=_sinfoClass==='kids';
-  STUDENTS[_sinfoClass].forEach(name=>{
-    const d=document.createElement('div');d.className='scard';
-    d.innerHTML=`<div class="av av${isK?'k':'a'}">${name.slice(0,2)}</div><div class="sname">${name}</div><div class="ssub">${CLS[_sinfoClass]}</div>`;
-    d.onclick=()=>loadSinfoStudent(name);
-    g.appendChild(d);
+function adminOut(){isAdmin=false;showPage('page-main');}
+let admTab_='students';
+function admTab(btn,tab){
+  admTab_=tab;
+  document.querySelectorAll('#page-admin .tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAdmContent();
+}
+function renderAdmContent(){
+  const c=document.getElementById('admin-content');
+  if(admTab_==='students') renderAdmStudents(c);
+  else if(admTab_==='classes') renderAdmClasses(c);
+  else if(admTab_==='schedule') renderAdmSchedule(c);
+  else if(admTab_==='notice') renderAdmNotice(c);
+  else if(admTab_==='resource') renderAdmResource(c);
+  else if(admTab_==='settings') renderAdmSettings(c);
+}
+function renderAdmStudents(c){
+  const aud=DB.students.filter(s=>s.cls==='audition'||!s.cls);
+  const kids=DB.students.filter(s=>s.cls==='kids');
+  let html='<button class="btn btn-orange" onclick="openM(\'modal-add-s\')" style="margin-bottom:14px">+ 학생 추가</button>';
+  ['오디션반','키즈오디션반'].forEach((label,li)=>{
+    const list=li===0?aud:kids;
+    html+=`<div class="sec-title">${label} (${list.length}명)</div><div class="adm-section">`;
+    list.sort((a,b)=>a.name.localeCompare(b.name,'ko')).forEach(s=>{
+      html+=`<div class="adm-row">
+        <div class="avatar${li===1?' kids':''}" style="width:34px;height:34px;font-size:14px">${s.photo?`<img src="${s.photo}">`:`${s.name[0]}`}</div>
+        <div style="flex:1"><div style="font-weight:800">${esc(s.name)}</div><div style="font-size:12px;color:var(--gray)">비번: ${s.pw||'미설정'}</div></div>
+        <button onclick="openTeacherMsg(${s.id})" class="edt-btn">💌</button>
+        <button onclick="openPwModal(${s.id})" class="edt-btn">비번</button>
+        <button onclick="delStudent(${s.id})" class="del-btn">삭제</button>
+      </div>`;
+    });
+    html+='</div>';
   });
+  c.innerHTML=html;
 }
-async function loadSinfoStudent(name){
-  _sinfoStu=name;
-  const cls=_sinfoClass;const isK=cls==='kids';
-  const key=cls+':'+name;
-  // header
-  document.getElementById('sinfo-av').textContent=name.slice(0,2);
-  document.getElementById('sinfo-av').className='shav '+(isK?'ak':'aa');
-  document.getElementById('sinfo-name').textContent=name;
-  document.getElementById('sinfo-cls').textContent=CLS[cls];
-  document.getElementById('sinfo-detail').classList.remove('hidden');
-  document.querySelectorAll('#sinfo-detail .stab').forEach((t,i)=>t.classList.toggle('on',i===0));
-  document.querySelectorAll('.ssec[id^="sinfo-s"]').forEach((s,i)=>s.classList.toggle('on',i===0));
-  // basic info
-  const info=await dbLoadStuData(key+'_info');
-  const age=info.birth?calcAge(info.birth):'';
-  document.getElementById('sinfo-basic').innerHTML=`
-    <div style="background:var(--bg);border-radius:8px;padding:10px 12px;"><div style="font-size:10px;font-weight:700;color:var(--mt);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">생년월일</div><div style="font-size:14px;font-weight:500;">${info.birth||'—'}${age?' ('+age+'세)':''}</div></div>
-    <div style="background:var(--bg);border-radius:8px;padding:10px 12px;"><div style="font-size:10px;font-weight:700;color:var(--mt);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">키</div><div style="font-size:14px;font-weight:500;">${info.height?info.height+'cm':'—'}</div></div>`;
-  // student data
-  const d=await dbLoadStuData(key);
-  // repertoire
-  const dRep=d.danceRep||[];const vRep=d.vocalRep||[];
-  document.getElementById('sinfo-dance-list').innerHTML=dRep.length?dRep.map(r=>`<div class="rep-item"><span>${r}</span></div>`).join(''):'<div style="font-size:13px;color:var(--mt);padding:6px 0;">아직 없음</div>';
-  document.getElementById('sinfo-vocal-list').innerHTML=vRep.length?vRep.map(r=>`<div class="rep-item"><span>${r}</span></div>`).join(''):'<div style="font-size:13px;color:var(--mt);padding:6px 0;">아직 없음</div>';
-  // goals
-  document.getElementById('sinfo-goal-short').textContent=d.goalShort||'—';
-  document.getElementById('sinfo-goal-long').textContent=d.goalLong||'—';
-  // memo
-  document.getElementById('sinfo-memo').textContent=d.memo||'—';
-  // inbody
-  const ib=await dbLoadStuData(key+'_inbody');
-  const ibList=ib.list||[];
-  const ibEl=document.getElementById('sinfo-inbody-list');
-  if(!ibList.length){ibEl.innerHTML='<div style="font-size:13px;color:var(--mt);">아직 기록 없음</div>';return;}
-  ibEl.innerHTML=ibList.map(r=>`
-    <div style="background:var(--bg);border-radius:10px;padding:12px 14px;">
-      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">${r.date}</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:${r.imgUrl?'10px':'0'};">
-        ${r.score?`<div style="text-align:center;"><div style="font-size:10px;color:var(--mt);font-weight:700;text-transform:uppercase;margin-bottom:3px;">점수</div><div style="font-size:15px;font-weight:700;color:var(--a);">${r.score}</div></div>`:''}
-        ${r.weight?`<div style="text-align:center;"><div style="font-size:10px;color:var(--mt);font-weight:700;text-transform:uppercase;margin-bottom:3px;">체중</div><div style="font-size:15px;font-weight:700;">${r.weight}kg</div></div>`:''}
-        ${r.muscle?`<div style="text-align:center;"><div style="font-size:10px;color:var(--mt);font-weight:700;text-transform:uppercase;margin-bottom:3px;">골격근량</div><div style="font-size:15px;font-weight:700;color:var(--k);">${r.muscle}kg</div></div>`:''}
-        ${r.fat?`<div style="text-align:center;"><div style="font-size:10px;color:var(--mt);font-weight:700;text-transform:uppercase;margin-bottom:3px;">체지방</div><div style="font-size:15px;font-weight:700;color:var(--dance);">${r.fat}kg</div></div>`:''}
-      </div>
-      ${r.imgUrl?`<img src="${r.imgUrl}" style="width:100%;border-radius:8px;border:1px solid var(--bd);">`:''}
-    </div>`).join('');
+function addStudent(){
+  const name=document.getElementById('ns-name').value.trim();
+  const cls=document.getElementById('ns-class').value;
+  const birth=document.getElementById('ns-birth').value;
+  const pw=document.getElementById('ns-pw').value;
+  if(!name){alert('이름을 입력해주세요');return;}
+  const newId=Date.now();
+  const s={id:newId,name,cls,birth,pw:pw||'0000',photo:'',classes:{},inbody:[],teacherMessages:[]};
+  DB.students.push(s);fbSave('idol_students',s.id,s);
+  closeM('modal-add-s');renderAdmContent();renderStudentList();showToast('✅ '+name+' 추가됨');
 }
-function showSinfoTab(i){
-  document.querySelectorAll('#sinfo-detail .stab').forEach((t,j)=>t.classList.toggle('on',i===j));
-  document.querySelectorAll('.ssec[id^="sinfo-s"]').forEach((s,j)=>s.classList.toggle('on',i===j));
+function delStudent(id){
+  const s=DB.students.find(x=>x.id===id);if(!s) return;
+  if(!confirm(s.name+' 학생을 삭제할까요?')) return;
+  DB.students=DB.students.filter(x=>x.id!==id);fbDel('idol_students',id);
+  renderAdmContent();renderStudentList();showToast('✅ 삭제됨');
+}
+function openPwModal(sid){
+  window._pwSid=sid;const s=DB.students.find(x=>x.id===sid);
+  document.getElementById('pw-sname').textContent=s?s.name:'';
+  document.getElementById('new-pw').value='';openM('modal-pw');
+}
+function saveStudentPw(){
+  const pw=document.getElementById('new-pw').value;
+  if(pw.length!==4||isNaN(pw)){alert('4자리 숫자를 입력해주세요');return;}
+  const s=DB.students.find(x=>x.id===window._pwSid);if(!s) return;
+  s.pw=pw;fbSave('idol_students',s.id,s);closeM('modal-pw');showToast('✅ 비밀번호 변경됨');renderAdmContent();
 }
 
-// ── NOTE BOARD ──
-let _noteTag='일반';
-function selectNoteTag(btn){
-  document.querySelectorAll('.note-tag-btn').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on');_noteTag=btn.dataset.tag;
+function renderAdmClasses(c){
+  let html='<div class="sec-title">💃 댄스 수업</div><div class="adm-section">';
+  (DB.danceClasses||[]).forEach((cl,i)=>{
+    html+=`<div class="adm-row">
+      <div style="flex:1"><div style="font-weight:800">${esc(cl.name)}</div><div style="font-size:12px;color:var(--gray)">${esc(cl.teacher)}${cl.day?' · '+cl.day:''}${cl.timeStart?' '+cl.timeStart:''}</div></div>
+      <button onclick="delClass('dance',${i})" class="del-btn">삭제</button>
+    </div>`;
+  });
+  html+=`<div class="add-row">
+    <input type="text" id="dc-name" placeholder="수업명" style="flex:2">
+    <input type="text" id="dc-teacher" placeholder="선생님">
+    <input type="text" id="dc-day" placeholder="요일" style="width:50px;flex:none">
+    <input type="text" id="dc-time" placeholder="시간" style="flex:1">
+    <button onclick="addDanceClass()">+ 추가</button>
+  </div></div>`;
+  html+='<div class="sec-title">🎤 보컬 수업</div><div class="adm-section">';
+  (DB.vocalClasses||[]).forEach((cl,i)=>{
+    html+=`<div class="adm-row">
+      <div style="flex:1"><div style="font-weight:800">${esc(cl.name)}</div><div style="font-size:12px;color:var(--gray)">${esc(cl.teacher)}${cl.day?' · '+cl.day:''}${cl.timeStart?' '+cl.timeStart:''}</div></div>
+      <button onclick="delClass('vocal',${i})" class="del-btn">삭제</button>
+    </div>`;
+  });
+  html+=`<div class="add-row">
+    <input type="text" id="vc-name" placeholder="수업명" style="flex:2">
+    <input type="text" id="vc-teacher" placeholder="선생님">
+    <input type="text" id="vc-day" placeholder="요일" style="width:50px;flex:none">
+    <input type="text" id="vc-time" placeholder="시간" style="flex:1">
+    <button onclick="addVocalClass()">+ 추가</button>
+  </div></div>`;
+  c.innerHTML=html;
 }
-function renderNoteBoard(){
-  // populate student select
-  const clsSel=document.getElementById('note-cls');
-  const stuSel=document.getElementById('note-stu');
-  clsSel.onchange=()=>updateNoteStuSelect();
-  updateNoteStuSelect();
-  renderNoteList();
+function addDanceClass(){
+  const name=document.getElementById('dc-name').value.trim();if(!name) return;
+  const cl={id:'d'+Date.now(),name,teacher:document.getElementById('dc-teacher').value,day:document.getElementById('dc-day').value,timeStart:document.getElementById('dc-time').value,timeEnd:''};
+  DB.danceClasses.push(cl);fbSaveConfig();renderAdmContent();showToast('✅ 댄스 수업 추가됨');
 }
-function updateNoteStuSelect(){
-  const cls=document.getElementById('note-cls').value;
-  const sel=document.getElementById('note-stu');
-  sel.innerHTML='<option value="all">전체</option>';
-  if(cls==='all'){
-    ['audition','kids'].forEach(c=>STUDENTS[c].forEach(n=>{const o=document.createElement('option');o.value=n+'|'+c;o.textContent=n+' ('+CLS[c]+')';sel.appendChild(o);}));
-  } else {
-    STUDENTS[cls].forEach(n=>{const o=document.createElement('option');o.value=n+'|'+cls;o.textContent=n;sel.appendChild(o);});
-  }
+function addVocalClass(){
+  const name=document.getElementById('vc-name').value.trim();if(!name) return;
+  const cl={id:'v'+Date.now(),name,teacher:document.getElementById('vc-teacher').value,day:document.getElementById('vc-day').value,timeStart:document.getElementById('vc-time').value,timeEnd:''};
+  DB.vocalClasses.push(cl);fbSaveConfig();renderAdmContent();showToast('✅ 보컬 수업 추가됨');
 }
-async function saveNote(){
-  const text=document.getElementById('note-text').value.trim();
-  if(!text){showMsg('note-status','내용을 입력해주세요',false);return;}
-  const stuVal=document.getElementById('note-stu').value;
-  const [stuName,stuCls]=stuVal==='all'?['전체','all']:stuVal.split('|');
-  const note={id:Date.now()+'',text,tag:_noteTag,stuName,stuCls,date:new Date().toLocaleDateString('ko-KR'),ts:Date.now()};
-  try{
-    await db.collection('notes').doc(note.id).set(note);
-    document.getElementById('note-text').value='';
-    showMsg('note-status','✓ 저장되었습니다',true);
-    renderNoteList();
-  }catch(e){showMsg('note-status','저장 실패: '+e.message,false);}
-}
-async function renderNoteList(){
-  const list=document.getElementById('note-list');
-  list.innerHTML='<div style="color:var(--mt);font-size:13px;padding:10px 0;">불러오는 중...</div>';
-  try{
-    const snap=await db.collection('notes').get();
-    let notes=[];snap.forEach(d=>notes.push(d.data()));
-    notes.sort((a,b)=>b.ts-a.ts);
-    // filter bar
-    const bar=document.getElementById('note-filter-bar');
-    const tags=['전체','일반','2차오디션','집중관리','칭찬','주의'];
-    bar.innerHTML=tags.map(t=>`<button class="fbtn${t==='전체'?' fao':''}" onclick="filterNotes('${t}',this)">${t}</button>`).join('');
-    if(!notes.length){list.innerHTML='<div class="empty"><div class="empty-ic">📋</div><p>아직 메모가 없어요</p></div>';return;}
-    renderNoteItems(notes);
-    window._allNotes=notes;
-  }catch(e){list.innerHTML='<div style="color:var(--rd);font-size:13px;">불러오기 실패</div>';}
-}
-function filterNotes(tag,btn){
-  document.querySelectorAll('#note-filter-bar .fbtn').forEach(b=>{b.classList.remove('fao');b.classList.remove('fko');});
-  btn.classList.add('fao');
-  const notes=window._allNotes||[];
-  const filtered=tag==='전체'?notes:notes.filter(n=>n.tag===tag);
-  renderNoteItems(filtered);
-}
-function renderNoteItems(notes){
-  const tagColors={'일반':'#8C857C','2차오디션':'#E8A020','집중관리':'var(--rd)','칭찬':'var(--gr)','주의':'var(--dance)'};
-  document.getElementById('note-list').innerHTML=notes.map(n=>`
-    <div class="note-card tag-${n.tag}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
-        <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
-          <span class="note-badge" style="background:${tagColors[n.tag]||'var(--mt)'};color:#fff;">${n.tag}</span>
-          ${n.stuName!=='전체'?`<span style="font-size:13px;font-weight:700;">${n.stuName}</span><span style="font-size:11px;color:var(--mt);">${n.stuCls==='audition'?'오디션반':n.stuCls==='kids'?'키즈오디션반':''}</span>`:'<span style="font-size:12px;color:var(--mt);">전체</span>'}
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:11px;color:var(--mt);">${n.date}</span>
-          <button onclick="delNote('${n.id}')" style="background:none;border:none;cursor:pointer;color:var(--mt);font-size:13px;padding:2px 4px;border-radius:4px;" onmouseover="this.style.background='var(--rl)'" onmouseout="this.style.background='none'">✕</button>
-        </div>
-      </div>
-      <div style="font-size:13px;line-height:1.7;white-space:pre-wrap;">${n.text}</div>
-    </div>`).join('');
-}
-async function delNote(id){
-  if(!confirm('이 메모를 삭제할까요?'))return;
-  await db.collection('notes').doc(id).delete();
-  renderNoteList();
+function delClass(type,i){
+  if(!confirm('삭제할까요?')) return;
+  if(type==='dance') DB.danceClasses.splice(i,1);else DB.vocalClasses.splice(i,1);
+  fbSaveConfig();renderAdmContent();showToast('✅ 삭제됨');
 }
 
-// ── STUDENT PW (individual) ──
-
-// ── PW ──
-function changePW(){
-  const cur=document.getElementById('cfg-cur').value;
-  const nw=document.getElementById('cfg-new').value;
-  const conf=document.getElementById('cfg-conf').value;
-  if(cur!==pw){showMsg('cfg-status','현재 비밀번호가 틀립니다',false);return;}
-  if(!nw){showMsg('cfg-status','새 비밀번호를 입력해주세요',false);return;}
-  if(nw!==conf){showMsg('cfg-status','비밀번호가 일치하지 않습니다',false);return;}
-  pw=nw;window._pw=nw;dbSaveSettings();showMsg('cfg-status','비밀번호가 변경되었습니다',true);
-  ['cfg-cur','cfg-new','cfg-conf'].forEach(i=>document.getElementById(i).value='');
+function renderAdmSchedule(c){
+  const events=(DB.events||[]).sort((a,b)=>a.date.localeCompare(b.date));
+  c.innerHTML=`<button class="btn btn-orange" onclick="openEvModal()" style="margin-bottom:14px">+ 행사 추가</button>
+  <div class="adm-section">
+    ${events.map(ev=>`<div class="adm-row">
+      <div style="flex:1"><div style="font-weight:800">${esc(ev.name)}</div><div style="font-size:12px;color:var(--gray)">${ev.date}${ev.memo?' · '+esc(ev.memo):''}</div></div>
+      <button onclick="delEv('${ev.id}')" class="del-btn">삭제</button>
+    </div>`).join('')}
+    ${!events.length?'<div class="empty-msg">행사가 없어요</div>':''}
+  </div>`;
 }
-function changeStuPW(){
-  const nw=document.getElementById('stu-pw-new').value.trim();
-  if(!nw){showMsg('stu-pw-status','비밀번호를 입력해주세요',false);return;}
-  window._stuPw=nw;dbSaveSettings();
-  document.getElementById('stu-pw-show').value=nw;
-  document.getElementById('stu-pw-new').value='';
-  showMsg('stu-pw-status','학생 비밀번호가 변경되었습니다',true);
+let editEvId2=null;
+function openEvModal(){editEvId2=null;document.getElementById('ev-title').textContent='행사 추가';document.getElementById('ev-date').value=today();document.getElementById('ev-name').value='';document.getElementById('ev-memo').value='';openM('modal-ev');}
+function saveEv(){
+  const date=document.getElementById('ev-date').value;const name=document.getElementById('ev-name').value.trim();
+  if(!date||!name){alert('날짜와 행사명을 입력해주세요');return;}
+  const ev={id:'e'+Date.now(),date,name,memo:document.getElementById('ev-memo').value};
+  if(!DB.events) DB.events=[];DB.events.push(ev);fbSaveConfig();closeM('modal-ev');
+  renderAdmContent();renderSchedule();showToast('✅ 행사 추가됨');
+}
+function delEv(id){if(!confirm('삭제할까요?')) return;DB.events=(DB.events||[]).filter(e=>e.id!==id);fbSaveConfig();renderAdmContent();renderSchedule();showToast('✅ 삭제됨');}
+
+function renderAdmNotice(c){
+  const notices=DB.notices||[];
+  c.innerHTML=`<div class="adm-section">
+    ${notices.map((n,i)=>`<div class="adm-row">
+      <div style="flex:1"><div style="font-weight:800">${esc(n.title)}</div><div style="font-size:12px;color:var(--gray);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${esc((n.content||'').substring(0,40))}</div></div>
+      <button onclick="delNotice(${i})" class="del-btn">삭제</button>
+    </div>`).join('')}
+    ${!notices.length?'<div class="empty-msg">공지가 없어요</div>':''}
+  </div>
+  <div style="margin-top:12px;background:var(--white);border-radius:13px;border:1px solid var(--border);padding:13px">
+    <div class="form-row"><label class="form-label">제목</label><input type="text" id="notice-title" placeholder="공지 제목"></div>
+    <div class="form-row"><label class="form-label">내용</label><textarea id="notice-content" placeholder="공지 내용" style="min-height:100px"></textarea></div>
+    <button class="btn btn-orange" onclick="addNotice()">공지 추가</button>
+  </div>`;
+}
+function addNotice(){
+  const title=document.getElementById('notice-title').value.trim();const content=document.getElementById('notice-content').value.trim();
+  if(!title){alert('제목을 입력해주세요');return;}
+  if(!DB.notices) DB.notices=[];DB.notices.push({id:'n'+Date.now(),title,content,date:today()});
+  fbSaveConfig();renderAdmContent();renderNoticeBar();showToast('✅ 공지 추가됨');
+}
+function delNotice(i){if(!confirm('삭제할까요?')) return;(DB.notices||[]).splice(i,1);fbSaveConfig();renderAdmContent();renderNoticeBar();}
+
+function renderAdmResource(c){
+  const res=(DB.resources||[]).slice().reverse();
+  c.innerHTML=`<div class="adm-section">
+    ${res.map(r=>`<div class="adm-row">
+      <div style="flex:1"><div style="font-weight:800;font-size:13px">${esc(r.title)}</div><div style="font-size:11px;color:var(--gray)">${r.url?r.url.substring(0,30)+'…':'텍스트'}</div></div>
+      <button onclick="delResource('${r.id}')" class="del-btn">삭제</button>
+    </div>`).join('')}
+    ${!res.length?'<div class="empty-msg">등록된 자료가 없어요</div>':''}
+  </div>
+  <div style="margin-top:12px;background:var(--white);border-radius:13px;border:1px solid var(--border);padding:13px">
+    <div class="form-row"><label class="form-label">제목</label><input type="text" id="res-title" placeholder="제목"></div>
+    <div class="form-row"><label class="form-label">URL (유튜브/링크)</label><input type="text" id="res-url" placeholder="https://..."></div>
+    <div class="form-row"><label class="form-label">내용 (선택)</label><textarea id="res-content" placeholder="설명 또는 본문" style="min-height:80px"></textarea></div>
+    <button class="btn btn-orange" onclick="addResource()">자료 추가</button>
+  </div>`;
+}
+function addResource(){
+  const title=document.getElementById('res-title').value.trim();if(!title){alert('제목을 입력해주세요');return;}
+  const r={id:'res'+Date.now(),title,url:document.getElementById('res-url').value.trim(),content:document.getElementById('res-content').value.trim(),time:today(),comments:[]};
+  if(!DB.resources) DB.resources=[];DB.resources.push(r);
+  fbSave('idol_resources',r.id,r);renderAdmContent();renderResourceBoard();showToast('✅ 자료 추가됨');
+}
+function delResource(id){if(!confirm('삭제할까요?')) return;DB.resources=(DB.resources||[]).filter(x=>x.id!==id);fbDel('idol_resources',id);renderAdmContent();renderResourceBoard();}
+
+function renderAdmSettings(c){
+  c.innerHTML=`<div class="adm-section">
+    <div class="adm-row">
+      <div style="flex:1"><div style="font-weight:800">관리자 비밀번호</div><div style="font-size:12px;color:var(--gray)">현재: ${DB.adminPw}</div></div>
+    </div>
+    <div class="add-row">
+      <input type="password" id="new-admin-pw" placeholder="새 비밀번호">
+      <button onclick="changeAdminPw()">변경</button>
+    </div>
+  </div>
+  <div class="adm-section" style="margin-top:12px">
+    <div class="adm-row">
+      <div style="flex:1;font-weight:800">전체 메시지 보내기</div>
+      <button onclick="openM('modal-broadcast')" class="edt-btn">📢 전송</button>
+    </div>
+  </div>`;
+}
+function changeAdminPw(){
+  const pw=document.getElementById('new-admin-pw').value.trim();if(!pw){alert('비밀번호를 입력해주세요');return;}
+  DB.adminPw=pw;fbSaveConfig();showToast('✅ 관리자 비밀번호 변경됨');renderAdmContent();
+}
+function sendBroadcast(){
+  const name=(document.getElementById('broadcast-teacher-name').value||'').trim();
+  const content=document.getElementById('broadcast-content').value.trim();
+  if(!name||!content){alert('이름과 메시지를 입력해주세요');return;}
+  if(!confirm('모든 학생 '+DB.students.length+'명에게 전송할까요?')) return;
+  DB.students.forEach(s=>{
+    if(!s.teacherMessages) s.teacherMessages=[];
+    s.teacherMessages.push({id:'tm'+Date.now()+Math.random(),content:'['+name+'] '+content,date:nowTime(),read:false});
+    fbSave('idol_students',s.id,s);
+  });
+  showToast('✅ 전송 완료');closeM('modal-broadcast');
 }
 
-async function initApp(){
-  document.getElementById('loading-screen').style.display='flex';
-  try{
-    const snap=await db.collection('settings').doc('main').get();
-    if(snap.exists){
-      const d=snap.data();
-      pw=d.pw||'1234';window._stuPw=d.stuPw||'0000';
-      agencies=d.agencies||[...DEFAULT_AGENCIES];
-      STUDENTS=d.students||JSON.parse(JSON.stringify(DEFAULT_STUDENTS));
-    }else{
-      await db.collection('settings').doc('main').set({pw:'1234',stuPw:'0000',agencies:[...DEFAULT_AGENCIES],students:JSON.parse(JSON.stringify(DEFAULT_STUDENTS))});
-    }
-    // Load individual student passwords
-    const stuPwSnap=await db.collection('settings').doc('stuPws').get();
-    window._stuPws=stuPwSnap.exists?stuPwSnap.data():{};
-    const fbSnap=await db.collection('feedbacks').get();
-    feedbacks=[];fbSnap.forEach(d=>feedbacks.push({id:d.id,...d.data()}));
-    feedbacks.sort((a,b)=>(b.ts||0)-(a.ts||0));
-    window._initDone=true;
-  }catch(e){console.error('Init error:',e);}
-  document.getElementById('loading-screen').style.display='none';
-}
-
-window._initPromise = initApp().then(()=>{window._initDone=true;});
+// ═══ INIT ═══
+window.addEventListener('load',async()=>{
+  await new Promise(r=>setTimeout(r,200));
+  await loadAll();
+  startMsgSync();
+});
 </script>
-
 </body>
 </html>
