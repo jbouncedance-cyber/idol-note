@@ -207,9 +207,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
   </div>
   <div class="tb" id="prof-tabs">
     <button class="tbtn on" onclick="profTab(0)">📋 기본정보</button>
-    <button class="tbtn" onclick="profTab(1)">🎬 오디션피드백</button>
-    <button class="tbtn" onclick="profTab(2)">💃 댄스레파토리</button>
-    <button class="tbtn" onclick="profTab(3)">🎤 보컬레파토리</button>
+    <button class="tbtn" onclick="profTab(1)">📝 오디션지원기록</button>
+    <button class="tbtn" onclick="profTab(2)">🎬 피드백</button>
+    <button class="tbtn" onclick="profTab(3)">💃 댄스레파토리</button>
+    <button class="tbtn" onclick="profTab(4)">🎤 보컬레파토리</button>
   </div>
   <div class="page-body">
     <div class="ct" id="prof-ct"></div>
@@ -433,6 +434,7 @@ window.DB={
     {id:12,name:'임사랑',cls:'kids',birth:'',height:'',pw:'0000',photo:'',classes:{},inbody:[],monthlyGoals:[],weeklies:[],goals:{idol:''},teacherMessages:[]},
     {id:13,name:'최소민',cls:'kids',birth:'',height:'',pw:'0000',photo:'',classes:{},inbody:[],monthlyGoals:[],weeklies:[],goals:{idol:''},teacherMessages:[]}
   ],
+  teacherMemos:[],
   danceClasses:[
     {id:'r1',name:'팝핑기초',teacher:'여린',day:'월',ts:'19:00',te:'20:00'},{id:'r2',name:'팝핑',teacher:'여린',day:'월',ts:'20:00',te:'21:00'},
     {id:'r3',name:'팝컨트롤',teacher:'브라운티오',day:'수',ts:'20:00',te:'22:00'},{id:'r4',name:'팝핑',teacher:'브라운티오',day:'수',ts:'21:00',te:'22:00'},
@@ -487,7 +489,7 @@ function getWkLbl(off){const n=new Date();const d=n.getDay();const m=new Date(n)
 // FIREBASE HELPERS
 async function fbSv(col,id,data){try{await db.collection(col).doc(String(id)).set(data);}catch(e){console.warn(e);}}
 async function fbDl(col,id){try{await db.collection(col).doc(String(id)).delete();}catch(e){}}
-async function fbCfg(){try{await db.collection('idol_config').doc('main').set({adminPw:DB.adminPw,notices:DB.notices||[],events:DB.events||[],danceClasses:DB.danceClasses||[],vocalClasses:DB.vocalClasses||[],etcClasses:DB.etcClasses||[],trainingClasses:DB.trainingClasses||[],updatedAt:Date.now()});}catch(e){console.warn(e);}}
+async function fbCfg(){try{await db.collection('idol_config').doc('main').set({adminPw:DB.adminPw,notices:DB.notices||[],events:DB.events||[],danceClasses:DB.danceClasses||[],vocalClasses:DB.vocalClasses||[],etcClasses:DB.etcClasses||[],trainingClasses:DB.trainingClasses||[],teacherMemos:DB.teacherMemos||[],updatedAt:Date.now()});}catch(e){console.warn(e);}}
 
 async function loadAll(){
   try{
@@ -502,6 +504,7 @@ async function loadAll(){
       if(d.vocalClasses!==undefined)DB.vocalClasses=normCls(d.vocalClasses);
       if(d.etcClasses!==undefined)DB.etcClasses=normCls(d.etcClasses);
       if(d.trainingClasses!==undefined)DB.trainingClasses=normCls(d.trainingClasses);
+      if(d.teacherMemos)DB.teacherMemos=d.teacherMemos;
     }else{await fbCfg();}
     const ss=await db.collection('idol_students').get();
     if(!ss.empty){DB.students=[];ss.forEach(d=>DB.students.push(d.data()));}
@@ -725,10 +728,10 @@ function renderPTab(s,tab){
     setTimeout(()=>renderPTab(s,tab),100);return;
   }
   if(tab===0)ct.innerHTML=renderPMain(s);
-  else if(tab===1)renderFb(s,ct);
-  else if(tab===2)renderRep(s,'dance',ct);
-  else if(tab===3)renderRep(s,'vocal',ct);
-  // tab 4는 더 이상 사용 안 함 (인바디는 기본정보 탭 안에)
+  else if(tab===1)ct.innerHTML=renderAuditionRecord(s);
+  else if(tab===2)renderFb(s,ct);
+  else if(tab===3)renderRep(s,'dance',ct);
+  else if(tab===4)renderRep(s,'vocal',ct);
   // 스크롤 맨 위로
   const pg=document.getElementById('pg-prof');if(pg)pg.scrollTop=0;
 }
@@ -752,8 +755,11 @@ function renderPMain(s){
     </div>
   </div></div>
 
-  <div class="cd"><div class="cd-h"><div class="cd-t">🌟 아이돌 지망생으로서의 목표</div></div><div class="cd-b">
-    <textarea id="ig-${s.id}" placeholder="나의 꿈과 목표를 적어보세요" style="min-height:80px">${esc((s.goals&&s.goals.idol)||'')}</textarea>
+  <div class="cd"><div class="cd-h"><div class="cd-t">🏆 지망 1순위 기획사</div></div><div class="cd-b">
+    <div style="background:linear-gradient(135deg,rgba(107,63,160,0.08),rgba(201,162,39,0.05));border:1px solid #E8DEFF;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--gy)">
+      ⭐ 목표하는 기획사와 이유, 목표 시기 등을 자유롭게 적어보세요
+    </div>
+    <textarea id="ig-${s.id}" placeholder="예) SM엔터테인먼트 - 2026년 상반기 내방오디션 목표&#10;이유: 댄스퍼포먼스 중심 가수를 꿈꾸고 있어서" style="min-height:100px">${esc((s.goals&&s.goals.idol)||'')}</textarea>
     <button class="btn btn-or" style="margin-top:8px" onclick="saveIdolGoal(${s.id})">저장</button>
   </div></div>
 
@@ -888,6 +894,159 @@ function openTMsg(sid){_tmSid=sid;const s=DB.students.find(x=>x.id===sid);if(!s)
 function sendTMsg(){const c=document.getElementById('tmsg-inp').value.trim();if(!c){alert('내용을 입력해주세요');return;}const s=DB.students.find(x=>x.id===_tmSid);if(!s)return;if(!s.teacherMessages)s.teacherMessages=[];s.teacherMessages.push({id:'tm'+Date.now(),content:c,date:nowT(),read:false});fbSv('idol_students',s.id,s);toast('✅ 전송됨');closeM('ov-tmsg');}
 
 // FEEDBACK TAB
+// 오디션 지원 기록
+function renderAuditionRecord(s){
+  const records=(s.auditions||[]).slice().reverse();
+  const agencyColors={'SM':'#1A1A2E','JYP':'#FF4500','YG':'#1A1A1A','HYBE':'#2D2D2D','더블랙레이블':'#4A0080'};
+  const resultColors={'대기중':'#f97316','불합격':'var(--rd)','1차 합격':'var(--bl)','최종 합격':'var(--gn)'};
+  const resultBg={'대기중':'#fff7ed','불합격':'var(--rdb)','1차 합격':'var(--blb)','최종 합격':'var(--gnb)'};
+  return `<div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div>
+        <div style="font-size:14px;font-weight:800;color:var(--bk)">📝 오디션 지원 기록</div>
+        <div style="font-size:11px;color:var(--gy);margin-top:2px">총 ${(s.auditions||[]).length}회 지원 · ${(s.auditions||[]).filter(a=>a.result==='최종 합격').length}회 합격</div>
+      </div>
+      <button onclick="openAuditionAdd(${s.id})" style="background:linear-gradient(135deg,var(--or),var(--or2));color:#fff;border:none;border-radius:10px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(107,63,160,0.3)">+ 기록 추가</button>
+    </div>
+    ${!records.length
+      ?`<div style="text-align:center;padding:40px 20px;background:#fff;border-radius:14px;border:1px solid #E8DEFF">
+          <div style="font-size:40px;margin-bottom:12px">🎯</div>
+          <div style="font-weight:800;font-size:15px;color:var(--bk);margin-bottom:6px">아직 지원 기록이 없어요</div>
+          <div style="font-size:13px;color:var(--gy)">+ 기록 추가 버튼으로 첫 오디션을 기록해보세요!</div>
+        </div>`
+      :records.map((r,i)=>{
+        const ridx=(s.auditions||[]).length-1-i;
+        const rc=resultColors[r.result]||'var(--gy)';
+        const rb=resultBg[r.result]||'var(--lt)';
+        return `<div style="background:#fff;border-radius:14px;border:1px solid #E8DEFF;margin-bottom:12px;overflow:hidden;box-shadow:0 2px 12px rgba(107,63,160,0.08)">
+          <!-- 헤더 -->
+          <div style="background:linear-gradient(135deg,#2D1054,#4A2080);padding:12px 14px;display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div style="font-size:15px;font-weight:800;color:var(--gold)">${esc(r.agency)}</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:2px">${r.date} · ${esc(r.type||'')}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="background:${rb};color:${rc};border-radius:20px;padding:4px 12px;font-size:12px;font-weight:800;border:1px solid ${rc}">${r.result||'대기중'}</span>
+            </div>
+          </div>
+          <!-- 내용 -->
+          <div style="padding:12px 14px">
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+              ${r.field?`<span style="background:#EFE4F8;color:var(--dn);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700">🎵 ${esc(r.field)}</span>`:''}
+              ${r.content?`<span style="background:#f0f9ff;color:var(--bl);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700">🎬 ${esc(r.content)}</span>`:''}
+            </div>
+            ${r.feeling?`<div style="background:rgba(107,63,160,0.05);border-left:3px solid var(--or);border-radius:0 8px 8px 0;padding:8px 12px;margin-bottom:8px">
+              <div style="font-size:11px;font-weight:800;color:var(--or);margin-bottom:4px">💭 느낀 점</div>
+              <div style="font-size:13px;line-height:1.6;color:var(--bk);white-space:pre-wrap">${esc(r.feeling)}</div>
+            </div>`:''}
+            ${r.improve?`<div style="background:rgba(201,162,39,0.06);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;padding:8px 12px;margin-bottom:10px">
+              <div style="font-size:11px;font-weight:800;color:var(--gold);margin-bottom:4px">📈 다음에 보완할 점</div>
+              <div style="font-size:13px;line-height:1.6;color:var(--bk);white-space:pre-wrap">${esc(r.improve)}</div>
+            </div>`:''}
+            <div style="display:flex;gap:8px;padding-top:8px;border-top:1px solid #E8DEFF">
+              <button onclick="openAuditionEdit(${s.id},${ridx})" style="flex:1;background:none;border:1px solid #E8DEFF;border-radius:8px;padding:7px;font-size:12px;font-weight:700;color:var(--gy);cursor:pointer;font-family:inherit">수정</button>
+              <button onclick="delAudition(${s.id},${ridx})" style="background:none;border:1px solid var(--rdbd);border-radius:8px;padding:7px;font-size:12px;font-weight:700;color:var(--rd);cursor:pointer;font-family:inherit">삭제</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+  </div>`;
+}
+
+const AUDIT_TYPES=['내방오디션','이메일오디션','공개오디션','온라인오디션','서류심사'];
+const AUDIT_FIELDS=['댄스','보컬','댄스+보컬','랩','연기','기타'];
+const AUDIT_RESULTS=['대기중','불합격','1차 합격','최종 합격'];
+let _auditSid=null,_auditIdx=-1;
+
+function openAuditionAdd(sid){
+  _auditSid=sid;_auditIdx=-1;
+  showAuditModal('오디션 지원 기록 추가',{});
+}
+function openAuditionEdit(sid,idx){
+  _auditSid=sid;_auditIdx=idx;
+  const s=DB.students.find(x=>x.id===sid);
+  const r=(s&&s.auditions||[])[idx]||{};
+  showAuditModal('오디션 지원 기록 수정',r);
+}
+function showAuditModal(title,r){
+  let det=document.getElementById('ov-audit');
+  if(!det){det=document.createElement('div');det.id='ov-audit';det.className='ov';det.onclick=function(e){if(e.target===this)closeM('ov-audit');};document.body.appendChild(det);}
+  det.innerHTML=`<div class="md" style="max-height:92vh">
+    <div class="mh"><div class="mt">🎯 ${title}</div><button class="xb" onclick="closeM('ov-audit')">✕</button></div>
+    <div class="mb">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" class="fr">
+        <div><label class="fl">날짜</label><input type="date" id="au-date" value="${r.date||today()}"></div>
+        <div><label class="fl">결과</label>
+          <select id="au-result">
+            ${AUDIT_RESULTS.map(v=>`<option value="${v}" ${r.result===v?'selected':''}>${v}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="fr"><label class="fl">기획사명</label>
+        <input type="text" id="au-agency" placeholder="예: SM엔터테인먼트" value="${esc(r.agency||'')}">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" class="fr">
+        <div><label class="fl">오디션 종류</label>
+          <select id="au-type">
+            ${AUDIT_TYPES.map(v=>`<option value="${v}" ${r.type===v?'selected':''}>${v}</option>`).join('')}
+          </select>
+        </div>
+        <div><label class="fl">지원 분야</label>
+          <select id="au-field">
+            ${AUDIT_FIELDS.map(v=>`<option value="${v}" ${r.field===v?'selected':''}>${v}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="fr"><label class="fl">제출한 곡 또는 영상</label>
+        <input type="text" id="au-content" placeholder="예: Whiplash - aespa / 구글드라이브 링크" value="${esc(r.content||'')}">
+      </div>
+      <div class="fr"><label class="fl">💭 느낀 점</label>
+        <textarea id="au-feeling" placeholder="오디션을 통해 느낀 점, 분위기, 피드백 등" style="min-height:80px">${esc(r.feeling||'')}</textarea>
+      </div>
+      <div class="fr" style="margin-bottom:0"><label class="fl">📈 다음에 보완할 점</label>
+        <textarea id="au-improve" placeholder="다음 오디션을 위해 개선하고 싶은 것들" style="min-height:80px">${esc(r.improve||'')}</textarea>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-or" onclick="saveAudition()">저장하기</button></div>
+  </div>`;
+  det.classList.add('on');
+}
+function saveAudition(){
+  const agency=(document.getElementById('au-agency').value||'').trim();
+  if(!agency){alert('기획사명을 입력해주세요');return;}
+  const record={
+    date:document.getElementById('au-date').value,
+    agency,
+    type:document.getElementById('au-type').value,
+    field:document.getElementById('au-field').value,
+    content:(document.getElementById('au-content').value||'').trim(),
+    result:document.getElementById('au-result').value,
+    feeling:(document.getElementById('au-feeling').value||'').trim(),
+    improve:(document.getElementById('au-improve').value||'').trim(),
+    id:'au'+Date.now()
+  };
+  const s=DB.students.find(x=>x.id===_auditSid);if(!s)return;
+  if(!s.auditions)s.auditions=[];
+  if(_auditIdx>=0)s.auditions[_auditIdx]=record;
+  else s.auditions.push(record);
+  fbSv('idol_students',s.id,s);
+  closeM('ov-audit');
+  const ct=document.getElementById('prof-ct');
+  if(ct){ct.innerHTML='<div style="padding:20px;text-align:center"><div style="width:24px;height:24px;border:3px solid #f5c6a0;border-top-color:var(--or);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div></div>';}
+  setTimeout(()=>renderPTab(s,1),50);
+  toast('✅ 오디션 기록 저장됨');
+}
+function delAudition(sid,idx){
+  if(!confirm('삭제할까요?'))return;
+  const s=DB.students.find(x=>x.id===sid);if(!s||!s.auditions)return;
+  s.auditions.splice(idx,1);
+  fbSv('idol_students',s.id,s);
+  const ct=document.getElementById('prof-ct');
+  if(ct){ct.innerHTML='<div style="padding:20px;text-align:center"><div style="width:24px;height:24px;border:3px solid #f5c6a0;border-top-color:var(--or);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div></div>';}
+  setTimeout(()=>renderPTab(s,1),50);
+  toast('✅ 삭제됨');
+}
+
 async function renderFb(s,c){
   c.innerHTML='<div style="padding:20px;text-align:center;color:var(--gy)">불러오는 중...</div>';
   try{
@@ -898,7 +1057,9 @@ async function renderFb(s,c){
     let h='';
     Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).forEach(([k,items])=>{
       const [date,agency]=k.split('|');
-      h+=`<div style="font-size:12px;font-weight:800;color:var(--gy);margin:14px 0 7px;display:flex;align-items:center;gap:8px">${date} · ${agency}<div style="flex:1;height:1px;background:var(--bd)"></div></div>`;
+      // 같은 기획사의 오디션 기록 찾기
+      const relAudit=(s.auditions||[]).find(a=>a.agency===agency&&a.date===date);
+      h+=`<div style="font-size:12px;font-weight:800;color:var(--gy);margin:14px 0 7px;display:flex;align-items:center;gap:8px">${date} · ${agency}${relAudit?`<span style="background:linear-gradient(135deg,var(--or),var(--or2));color:#fff;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700">📝 ${relAudit.result||'대기중'}</span>`:''}<div style="flex:1;height:1px;background:var(--bd)"></div></div>`;
       items.forEach(f=>{
         h+=`<div class="cd" style="margin-bottom:9px"><div style="padding:12px 14px">
           ${f.videoDance?`<a href="${f.videoDance}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:#EFE4F8;color:var(--dn);font-size:12px;font-weight:700;border-radius:8px;text-decoration:none;margin-bottom:8px">💃 댄스 영상 ↗</a>`:''}
@@ -1160,8 +1321,95 @@ function renderAdm(){
 function renderAdmMain(container){
   // 게시판 + 학생목록 합체
   if(!container) return;
-  container.innerHTML='<div id="adm-w-ntc"></div><div id="adm-w-ev"></div><div id="adm-w-res"></div><div id="adm-w-msg"></div><div id="adm-w-stu"></div>';
+  container.innerHTML='<div id="adm-w-memo"></div><div id="adm-w-ntc"></div><div id="adm-w-ev"></div><div id="adm-w-res"></div><div id="adm-w-msg"></div><div id="adm-w-stu"></div>';
+  renderAdmMemo();
   renderAdmBoard(container,true);
+}
+function renderAdmMemo(){
+  const w=document.getElementById('adm-w-memo');if(!w)return;
+  const memos=DB.teacherMemos||[];
+  const now=new Date();const nowStr=(now.getMonth()+1)+'/'+now.getDate()+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  w.innerHTML=`<div style="margin-bottom:12px">
+    <div style="background:linear-gradient(135deg,#2D1054,#4A2080);border-radius:14px;overflow:hidden;box-shadow:0 4px 20px rgba(107,63,160,0.3)">
+      <div style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(201,162,39,0.2)">
+        <div>
+          <div style="font-size:14px;font-weight:800;color:var(--gold)">🔒 선생님 전용 메모</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">관리자만 볼 수 있어요</div>
+        </div>
+        <button onclick="openTeacherMemoAdd()" style="background:rgba(201,162,39,0.2);border:1px solid rgba(201,162,39,0.4);border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--gold);cursor:pointer;font-family:inherit">+ 추가</button>
+      </div>
+      <div style="padding:10px 14px 12px">
+        ${!memos.length
+          ?'<div style="text-align:center;padding:16px;color:rgba(255,255,255,0.4);font-size:13px">메모가 없어요. + 추가 버튼으로 작성해보세요!</div>'
+          :memos.slice().reverse().map((m,i)=>`
+          <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(201,162,39,0.15);border-radius:10px;padding:10px 12px;margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
+              <div style="font-size:11px;color:rgba(255,255,255,0.5)">${m.date}</div>
+              <div style="display:flex;gap:5px;flex-shrink:0">
+                <button onclick="openTeacherMemoEdit(${memos.length-1-i})" style="background:none;border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.6);border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;font-family:inherit">수정</button>
+                <button onclick="delTeacherMemo(${memos.length-1-i})" style="background:none;border:1px solid rgba(239,68,68,0.4);color:var(--rd);border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;font-family:inherit">삭제</button>
+              </div>
+            </div>
+            <div style="font-size:13px;line-height:1.6;color:rgba(255,255,255,0.88);white-space:pre-wrap">${esc(m.content)}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+let _memoEditIdx=-1;
+function openTeacherMemoAdd(){
+  _memoEditIdx=-1;
+  let det=document.getElementById('ov-tmemo');
+  if(!det){det=document.createElement('div');det.id='ov-tmemo';det.className='ov';det.onclick=function(e){if(e.target===this)closeM('ov-tmemo');};document.body.appendChild(det);}
+  det.innerHTML=`<div class="md">
+    <div class="mh"><div class="mt">🔒 선생님 메모 추가</div><button class="xb" onclick="closeM('ov-tmemo')">✕</button></div>
+    <div class="mb">
+      <div style="background:rgba(107,63,160,0.08);border:1px solid #E8DEFF;border-radius:9px;padding:9px 12px;margin-bottom:12px;font-size:12px;color:var(--or)">💡 관리자만 볼 수 있는 메모예요</div>
+      <div class="fr"><label class="fl">내용</label><textarea id="tmemo-inp" placeholder="참고사항, 공유사항 등 자유롭게 작성하세요" style="min-height:120px"></textarea></div>
+    </div>
+    <div class="mf"><button class="btn btn-or" onclick="saveTeacherMemo()">저장</button></div>
+  </div>`;
+  det.classList.add('on');
+  setTimeout(()=>{const el=document.getElementById('tmemo-inp');if(el)el.focus();},100);
+}
+function openTeacherMemoEdit(idx){
+  _memoEditIdx=idx;
+  const m=(DB.teacherMemos||[])[idx];if(!m)return;
+  let det=document.getElementById('ov-tmemo');
+  if(!det){det=document.createElement('div');det.id='ov-tmemo';det.className='ov';det.onclick=function(e){if(e.target===this)closeM('ov-tmemo');};document.body.appendChild(det);}
+  det.innerHTML=`<div class="md">
+    <div class="mh"><div class="mt">🔒 선생님 메모 수정</div><button class="xb" onclick="closeM('ov-tmemo')">✕</button></div>
+    <div class="mb">
+      <div class="fr"><label class="fl">내용</label><textarea id="tmemo-inp" style="min-height:120px">${esc(m.content)}</textarea></div>
+    </div>
+    <div class="mf"><button class="btn btn-or" onclick="saveTeacherMemo()">저장</button></div>
+  </div>`;
+  det.classList.add('on');
+  setTimeout(()=>{const el=document.getElementById('tmemo-inp');if(el)el.focus();},100);
+}
+async function saveTeacherMemo(){
+  const content=(document.getElementById('tmemo-inp').value||'').trim();
+  if(!content){alert('내용을 입력해주세요');return;}
+  if(!DB.teacherMemos)DB.teacherMemos=[];
+  const now=new Date();
+  const dateStr=(now.getMonth()+1)+'/'+now.getDate()+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  if(_memoEditIdx>=0){
+    DB.teacherMemos[_memoEditIdx].content=content;
+    DB.teacherMemos[_memoEditIdx].date=dateStr+'(수정)';
+  }else{
+    DB.teacherMemos.push({id:'tm'+Date.now(),content,date:dateStr});
+  }
+  await fbCfg();
+  closeM('ov-tmemo');
+  renderAdmMemo();
+  toast('✅ 메모 저장됨');
+}
+async function delTeacherMemo(idx){
+  if(!confirm('삭제할까요?'))return;
+  (DB.teacherMemos||[]).splice(idx,1);
+  await fbCfg();
+  renderAdmMemo();
+  toast('✅ 삭제됨');
 }
 function renderAdmBoard(container,isMain){
   let ntcW=document.getElementById('adm-w-ntc');
@@ -1349,7 +1597,9 @@ async function renderAdmFbList(c){
     if(!filtered.length)h+='<div class="emp-msg">피드백이 없어요</div>';
     else Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).forEach(([k,items])=>{
       const [date,agency]=k.split('|');
-      h+=`<div style="font-size:12px;font-weight:800;color:var(--gy);margin:14px 0 7px;display:flex;align-items:center;gap:8px">${date} · ${agency}<div style="flex:1;height:1px;background:var(--bd)"></div></div>`;
+      // 같은 기획사의 오디션 기록 찾기
+      const relAudit=(s.auditions||[]).find(a=>a.agency===agency&&a.date===date);
+      h+=`<div style="font-size:12px;font-weight:800;color:var(--gy);margin:14px 0 7px;display:flex;align-items:center;gap:8px">${date} · ${agency}${relAudit?`<span style="background:linear-gradient(135deg,var(--or),var(--or2));color:#fff;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700">📝 ${relAudit.result||'대기중'}</span>`:''}<div style="flex:1;height:1px;background:var(--bd)"></div></div>`;
       items.forEach(f=>{h+=`<div class="cd" style="margin-bottom:8px"><div style="padding:11px 13px;display:flex;justify-content:space-between;align-items:flex-start"><span style="font-weight:800">${esc(f.name)}</span><button onclick="dlFb('${f.id}')" class="del-btn">삭제</button></div>
         <div style="padding:0 13px 11px">
           ${f.dText?`<div style="background:#EFE4F8;border-radius:8px;padding:9px 11px;margin-bottom:7px"><div style="font-size:10px;font-weight:800;color:var(--dn);margin-bottom:3px">💃${f.dTeacher?' · '+esc(f.dTeacher):''}</div><div style="font-size:13px;line-height:1.6">${esc(f.dText)}</div></div>`:''}
