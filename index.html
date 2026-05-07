@@ -898,13 +898,12 @@ function sendTMsg(){const c=document.getElementById('tmsg-inp').value.trim();if(
 function renderAuditionRecord(s){
   const records=(s.auditions||[]).slice().reverse();
   const agencyColors={'SM':'#1A1A2E','JYP':'#FF4500','YG':'#1A1A1A','HYBE':'#2D2D2D','더블랙레이블':'#4A0080'};
-  const resultColors={'대기중':'#f97316','불합격':'var(--rd)','1차 합격':'var(--bl)','최종 합격':'var(--gn)'};
-  const resultBg={'대기중':'#fff7ed','불합격':'var(--rdb)','1차 합격':'var(--blb)','최종 합격':'var(--gnb)'};
+
   return `<div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div>
         <div style="font-size:14px;font-weight:800;color:var(--bk)">📝 오디션 지원 기록</div>
-        <div style="font-size:11px;color:var(--gy);margin-top:2px">총 ${(s.auditions||[]).length}회 지원 · ${(s.auditions||[]).filter(a=>a.result==='최종 합격').length}회 합격</div>
+        <div style="font-size:11px;color:var(--gy);margin-top:2px">총 ${(s.auditions||[]).length}회 지원 기록</div>
       </div>
       <button onclick="openAuditionAdd(${s.id})" style="background:linear-gradient(135deg,var(--or),var(--or2));color:#fff;border:none;border-radius:10px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(107,63,160,0.3)">+ 기록 추가</button>
     </div>
@@ -925,16 +924,18 @@ function renderAuditionRecord(s){
               <div style="font-size:15px;font-weight:800;color:var(--gold)">${esc(r.agency)}</div>
               <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:2px">${r.date} · ${esc(r.type||'')}</div>
             </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <span style="background:${rb};color:${rc};border-radius:20px;padding:4px 12px;font-size:12px;font-weight:800;border:1px solid ${rc}">${r.result||'대기중'}</span>
-            </div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.5)">${r.type||''}</div>
           </div>
           <!-- 내용 -->
           <div style="padding:12px 14px">
             <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
               ${r.field?`<span style="background:#EFE4F8;color:var(--dn);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700">🎵 ${esc(r.field)}</span>`:''}
-              ${r.content?`<span style="background:#f0f9ff;color:var(--bl);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700">🎬 ${esc(r.content)}</span>`:''}
+              ${r.type?`<span style="background:rgba(201,162,39,0.12);color:var(--gold);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700">📋 ${esc(r.type)}</span>`:''}
             </div>
+            ${(r.linkDance||r.linkVocal)?`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px">
+              ${r.linkDance?`<a href="${esc(r.linkDance)}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:#EFE4F8;color:var(--dn);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;text-decoration:none">💃 댄스 영상 ↗</a>`:''}
+              ${r.linkVocal?`<a href="${esc(r.linkVocal)}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:#D4F0E8;color:var(--vc);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;text-decoration:none">🎤 보컬 영상 ↗</a>`:''}
+            </div>`:''} 
             ${r.feeling?`<div style="background:rgba(107,63,160,0.05);border-left:3px solid var(--or);border-radius:0 8px 8px 0;padding:8px 12px;margin-bottom:8px">
               <div style="font-size:11px;font-weight:800;color:var(--or);margin-bottom:4px">💭 느낀 점</div>
               <div style="font-size:13px;line-height:1.6;color:var(--bk);white-space:pre-wrap">${esc(r.feeling)}</div>
@@ -955,7 +956,7 @@ function renderAuditionRecord(s){
 
 const AUDIT_TYPES=['내방오디션','이메일오디션','공개오디션','온라인오디션','서류심사'];
 const AUDIT_FIELDS=['댄스','보컬','댄스+보컬','랩','연기','기타'];
-const AUDIT_RESULTS=['대기중','불합격','1차 합격','최종 합격'];
+
 let _auditSid=null,_auditIdx=-1;
 
 function openAuditionAdd(sid){
@@ -976,35 +977,31 @@ function showAuditModal(title,r){
     <div class="mb">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" class="fr">
         <div><label class="fl">날짜</label><input type="date" id="au-date" value="${r.date||today()}"></div>
-        <div><label class="fl">결과</label>
-          <select id="au-result">
-            ${AUDIT_RESULTS.map(v=>`<option value="${v}" ${r.result===v?'selected':''}>${v}</option>`).join('')}
+        <div><label class="fl">오디션 종류</label>
+          <select id="au-type">
+            ${AUDIT_TYPES.map(v=>`<option value="${v}" ${r.type===v?'selected':''}>${v}</option>`).join('')}
           </select>
         </div>
       </div>
       <div class="fr"><label class="fl">기획사명</label>
         <input type="text" id="au-agency" placeholder="예: SM엔터테인먼트" value="${esc(r.agency||'')}">
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" class="fr">
-        <div><label class="fl">오디션 종류</label>
-          <select id="au-type">
-            ${AUDIT_TYPES.map(v=>`<option value="${v}" ${r.type===v?'selected':''}>${v}</option>`).join('')}
-          </select>
-        </div>
-        <div><label class="fl">지원 분야</label>
-          <select id="au-field">
-            ${AUDIT_FIELDS.map(v=>`<option value="${v}" ${r.field===v?'selected':''}>${v}</option>`).join('')}
-          </select>
-        </div>
+      <div class="fr"><label class="fl">지원 분야</label>
+        <select id="au-field">
+          ${AUDIT_FIELDS.map(v=>`<option value="${v}" ${r.field===v?'selected':''}>${v}</option>`).join('')}
+        </select>
       </div>
-      <div class="fr"><label class="fl">제출한 곡 또는 영상</label>
-        <input type="text" id="au-content" placeholder="예: Whiplash - aespa / 구글드라이브 링크" value="${esc(r.content||'')}">
+      <div class="fr"><label class="fl">🎬 댄스 오디션 영상 링크</label>
+        <input type="text" id="au-link-dance" placeholder="구글드라이브 또는 유튜브 링크" value="${esc(r.linkDance||'')}">
+      </div>
+      <div class="fr"><label class="fl">🎤 보컬 오디션 영상 링크</label>
+        <input type="text" id="au-link-vocal" placeholder="구글드라이브 또는 유튜브 링크" value="${esc(r.linkVocal||'')}">
       </div>
       <div class="fr"><label class="fl">💭 느낀 점</label>
-        <textarea id="au-feeling" placeholder="오디션을 통해 느낀 점, 분위기, 피드백 등" style="min-height:80px">${esc(r.feeling||'')}</textarea>
+        <textarea id="au-feeling" placeholder="오디션을 통해 느낀 점, 분위기, 받은 피드백 등" style="min-height:90px">${esc(r.feeling||'')}</textarea>
       </div>
       <div class="fr" style="margin-bottom:0"><label class="fl">📈 다음에 보완할 점</label>
-        <textarea id="au-improve" placeholder="다음 오디션을 위해 개선하고 싶은 것들" style="min-height:80px">${esc(r.improve||'')}</textarea>
+        <textarea id="au-improve" placeholder="다음 오디션을 위해 개선하고 싶은 것들" style="min-height:90px">${esc(r.improve||'')}</textarea>
       </div>
     </div>
     <div class="mf"><button class="btn btn-or" onclick="saveAudition()">저장하기</button></div>
@@ -1019,8 +1016,8 @@ function saveAudition(){
     agency,
     type:document.getElementById('au-type').value,
     field:document.getElementById('au-field').value,
-    content:(document.getElementById('au-content').value||'').trim(),
-    result:document.getElementById('au-result').value,
+    linkDance:(document.getElementById('au-link-dance').value||'').trim(),
+    linkVocal:(document.getElementById('au-link-vocal').value||'').trim(),
     feeling:(document.getElementById('au-feeling').value||'').trim(),
     improve:(document.getElementById('au-improve').value||'').trim(),
     id:'au'+Date.now()
@@ -1059,7 +1056,7 @@ async function renderFb(s,c){
       const [date,agency]=k.split('|');
       // 같은 기획사의 오디션 기록 찾기
       const relAudit=(s.auditions||[]).find(a=>a.agency===agency&&a.date===date);
-      h+=`<div style="font-size:12px;font-weight:800;color:var(--gy);margin:14px 0 7px;display:flex;align-items:center;gap:8px">${date} · ${agency}${relAudit?`<span style="background:linear-gradient(135deg,var(--or),var(--or2));color:#fff;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700">📝 ${relAudit.result||'대기중'}</span>`:''}<div style="flex:1;height:1px;background:var(--bd)"></div></div>`;
+      h+=`<div style="font-size:12px;font-weight:800;color:var(--gy);margin:14px 0 7px;display:flex;align-items:center;gap:8px">${date} · ${agency}${relAudit?`<span style="background:linear-gradient(135deg,var(--or),var(--or2));color:#fff;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700">📝 지원기록 있음</span>`:''}<div style="flex:1;height:1px;background:var(--bd)"></div></div>`;
       items.forEach(f=>{
         h+=`<div class="cd" style="margin-bottom:9px"><div style="padding:12px 14px">
           ${f.videoDance?`<a href="${f.videoDance}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:#EFE4F8;color:var(--dn);font-size:12px;font-weight:700;border-radius:8px;text-decoration:none;margin-bottom:8px">💃 댄스 영상 ↗</a>`:''}
@@ -1599,7 +1596,7 @@ async function renderAdmFbList(c){
       const [date,agency]=k.split('|');
       // 같은 기획사의 오디션 기록 찾기
       const relAudit=(s.auditions||[]).find(a=>a.agency===agency&&a.date===date);
-      h+=`<div style="font-size:12px;font-weight:800;color:var(--gy);margin:14px 0 7px;display:flex;align-items:center;gap:8px">${date} · ${agency}${relAudit?`<span style="background:linear-gradient(135deg,var(--or),var(--or2));color:#fff;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700">📝 ${relAudit.result||'대기중'}</span>`:''}<div style="flex:1;height:1px;background:var(--bd)"></div></div>`;
+      h+=`<div style="font-size:12px;font-weight:800;color:var(--gy);margin:14px 0 7px;display:flex;align-items:center;gap:8px">${date} · ${agency}${relAudit?`<span style="background:linear-gradient(135deg,var(--or),var(--or2));color:#fff;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700">📝 지원기록 있음</span>`:''}<div style="flex:1;height:1px;background:var(--bd)"></div></div>`;
       items.forEach(f=>{h+=`<div class="cd" style="margin-bottom:8px"><div style="padding:11px 13px;display:flex;justify-content:space-between;align-items:flex-start"><span style="font-weight:800">${esc(f.name)}</span><button onclick="dlFb('${f.id}')" class="del-btn">삭제</button></div>
         <div style="padding:0 13px 11px">
           ${f.dText?`<div style="background:#EFE4F8;border-radius:8px;padding:9px 11px;margin-bottom:7px"><div style="font-size:10px;font-weight:800;color:var(--dn);margin-bottom:3px">💃${f.dTeacher?' · '+esc(f.dTeacher):''}</div><div style="font-size:13px;line-height:1.6">${esc(f.dText)}</div></div>`:''}
