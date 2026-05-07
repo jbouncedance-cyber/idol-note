@@ -802,10 +802,53 @@ function renderPMain(s){
   ${renderIbTab(s)}`;
 }
 
+function openPrevGoalEdit(sid,month){
+  const s=DB.students.find(x=>x.id===sid);if(!s)return;
+  const g=(s.monthlyGoals||[]).find(x=>x.month===month)||{month,goal:'',achievement:0};
+  let det=document.getElementById('ov-prev-goal');
+  if(!det){det=document.createElement('div');det.id='ov-prev-goal';det.className='ov';det.onclick=function(e){if(e.target===this)closeM('ov-prev-goal');};document.body.appendChild(det);}
+  det.innerHTML=`<div class="md"><div class="mh"><div class="mt">✏️ ${ymLbl(month)} 목표 수정</div><button class="xb" onclick="closeM('ov-prev-goal')">✕</button></div>
+    <div class="mb">
+      <div class="fr"><label class="fl">목표 내용</label><textarea id="pg-goal-inp" style="min-height:100px">${esc(g.goal||'')}</textarea></div>
+      <div class="fr"><label class="fl">달성률 <span id="pg-pct">${g.achievement||0}%</span></label>
+        <div class="pr-wrap"><div class="pr-bg"></div><div class="pr-bar" id="pg-bar" style="width:${g.achievement||0}%;background:${pctC(g.achievement||0)}"></div>
+          <input type="range" class="pr-range" id="pg-range" min="0" max="100" value="${g.achievement||0}" oninput="var v=this.value;document.getElementById('pg-pct').textContent=v+'%';document.getElementById('pg-bar').style.width=v+'%';document.getElementById('pg-bar').style.background=pctC(v);">
+        </div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-or" onclick="savePrevGoal(${sid},'${month}')">저장</button></div>
+  </div>`;
+  det.classList.add('on');
+}
+function savePrevGoal(sid,month){
+  const s=DB.students.find(x=>x.id===sid);if(!s)return;
+  const goal=(document.getElementById('pg-goal-inp').value||'').trim();
+  const ach=parseInt(document.getElementById('pg-range').value)||0;
+  if(!s.monthlyGoals)s.monthlyGoals=[];
+  const i=s.monthlyGoals.findIndex(g=>g.month===month);
+  if(i>=0){s.monthlyGoals[i].goal=goal;s.monthlyGoals[i].achievement=ach;}
+  else s.monthlyGoals.push({month,goal,achievement:ach});
+  fbSv('idol_students',s.id,s);closeM('ov-prev-goal');
+  toast('✅ '+ymLbl(month)+' 수정됨');
+  setTimeout(()=>renderPTab(s,0),100);
+}
 function saveIdolGoal(sid){const s=DB.students.find(x=>x.id===sid);if(!s)return;if(!s.goals)s.goals={};s.goals.idol=(document.getElementById('ig-'+sid)||{value:''}).value||'';fbSv('idol_students',s.id,s);toast('✅ 목표 저장됨');}
 function onGR(el,sid){const v=parseInt(el.value)||0;const c=pctC(v);const p=document.getElementById('gp-'+sid);const b=document.getElementById('gb-'+sid);if(p){p.textContent=v+'%';p.style.color=c;}if(b){b.style.width=v+'%';b.style.background=c;}}
 function svGA(sid,val){const s=DB.students.find(x=>x.id===sid);if(!s)return;const m=ym();if(!s.monthlyGoals)s.monthlyGoals=[];const i=s.monthlyGoals.findIndex(g=>g.month===m);if(i>=0)s.monthlyGoals[i].achievement=parseInt(val)||0;else s.monthlyGoals.push({month:m,goal:'',achievement:parseInt(val)||0});fbSv('idol_students',s.id,s);}
-function svMG(sid){const s=DB.students.find(x=>x.id===sid);if(!s)return;const m=ym();const goal=(document.getElementById('mg-'+sid)||{value:''}).value||'';const ach=parseInt(document.querySelector(`#gb-${sid}`)?parseFloat(document.querySelector(`#gb-${sid}`).style.width)||0:0)||0;if(!s.monthlyGoals)s.monthlyGoals=[];const i=s.monthlyGoals.findIndex(g=>g.month===m);const entry={month:m,goal,achievement:ach};if(i>=0)s.monthlyGoals[i]=entry;else s.monthlyGoals.push(entry);fbSv('idol_students',s.id,s);toast('✅ '+ymLbl(m)+' 목표 저장됨');}
+function svMG(sid){
+  const s=DB.students.find(x=>x.id===sid);if(!s)return;
+  const m=ym();
+  const goal=(document.getElementById('mg-'+sid)||{value:''}).value||'';
+  // 달성률은 range input에서 직접 읽기
+  const rangeEl=document.querySelector(`input.pr-range[data-sid="${sid}"]`)||document.querySelector(`.pr-range`);
+  const ach=parseInt(rangeEl?rangeEl.value:0)||0;
+  if(!s.monthlyGoals)s.monthlyGoals=[];
+  const i=s.monthlyGoals.findIndex(g=>g.month===m);
+  const entry={month:m,goal,achievement:ach};
+  if(i>=0)s.monthlyGoals[i]=entry;else s.monthlyGoals.push(entry);
+  fbSv('idol_students',s.id,s);
+  toast('✅ '+ymLbl(m)+' 목표 저장됨');
+}
 function svMemo(sid){const s=DB.students.find(x=>x.id===sid);if(!s)return;s.memo=(document.getElementById('mo-'+sid)||{value:''}).value||'';fbSv('idol_students',s.id,s);toast('✅ 메모 저장됨');}
 
 // WEEKLY
@@ -1008,7 +1051,7 @@ function showAuditModal(title,r){
   </div>`;
   det.classList.add('on');
 }
-function saveAudition(){
+async function saveAudition(){
   const agency=(document.getElementById('au-agency').value||'').trim();
   if(!agency){alert('기획사명을 입력해주세요');return;}
   const record={
@@ -1026,22 +1069,20 @@ function saveAudition(){
   if(!s.auditions)s.auditions=[];
   if(_auditIdx>=0)s.auditions[_auditIdx]=record;
   else s.auditions.push(record);
-  fbSv('idol_students',s.id,s);
-  closeM('ov-audit');
-  const ct=document.getElementById('prof-ct');
-  if(ct){ct.innerHTML='<div style="padding:20px;text-align:center"><div style="width:24px;height:24px;border:3px solid #f5c6a0;border-top-color:var(--or);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div></div>';}
-  setTimeout(()=>renderPTab(s,1),50);
-  toast('✅ 오디션 기록 저장됨');
+  try{
+    await fbSv('idol_students',s.id,s);
+    closeM('ov-audit');
+    toast('✅ 오디션 기록 저장됨');
+    setTimeout(()=>renderPTab(s,1),100);
+  }catch(e){alert('저장 실패: '+e.message);}
 }
-function delAudition(sid,idx){
+async function delAudition(sid,idx){
   if(!confirm('삭제할까요?'))return;
   const s=DB.students.find(x=>x.id===sid);if(!s||!s.auditions)return;
   s.auditions.splice(idx,1);
-  fbSv('idol_students',s.id,s);
-  const ct=document.getElementById('prof-ct');
-  if(ct){ct.innerHTML='<div style="padding:20px;text-align:center"><div style="width:24px;height:24px;border:3px solid #f5c6a0;border-top-color:var(--or);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div></div>';}
-  setTimeout(()=>renderPTab(s,1),50);
+  await fbSv('idol_students',s.id,s);
   toast('✅ 삭제됨');
+  setTimeout(()=>renderPTab(s,1),100);
 }
 
 async function renderFb(s,c){
@@ -1580,6 +1621,8 @@ async function saveFb(){
 
 // 피드백 목록
 async function renderAdmFbList(c){
+  if(!c){c=document.getElementById('adm-ct');}
+  if(!c)return;
   c.innerHTML='<div style="text-align:center;padding:20px;color:var(--gy)">불러오는 중...</div>';
   try{
     const snap=await db.collection('feedbacks').get();let all=[];snap.forEach(d=>all.push({id:d.id,...d.data()}));all.sort((a,b)=>(b.ts||0)-(a.ts||0));
