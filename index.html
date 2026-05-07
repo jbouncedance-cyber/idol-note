@@ -464,7 +464,7 @@ let _editEvId=null,_editResId=null,_editNtcIdx=null,_editStuId=null,_tmSid=null,
 let _curMsgId=null,_resDetId=null,_fbStu=null,_fbCls='audition',_fblCls='audition',_fblFilter='all';
 let _prevPage='pg-main';  // 개인 페이지 뒤로가기용
 // 비번 세션 유지 - sessionStorage 사용
-let isAdm=sessionStorage.getItem('jbi_adm')==='1';
+let isAdm=localStorage.getItem('jbi_adm')==='1';
 let _clsSel={};let _ibBase64=null;
 const PC=['#fef08a','#bbf7d0','#bfdbfe','#fecdd3','#e9d5ff','#fed7aa','#a5f3fc','#fde68a'];
 const DEF_AG=['SM엔터테인먼트','JYP엔터테인먼트','YG엔터테인먼트','HYBE','더블랙레이블','FNC엔터테인먼트','스타쉽엔터테인먼트','카카오엔터테인먼트','빅히트뮤직','WM엔터테인먼트'];
@@ -549,8 +549,8 @@ function goTeacher(){
 }
 function goClass(cls){_curCls=cls;document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent=cls==='kids'?'키즈오디션반':'오디션반';document.getElementById('adm-btn').style.display='none';document.getElementById('adm-nav').style.display='none';showPage('pg-main');}
 function goAdmin(){if(isAdm){showPage('pg-adm');renderAdm();}else{showPage('pg-admlk');document.getElementById('adm-pw-inp').value='';document.getElementById('adm-pw-err').textContent='';}}
-function chkAdm(){const pw=document.getElementById('adm-pw-inp').value;if(pw===DB.adminPw){isAdm=true;sessionStorage.setItem('jbi_adm','1');_curCls='all';document.getElementById('adm-btn').style.display='';document.getElementById('adm-nav').style.display='';showPage('pg-adm');renderAdm();}else document.getElementById('adm-pw-err').textContent='비밀번호가 틀렸습니다';}
-function admOut(){isAdm=false;sessionStorage.removeItem('jbi_adm');showPage('pg-land');}
+function chkAdm(){const pw=document.getElementById('adm-pw-inp').value;if(pw===DB.adminPw){isAdm=true;localStorage.setItem('jbi_adm','1');_curCls='all';document.getElementById('adm-btn').style.display='';document.getElementById('adm-nav').style.display='';showPage('pg-adm');renderAdm();}else document.getElementById('adm-pw-err').textContent='비밀번호가 틀렸습니다';}
+function admOut(){isAdm=false;localStorage.removeItem('jbi_adm');showPage('pg-land');}
 function profGoBack(){showPage(_prevPage);if(_prevPage==='pg-adm')renderAdm();}
 function showTT(){const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.getElementById('tt-hd').textContent=s.name+' 시간표';renderTT(s);showPage('pg-tt');}
 function renderTT(s){
