@@ -12,20 +12,9 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--or:#C2621A;--or2:#e07830;--ob:#FFF3EB;--k:#3E7FA8;--kb:#EBF5FF;--bk:#111;--gy:#777;--gy2:#bbb;--lt:#f5f5f7;--wh:#fff;--bd:#e8e8e8;--gn:#16a34a;--gnb:#f0fdf4;--rd:#ef4444;--rdb:#fef2f2;--rdbd:#fecaca;--bl:#2563eb;--blb:#eff6ff;--am:#b45309;--amb:#fffbeb;--ambd:#fde68a;--pp:#7c3aed;--ppb:#f5f3ff;--ppbd:#ddd6fe;--dn:#7B4FA0;--vc:#1A6B5A}
-body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;background:var(--lt);color:var(--bk);height:100vh;overflow:hidden;font-size:15px}
-.page{
-  position:fixed;inset:0;
-  display:none;
-  flex-direction:column;
-  overflow:hidden;
-  z-index:0;
-}
-.page.active{
-  display:flex;
-  overflow-y:auto;
-  overflow-x:hidden;
-  z-index:1;
-}
+body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;background:var(--lt);color:var(--bk);min-height:100vh;overflow-x:hidden;font-size:15px}
+.page{display:none;min-height:100vh;flex-direction:column}
+.page.active{display:flex}
 .hd{background:var(--wh);border-bottom:1px solid var(--bd);padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
 .logo{font-size:18px;font-weight:900;color:var(--or);letter-spacing:-1px}.hd-sub{font-size:11px;color:var(--gy);margin-top:1px}.hd-r{margin-left:auto;display:flex;gap:6px;align-items:center}
 .back{background:none;border:none;font-size:22px;cursor:pointer;padding:4px 10px 4px 0;color:var(--bk);line-height:1}
@@ -48,7 +37,7 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif
 input,textarea,select{width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;font-family:inherit;background:#fff;color:var(--bk);outline:none;-webkit-appearance:none}
 input:focus,textarea:focus,select:focus{border-color:var(--or)}textarea{resize:vertical;min-height:80px}
 .fl{font-size:12px;font-weight:700;color:var(--gy);margin-bottom:4px;display:block}.fr{margin-bottom:11px}
-.tb{display:flex;border-bottom:1px solid var(--bd);overflow-x:auto;background:#fff;position:sticky;top:49px;z-index:90;flex-shrink:0}
+.tb{display:flex;border-bottom:1px solid var(--bd);overflow-x:auto;background:#fff;position:sticky;top:49px;z-index:90}
 .tbtn{padding:10px 15px;border:none;background:none;font-size:13px;font-weight:700;color:var(--gy);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:inherit;flex-shrink:0}
 .tbtn.on{color:var(--or);border-bottom-color:var(--or)}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:flex-end;justify-content:center}
@@ -120,7 +109,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 </div>
 
 <!-- LANDING -->
-<div id="pg-land" class="page lnd" style="display:flex">
+<div id="pg-land" class="page active lnd">
   <div class="ll" style="margin-bottom:4px">JB IDOL</div>
   <div class="ls" style="margin-bottom:28px">오디션반 · 키즈오디션반 관리 시스템</div>
   <div class="rcard" onclick="goTeacher()"><div class="ric">🎹</div><div class="rl">선생님</div><div class="rs">관리 및 피드백 입력</div></div>
@@ -528,8 +517,8 @@ async function refreshData(){const btn=document.getElementById('refresh-btn');if
 
 // PAGES
 function showPage(id){
-  document.querySelectorAll('.page').forEach(p=>{p.classList.remove('active');p.style.display='';});
-  const target=document.getElementById(id);target.classList.add('active');target.style.display='flex';
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
   // bnav: 랜딩/잠금/관리자잠금 페이지에서는 숨기기
   const noNav=['pg-land','pg-lock','pg-admlk'];
   document.querySelectorAll('.bnav').forEach(b=>{const h=noNav.includes(id);b.style.display=h?'none':'flex';b.style.pointerEvents=h?'none':'auto';});
@@ -1447,9 +1436,6 @@ function sendBroadcast(){const nm=(document.getElementById('bc-nm').value||'').t
 // INIT
 window.addEventListener('load',async()=>{
   await new Promise(r=>setTimeout(r,200));
-  // 랜딩 페이지만 표시 (active 클래스 없이 inline style로)
-  document.querySelectorAll('.page').forEach(p=>p.style.display='');
-  document.getElementById('pg-land').style.display='flex';
   document.querySelectorAll('.bnav').forEach(b=>{b.style.display='none';b.style.pointerEvents='none';});
   await loadAll();startMsgSync();
   // isAdm이면 adm 버튼 표시만 (자동 이동은 안 함 - 랜딩 먼저)
