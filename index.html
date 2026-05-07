@@ -20,7 +20,7 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif
 .btn-or{background:var(--or);color:#fff}.btn-out{background:#fff;color:var(--or);border:1.5px solid var(--or)}.btn-gr{background:var(--lt);color:var(--bk);border:1px solid var(--bd)}
 .del-btn{background:none;border:1px solid var(--rdbd);color:var(--rd);border-radius:8px;padding:4px 9px;font-size:12px;cursor:pointer;font-family:inherit;flex-shrink:0}
 .edt-btn{background:none;border:1px solid var(--bd);color:var(--gy);border-radius:8px;padding:4px 9px;font-size:12px;cursor:pointer;font-family:inherit;flex-shrink:0}
-.bnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:none;z-index:200;padding-bottom:env(safe-area-inset-bottom,0px)}.page.active .bnav{display:flex}
+.bnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:none;z-index:200;padding-bottom:env(safe-area-inset-bottom,0px)}
 .nb{flex:1;background:none;border:none;padding:9px 0 7px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-size:10px;color:var(--gy2);font-family:inherit}
 .nb.on{color:var(--or)}.ni{font-size:20px;line-height:1.2}
 .ct{flex:1;padding:12px 12px 90px}
@@ -485,7 +485,15 @@ function startMsgSync(){
 async function refreshData(){const btn=document.getElementById('refresh-btn');if(btn){btn.style.animation='spin .6s linear infinite';btn.disabled=true;}await loadAll();toast('✅ 업데이트됐어요!');if(btn){btn.style.animation='';btn.disabled=false;}}
 
 // PAGES
-function showPage(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(id).classList.add('active');if(id==='pg-main')renderMain();if(id==='pg-sch')renderSch();}
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  // bnav: 랜딩/잠금/관리자잠금 페이지에서는 숨기기
+  const noNav=['pg-land','pg-lock','pg-admlk'];
+  document.querySelectorAll('.bnav').forEach(b=>{b.style.display=noNav.includes(id)?'none':'flex';});
+  if(id==='pg-main')renderMain();
+  if(id==='pg-sch')renderSch();
+}
 function goTeacher(){_curCls='all';document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent='전체 관리';document.getElementById('adm-btn').style.display='';document.getElementById('adm-nav').style.display='';showPage('pg-main');}
 function goClass(cls){_curCls=cls;document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent=cls==='kids'?'키즈오디션반':'오디션반';document.getElementById('adm-btn').style.display='none';document.getElementById('adm-nav').style.display='none';showPage('pg-main');}
 function goAdmin(){if(isAdm){showPage('pg-adm');renderAdm();}else{showPage('pg-admlk');document.getElementById('adm-pw-inp').value='';document.getElementById('adm-pw-err').textContent='';}}
