@@ -524,7 +524,7 @@ function showPage(id){
 function goTeacher(){showPage('pg-admlk');document.getElementById('adm-pw-inp').value='';document.getElementById('adm-pw-err').textContent='';}
 function goClass(cls){_curCls=cls;document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent=cls==='kids'?'키즈오디션반':'오디션반';document.getElementById('adm-btn').style.display='none';document.getElementById('adm-nav').style.display='none';showPage('pg-main');}
 function goAdmin(){if(isAdm){showPage('pg-adm');renderAdm();}else{showPage('pg-admlk');document.getElementById('adm-pw-inp').value='';document.getElementById('adm-pw-err').textContent='';}}
-function chkAdm(){const pw=document.getElementById('adm-pw-inp').value;if(pw===DB.adminPw){isAdm=true;_curCls='all';document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent='전체 관리';document.getElementById('adm-btn').style.display='';document.getElementById('adm-nav').style.display='';showPage('pg-main');renderMain();}else document.getElementById('adm-pw-err').textContent='비밀번호가 틀렸습니다';}
+function chkAdm(){const pw=document.getElementById('adm-pw-inp').value;if(pw===DB.adminPw){isAdm=true;_curCls='all';document.getElementById('adm-btn').style.display='';document.getElementById('adm-nav').style.display='';showPage('pg-adm');renderAdm();}else document.getElementById('adm-pw-err').textContent='비밀번호가 틀렸습니다';}
 function admOut(){isAdm=false;showPage('pg-land');}
 function showTT(){const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.getElementById('tt-hd').textContent=s.name+' 시간표';renderTT(s);showPage('pg-tt');}
 function renderTT(s){
@@ -999,17 +999,52 @@ function renderAdmStu(c){
   const aud=DB.students.filter(s=>s.cls==='audition'||!s.cls);const kids=DB.students.filter(s=>s.cls==='kids');
   let h=`<button class="btn btn-or" onclick="openStuM(null)" style="margin-bottom:14px">+ 학생 추가</button>`;
   ['오디션반','키즈오디션반'].forEach((lbl,li)=>{
-    const list=li===0?aud:kids;h+=`<div style="font-size:11px;font-weight:800;color:var(--gy);margin:12px 0 7px">${lbl} (${list.length}명)</div><div class="adm-sec">`;
-    list.sort((a,b)=>a.name.localeCompare(b.name,'ko')).forEach(s=>{
-      h+=`<div class="adm-r"><div class="av${li===1?' kav':''}" style="width:34px;height:34px;font-size:14px;cursor:pointer" onclick="admOpenProf(${s.id})">${s.photo?`<img src="${s.photo}">`:`${s.name[0]}`}</div>
-        <div style="flex:1;cursor:pointer" onclick="admOpenProf(${s.id})"><div style="font-weight:800">${esc(s.name)}</div><div style="font-size:12px;color:var(--gy)">${s.birth||''} · 비번:${s.pw||'미설정'}</div></div>
-        <button onclick="openTMsg(${s.id})" class="edt-btn">💌</button>
-        <button onclick="openStuM(${s.id})" class="edt-btn">수정</button>
-        <button onclick="dlStu(${s.id})" class="del-btn">삭제</button>
+    const list=li===0?aud:kids;
+    h+=`<div style="font-size:11px;font-weight:800;color:var(--gy);margin:12px 0 7px">${lbl} (${list.length}명)</div>`;
+    list.sort((a,b)=>a.name.localeCompare(b.name,'ko')).forEach((s,idx)=>{
+      const isK=li===1;
+      const dC=Object.keys(s.classes||{}).filter(k=>k[0]==='d'&&s.classes[k]);
+      const vC=Object.keys(s.classes||{}).filter(k=>k[0]==='v'&&s.classes[k]);
+      const mC=Object.keys(s.classes||{}).filter(k=>k[0]==='m'&&s.classes[k]);
+      const tC=Object.keys(s.classes||{}).filter(k=>k[0]==='t'&&s.classes[k]);
+      const tot=dC.length+vC.length+mC.length+tC.length;
+      const cid='asc'+s.id;
+      const lastIb=s.inbody&&s.inbody.length?s.inbody[s.inbody.length-1]:null;
+      h+=`<div class="cd" style="margin-bottom:8px">
+        <div style="padding:10px 12px;display:flex;align-items:center;gap:10px">
+          <div class="av${isK?' kav':''}" style="width:36px;height:36px;font-size:14px;cursor:pointer;flex-shrink:0" onclick="admOpenProf(${s.id})">${s.photo?`<img src="${s.photo}">`:`${s.name[0]}`}</div>
+          <div style="flex:1;min-width:0;cursor:pointer" onclick="admOpenProf(${s.id})">
+            <div style="font-size:15px;font-weight:800">${esc(s.name)}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;align-items:center">
+              <span style="font-size:11px;color:var(--gy)">비번:${s.pw||'0000'}</span>
+              ${lastIb?`<span class="bx gr" style="font-size:10px;padding:1px 6px">📊 ${lastIb.score}점</span>`:''}
+              ${dC.length?`<span class="bx dn" style="font-size:10px;padding:1px 6px">💃 ${dC.length}</span>`:''}
+              ${vC.length?`<span class="bx vc" style="font-size:10px;padding:1px 6px">🎤 ${vC.length}</span>`:''}
+              ${tC.length?`<span class="bx pp" style="font-size:10px;padding:1px 6px">💪 ${tC.length}</span>`:''}
+              ${!tot?`<span class="bx gy" style="font-size:10px;padding:1px 6px">수업미배정</span>`:''}
+            </div>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">
+            ${tot?`<button onclick="toggleAdmCard('${cid}')" id="abtn-${cid}" style="background:none;border:1px solid var(--bd);border-radius:7px;padding:3px 8px;font-size:11px;color:var(--gy);cursor:pointer;font-family:inherit">▼</button>`:''}
+            <button onclick="openTMsg(${s.id})" class="edt-btn" style="font-size:11px;padding:3px 7px">💌</button>
+            <button onclick="openStuM(${s.id})" class="edt-btn" style="font-size:11px;padding:3px 7px">수정</button>
+            <button onclick="dlStu(${s.id})" class="del-btn" style="font-size:11px;padding:3px 7px">삭제</button>
+          </div>
+        </div>
+        ${tot?`<div id="${cid}" style="display:none;border-top:1px solid var(--bd);padding:8px 12px 10px">
+          ${dC.length?`<div style="font-size:10px;font-weight:800;color:var(--dn);margin-bottom:4px">💃 댄스</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">${dC.map(k=>{const cl=(DB.danceClasses||[]).find(x=>x.id===s.classes[k]);return cl?`<span style="background:#EFE4F8;border:1px solid #d4b8f0;border-radius:6px;padding:3px 8px;font-size:11px"><span style="font-weight:700">${esc(cl.name)}</span><span style="color:var(--dn)"> · ${esc(cl.teacher)}</span>${cl.day?`<span style="color:var(--gy);font-size:10px"> ${cl.day}${cl.ts?' '+cl.ts:''}${cl.te?'~'+cl.te:''}</span>`:''}</span>`:'';}).join('')}</div>`:''}
+          ${vC.length?`<div style="font-size:10px;font-weight:800;color:var(--vc);margin-bottom:4px">🎤 보컬</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">${vC.map(k=>{const cl=(DB.vocalClasses||[]).find(x=>x.id===s.classes[k]);return cl?`<span style="background:#D4F0E8;border:1px solid #a0d8c8;border-radius:6px;padding:3px 8px;font-size:11px"><span style="font-weight:700">${esc(cl.name)}</span><span style="color:var(--vc)"> · ${esc(cl.teacher)}</span>${cl.day?`<span style="color:var(--gy);font-size:10px"> ${cl.day}${cl.ts?' '+cl.ts:''}${cl.te?'~'+cl.te:''}</span>`:''}</span>`:'';}).join('')}</div>`:''}
+          ${mC.length?`<div style="font-size:10px;font-weight:800;color:var(--pp);margin-bottom:4px">🎵 기타</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">${mC.map(k=>{const cl=(DB.etcClasses||[]).find(x=>x.id===s.classes[k]);return cl?`<span style="background:var(--ppb);border:1px solid var(--ppbd);border-radius:6px;padding:3px 8px;font-size:11px"><span style="font-weight:700">${esc(cl.name)}</span><span style="color:var(--pp)"> · ${esc(cl.teacher)}</span></span>`:'';}).join('')}</div>`:''}
+          ${tC.length?`<div style="font-size:10px;font-weight:800;color:var(--bl);margin-bottom:4px">💪 트레이닝</div><div style="display:flex;flex-wrap:wrap;gap:4px">${tC.map(k=>{const cl=(DB.trainingClasses||[]).find(x=>x.id===s.classes[k]);return cl?`<span style="background:var(--blb);border:1px solid var(--bbd);border-radius:6px;padding:3px 8px;font-size:11px"><span style="font-weight:700">${esc(cl.name)}</span><span style="color:var(--bl)"> · ${esc(cl.teacher)}</span>${cl.day?`<span style="color:var(--gy);font-size:10px"> ${cl.day}${cl.ts?' '+cl.ts:''}${cl.te?'~'+cl.te:''}</span>`:''}</span>`:'';}).join('')}</div>`:''}
+          <div style="margin-top:9px;padding-top:8px;border-top:1px solid var(--bd)">
+            <button onclick="admOpenProf(${s.id})" style="width:100%;background:var(--ob);border:1px solid #f5c6a0;border-radius:8px;padding:7px;font-size:12px;font-weight:700;color:var(--or);cursor:pointer;font-family:inherit">개인 페이지 보기 →</button>
+          </div>
+        </div>`:''}
       </div>`;
-    });h+='</div>';
+    });
   });c.innerHTML=h;
 }
+function toggleAdmCard(id){const el=document.getElementById(id);const btn=document.getElementById('abtn-'+id);if(!el)return;const o=el.style.display!=='none';el.style.display=o?'none':'block';if(btn)btn.textContent=o?'▼':'▲';}
 function openStuM(sid){
   _editStuId=sid;const s=sid?DB.students.find(x=>x.id===sid):null;
   document.getElementById('stu-modal-ttl').textContent=s?'학생 수정':'학생 추가';
