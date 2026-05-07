@@ -800,7 +800,7 @@ function renderPMain(s){
   <div class="cd"><div class="cd-h"><div class="cd-t">💃 댄스 수업 (최대 6개)</div></div><div class="cd-b"><div class="cg">${mkClsGrid(s,'d',6)}</div></div></div>
   <div class="cd"><div class="cd-h"><div class="cd-t">🎤 보컬 수업 (최대 2개)</div></div><div class="cd-b"><div class="cg">${mkClsGrid(s,'v',2)}</div></div></div>
   <div class="cd"><div class="cd-h"><div class="cd-t">🎵 기타음악 수업 (최대 2개)</div></div><div class="cd-b"><div class="cg">${mkClsGrid(s,'m',2)}</div></div></div>
-  ${(s.cls==='audition'||(!s.cls&&s.id<=4))?`<div class="cd"><div class="cd-h"><div class="cd-t">💪 트레이닝 수업 (최대 4개)</div></div><div class="cd-b"><div class="cg">${mkClsGrid(s,'t',4)}</div></div></div>`:''}
+  <div class="cd"><div class="cd-h"><div class="cd-t">💪 트레이닝 수업 (최대 4개)</div></div><div class="cd-b"><div class="cg">${mkClsGrid(s,'t',4)}</div></div></div>
   ${renderTMsgs(s)}
   <div class="cd"><div class="cd-h"><div class="cd-t">📝 메모</div></div><div class="cd-b">
     <textarea id="mo-${s.id}">${esc(s.memo||'')}</textarea>
