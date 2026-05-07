@@ -13,10 +13,11 @@
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--or:#C2621A;--or2:#e07830;--ob:#FFF3EB;--k:#3E7FA8;--kb:#EBF5FF;--bk:#111;--gy:#777;--gy2:#bbb;--lt:#f5f5f7;--wh:#fff;--bd:#e8e8e8;--gn:#16a34a;--gnb:#f0fdf4;--rd:#ef4444;--rdb:#fef2f2;--rdbd:#fecaca;--bl:#2563eb;--blb:#eff6ff;--am:#b45309;--amb:#fffbeb;--ambd:#fde68a;--pp:#7c3aed;--ppb:#f5f3ff;--ppbd:#ddd6fe;--dn:#7B4FA0;--vc:#1A6B5A}
 body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;background:var(--lt);color:var(--bk);overflow:hidden;height:100vh;font-size:15px}
-.page{display:none;position:fixed;inset:0;flex-direction:column;overflow-y:auto;overflow-x:hidden;background:var(--lt)}
+.page{display:none;position:fixed;inset:0;flex-direction:column;overflow:hidden;background:var(--lt)}
 .page.active{display:flex}
+.page-body{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
 .lnd{background:linear-gradient(160deg,var(--ob),#f5f5f7)}
-.hd{background:var(--wh);border-bottom:1px solid var(--bd);padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
+.hd{background:var(--wh);border-bottom:1px solid var(--bd);padding:12px 16px;display:flex;align-items:center;gap:10px;z-index:100;flex-shrink:0}
 .logo{font-size:18px;font-weight:900;color:var(--or);letter-spacing:-1px}.hd-sub{font-size:11px;color:var(--gy);margin-top:1px}.hd-r{margin-left:auto;display:flex;gap:6px;align-items:center}
 .back{background:none;border:none;font-size:22px;cursor:pointer;padding:4px 10px 4px 0;color:var(--bk);line-height:1}
 .sbtn{background:none;border:1px solid var(--bd);border-radius:8px;padding:5px 10px;cursor:pointer;font-size:12px;color:var(--gy);font-family:inherit;white-space:nowrap}
@@ -38,7 +39,7 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif
 input,textarea,select{width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;font-family:inherit;background:#fff;color:var(--bk);outline:none;-webkit-appearance:none}
 input:focus,textarea:focus,select:focus{border-color:var(--or)}textarea{resize:vertical;min-height:80px}
 .fl{font-size:12px;font-weight:700;color:var(--gy);margin-bottom:4px;display:block}.fr{margin-bottom:11px}
-.tb{display:flex;border-bottom:1px solid var(--bd);overflow-x:auto;background:#fff;position:sticky;top:49px;z-index:90}
+.tb{display:flex;border-bottom:1px solid var(--bd);overflow-x:auto;background:#fff;flex-shrink:0}
 .tbtn{padding:10px 15px;border:none;background:none;font-size:13px;font-weight:700;color:var(--gy);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:inherit;flex-shrink:0}
 .tbtn.on{color:var(--or);border-bottom-color:var(--or)}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:flex-end;justify-content:center}
@@ -128,9 +129,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
       <button class="sbtn" onclick="goAdmin()" id="adm-btn" style="display:none">⚙️</button>
     </div>
   </div>
-  <div class="ct">
+  <div class="page-body"><div class="ct">
     <div id="w-ntc"></div><div id="w-ev"></div><div id="w-res"></div><div id="w-msg"></div><div id="w-stu"></div>
-  </div>
+  </div></div>
   <div class="bnav">
     <button class="nb on" onclick="showPage('pg-main')"><span class="ni">🏠</span>명단</button>
     <button class="nb" onclick="showPage('pg-sch')"><span class="ni">📅</span>스케줄</button>
@@ -145,7 +146,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
     <button class="back" onclick="showPage('pg-main')">←</button>
     <div><div class="logo">스케줄</div><div class="hd-sub">연간 행사 일정</div></div>
   </div>
-  <div class="ct" id="sch-ct"></div>
+  <div class="page-body"><div class="ct" id="sch-ct"></div></div>
   <div class="bnav">
     <button class="nb" onclick="showPage('pg-main')"><span class="ni">🏠</span>명단</button>
     <button class="nb on"><span class="ni">📅</span>스케줄</button>
@@ -159,7 +160,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
     <button class="back" onclick="showPage('pg-prof');document.querySelectorAll('.bnav').forEach(b=>{b.style.display='flex';b.style.pointerEvents='auto';})">←</button>
     <div><div class="logo" id="tt-hd">시간표</div><div class="hd-sub">개인 수업 시간표</div></div>
   </div>
-  <div class="ct" id="tt-ct"></div>
+  <div class="page-body"><div class="ct" id="tt-ct"></div></div>
 </div>
 
 <!-- STUDENT LOCK -->
@@ -198,7 +199,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
     <button class="tbtn" onclick="profTab(2)">💃 댄스레파토리</button>
     <button class="tbtn" onclick="profTab(3)">🎤 보컬레파토리</button>
   </div>
-  <div class="ct" id="prof-ct"></div>
+  <div class="page-body">
+    <div class="ct" id="prof-ct"></div>
+  </div>
 </div>
 
 <!-- ADMIN LOCK -->
@@ -227,8 +230,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
       <button class="sbtn dk" onclick="admOut()">로그아웃</button>
     </div>
   </div>
-  <!-- 관리자 탭바 (게시판+학생 제외) -->
-  <div class="tb" id="adm-tb" style="flex-shrink:0;position:sticky;top:49px;z-index:90;background:#fff">
+  <!-- 관리자 탭바 -->
+  <div class="tb" id="adm-tb">
     <button class="tbtn on" onclick="admTab(this,'main')">🏠 홈</button>
     <button class="tbtn" onclick="admTab(this,'fb')">피드백입력</button>
     <button class="tbtn" onclick="admTab(this,'fbl')">피드백목록</button>
@@ -239,7 +242,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
     <button class="tbtn" onclick="admTab(this,'cfg')">설정</button>
   </div>
   <!-- 스크롤 콘텐츠 -->
-  <div class="ct" id="adm-ct" style="padding-top:9px"></div>
+  <div class="page-body"><div class="ct" id="adm-ct" style="padding-top:9px"></div></div>
 </div>
 
 <!-- MODALS -->
