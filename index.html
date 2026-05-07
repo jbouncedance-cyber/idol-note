@@ -721,6 +721,13 @@ function chkPin(){const s=DB.students.find(x=>x.id===curSid);if(s&&(pinVal===s.p
 let _pTab=0;
 function openProf(id){_prevPage='pg-main';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));showPage('pg-prof');setTimeout(()=>renderPTab(s,0),100);}
 function profTab(i){_pTab=i;const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,j)=>b.classList.toggle('on',i===j));const ct=document.getElementById('prof-ct');if(ct){ct.innerHTML='<div style="padding:20px;text-align:center"><div style="width:24px;height:24px;border:3px solid #f5c6a0;border-top-color:var(--or);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div></div>';}setTimeout(()=>renderPTab(s,i),50);}
+function refreshPTab(tabIdx){
+  // curSid로 최신 학생 데이터 다시 찾아서 렌더링
+  const s=DB.students.find(x=>x.id===curSid);
+  if(!s)return;
+  document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===tabIdx));
+  renderPTab(s,tabIdx);
+}
 function renderPTab(s,tab){
   const ct=document.getElementById('prof-ct');
   if(!ct){
@@ -820,7 +827,7 @@ function openPrevGoalEdit(sid,month){
   </div>`;
   det.classList.add('on');
 }
-function savePrevGoal(sid,month){
+async function savePrevGoal(sid,month){
   const s=DB.students.find(x=>x.id===sid);if(!s)return;
   const goal=(document.getElementById('pg-goal-inp').value||'').trim();
   const ach=parseInt(document.getElementById('pg-range').value)||0;
@@ -828,11 +835,11 @@ function savePrevGoal(sid,month){
   const i=s.monthlyGoals.findIndex(g=>g.month===month);
   if(i>=0){s.monthlyGoals[i].goal=goal;s.monthlyGoals[i].achievement=ach;}
   else s.monthlyGoals.push({month,goal,achievement:ach});
-  fbSv('idol_students',s.id,s);closeM('ov-prev-goal');
+  await fbSv('idol_students',s.id,s);closeM('ov-prev-goal');
   toast('✅ '+ymLbl(month)+' 수정됨');
-  setTimeout(()=>renderPTab(s,0),100);
+  setTimeout(()=>refreshPTab(0),100);
 }
-function saveIdolGoal(sid){const s=DB.students.find(x=>x.id===sid);if(!s)return;if(!s.goals)s.goals={};s.goals.idol=(document.getElementById('ig-'+sid)||{value:''}).value||'';fbSv('idol_students',s.id,s);toast('✅ 목표 저장됨');}
+function saveIdolGoal(sid){const s=DB.students.find(x=>x.id===sid);if(!s)return;if(!s.goals)s.goals={};s.goals.idol=(document.getElementById('ig-'+sid)||{value:''}).value||'';fbSv('idol_students',s.id,s);toast('✅ 지망 기획사 저장됨');setTimeout(()=>refreshPTab(0),200);}
 function onGR(el,sid){const v=parseInt(el.value)||0;const c=pctC(v);const p=document.getElementById('gp-'+sid);const b=document.getElementById('gb-'+sid);if(p){p.textContent=v+'%';p.style.color=c;}if(b){b.style.width=v+'%';b.style.background=c;}}
 function svGA(sid,val){const s=DB.students.find(x=>x.id===sid);if(!s)return;const m=ym();if(!s.monthlyGoals)s.monthlyGoals=[];const i=s.monthlyGoals.findIndex(g=>g.month===m);if(i>=0)s.monthlyGoals[i].achievement=parseInt(val)||0;else s.monthlyGoals.push({month:m,goal:'',achievement:parseInt(val)||0});fbSv('idol_students',s.id,s);}
 function svMG(sid){
@@ -848,8 +855,9 @@ function svMG(sid){
   if(i>=0)s.monthlyGoals[i]=entry;else s.monthlyGoals.push(entry);
   fbSv('idol_students',s.id,s);
   toast('✅ '+ymLbl(m)+' 목표 저장됨');
+  setTimeout(()=>refreshPTab(0),200);
 }
-function svMemo(sid){const s=DB.students.find(x=>x.id===sid);if(!s)return;s.memo=(document.getElementById('mo-'+sid)||{value:''}).value||'';fbSv('idol_students',s.id,s);toast('✅ 메모 저장됨');}
+async function svMemo(sid){const s=DB.students.find(x=>x.id===sid);if(!s)return;s.memo=(document.getElementById('mo-'+sid)||{value:''}).value||'';await fbSv('idol_students',s.id,s);toast('✅ 메모 저장됨');}
 
 // WEEKLY
 function renderWkList(s){
@@ -918,7 +926,7 @@ function openCS(sid,sk,lbl,pfx){
       </div>`;}).join('')}
   </div></div>`;det.classList.add('on');
 }
-function doCS(cid){const s=DB.students.find(x=>x.id===_clsSel.sid);if(!s)return;if(!s.classes)s.classes={};if(cid)s.classes[_clsSel.sk]=cid;else delete s.classes[_clsSel.sk];fbSv('idol_students',s.id,s);closeM('ov-cs');renderPTab(s,0);toast('✅ 수업 저장됨');}
+async function doCS(cid){const s=DB.students.find(x=>x.id===_clsSel.sid);if(!s)return;if(!s.classes)s.classes={};if(cid)s.classes[_clsSel.sk]=cid;else delete s.classes[_clsSel.sk];await fbSv('idol_students',s.id,s);closeM('ov-cs');toast('✅ 수업 저장됨');setTimeout(()=>refreshPTab(0),100);}
 
 // TEACHER MSG
 function renderTMsgs(s){
@@ -932,7 +940,7 @@ function renderTMsgs(s){
     </div>`).join('')}
   </div></div>`;
 }
-function mkRead(sid,mid){const s=DB.students.find(x=>x.id===sid);if(!s)return;const m=(s.teacherMessages||[]).find(x=>x.id===mid);if(!m)return;m.read=true;fbSv('idol_students',s.id,s);renderPTab(s,0);}
+async function mkRead(sid,mid){const s=DB.students.find(x=>x.id===sid);if(!s)return;const m=(s.teacherMessages||[]).find(x=>x.id===mid);if(!m)return;m.read=true;await fbSv('idol_students',s.id,s);setTimeout(()=>refreshPTab(0),100);}
 function openTMsg(sid){_tmSid=sid;const s=DB.students.find(x=>x.id===sid);if(!s)return;document.getElementById('tmsg-sn').textContent=s.name;document.getElementById('tmsg-inp').value='';const hist=(s.teacherMessages||[]).slice().reverse().slice(0,10);document.getElementById('tmsg-hist').innerHTML=hist.map(m=>`<div style="padding:8px 10px;background:var(--lt);border-radius:8px;margin-bottom:5px;font-size:12px"><div style="color:var(--or);font-weight:700;font-size:11px;margin-bottom:3px">${m.date}</div><div style="white-space:pre-wrap">${esc(m.content)}</div></div>`).join('');openM('ov-tmsg');}
 function sendTMsg(){const c=document.getElementById('tmsg-inp').value.trim();if(!c){alert('내용을 입력해주세요');return;}const s=DB.students.find(x=>x.id===_tmSid);if(!s)return;if(!s.teacherMessages)s.teacherMessages=[];s.teacherMessages.push({id:'tm'+Date.now(),content:c,date:nowT(),read:false});fbSv('idol_students',s.id,s);toast('✅ 전송됨');closeM('ov-tmsg');}
 
@@ -1073,7 +1081,7 @@ async function saveAudition(){
     await fbSv('idol_students',s.id,s);
     closeM('ov-audit');
     toast('✅ 오디션 기록 저장됨');
-    setTimeout(()=>renderPTab(s,1),100);
+    setTimeout(()=>refreshPTab(1),100);
   }catch(e){alert('저장 실패: '+e.message);}
 }
 async function delAudition(sid,idx){
@@ -1082,7 +1090,7 @@ async function delAudition(sid,idx){
   s.auditions.splice(idx,1);
   await fbSv('idol_students',s.id,s);
   toast('✅ 삭제됨');
-  setTimeout(()=>renderPTab(s,1),100);
+  setTimeout(()=>refreshPTab(1),100);
 }
 
 async function renderFb(s,c){
@@ -1186,10 +1194,9 @@ async function saveRep(){
   await db.collection('studentData').doc(key).set(data);
   _repData.data=data;
   closeM('ov-rep');
-  const tabIdx=type==='dance'?2:3;
-  const ct=document.getElementById('prof-ct');if(ct)ct.innerHTML='<div style="padding:20px;text-align:center"><div style="width:24px;height:24px;border:3px solid #f5c6a0;border-top-color:var(--or);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div></div>';
-  setTimeout(()=>renderPTab(s,tabIdx),50);
+  const tabIdx=type==='dance'?3:4;
   toast('✅ 저장됨');
+  setTimeout(()=>refreshPTab(tabIdx),100);
 }
 async function dlRep(type,key,sid,idx){
   if(!confirm('삭제할까요?'))return;
@@ -1200,10 +1207,9 @@ async function dlRep(type,key,sid,idx){
   data[field].splice(idx,1);
   await db.collection('studentData').doc(key).set(data);
   _repData.data=data;
-  const tabIdx=type==='dance'?2:3;
-  const ct=document.getElementById('prof-ct');if(ct)ct.innerHTML='<div style="padding:20px;text-align:center"><div style="width:24px;height:24px;border:3px solid #f5c6a0;border-top-color:var(--or);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div></div>';
-  setTimeout(()=>renderPTab(s,tabIdx),50);
+  const tabIdx=type==='dance'?3:4;
   toast('✅ 삭제됨');
+  setTimeout(()=>refreshPTab(tabIdx),100);
 }
 
 // INBODY TAB
@@ -1215,14 +1221,14 @@ function renderIbTab(s){
     </table></div>`}
   </div>`;
 }
-function dlIb(sid,idx){const s=DB.students.find(x=>x.id===sid);if(!s||!confirm('삭제할까요?'))return;s.inbody.splice(idx,1);fbSv('idol_students',s.id,s);renderPTab(s,0);toast('✅ 삭제됨');}
+async function dlIb(sid,idx){const s=DB.students.find(x=>x.id===sid);if(!s||!confirm('삭제할까요?'))return;s.inbody.splice(idx,1);await fbSv('idol_students',s.id,s);toast('✅ 삭제됨');setTimeout(()=>refreshPTab(0),100);}
 function prevIb(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{_ibBase64=e.target.result;const p=document.getElementById('ib-prev');p.src=e.target.result;p.style.display='block';};r.readAsDataURL(f);}
 function openIbM(sid){_ibSid=sid;_ibBase64=null;document.getElementById('ib-dt').value=today();['ib-sc','ib-wt','ib-ms','ib-ft'].forEach(id=>{document.getElementById(id).value='';});document.getElementById('ib-img').value='';document.getElementById('ib-prev').style.display='none';openM('ov-ib');}
 async function saveIb(){
   const s=DB.students.find(x=>x.id===_ibSid);if(!s)return;const dt=document.getElementById('ib-dt').value;if(!dt){alert('날짜를 입력해주세요');return;}
   let imgUrl='';if(_ibBase64){try{const ref=st.ref('idol_inbody/'+_ibSid+'/'+Date.now()+'.jpg');await ref.putString(_ibBase64,'data_url');imgUrl=await ref.getDownloadURL();}catch(e){console.warn('사진 업로드 실패:',e);}}
   const ib={date:dt,score:document.getElementById('ib-sc').value,weight:document.getElementById('ib-wt').value,muscle:document.getElementById('ib-ms').value,fat:document.getElementById('ib-ft').value,imgUrl,ts:Date.now()};
-  if(!s.inbody)s.inbody=[];s.inbody.push(ib);await fbSv('idol_students',s.id,s);closeM('ov-ib');const ss=DB.students.find(x=>x.id===_ibSid);if(ss)renderPTab(ss,0);toast('✅ 인바디 저장됨');
+  if(!s.inbody)s.inbody=[];s.inbody.push(ib);await fbSv('idol_students',s.id,s);closeM('ov-ib');toast('✅ 인바디 저장됨');setTimeout(()=>refreshPTab(0),100);
 }
 function handleProfImg(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=async e=>{const s=DB.students.find(x=>x.id===curSid);if(!s)return;try{const ref=st.ref('idol_profiles/'+curSid+'.jpg');await ref.putString(e.target.result,'data_url');s.photo=await ref.getDownloadURL();}catch(err){s.photo=e.target.result;}await fbSv('idol_students',s.id,s);renderPTab(s,0);toast('✅ 사진 저장됨');};r.readAsDataURL(f);}
 
