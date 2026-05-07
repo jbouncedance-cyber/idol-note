@@ -1102,9 +1102,7 @@ async function renderFb(s,c){
     let h='';
     Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).forEach(([k,items])=>{
       const [date,agency]=k.split('|');
-      // 같은 기획사의 오디션 기록 찾기
-      const relAudit=(s.auditions||[]).find(a=>a.agency===agency&&a.date===date);
-      h+=`<div style="font-size:12px;font-weight:800;color:var(--gy);margin:14px 0 7px;display:flex;align-items:center;gap:8px">${date} · ${agency}${relAudit?`<span style="background:linear-gradient(135deg,var(--or),var(--or2));color:#fff;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700">📝 지원기록 있음</span>`:''}<div style="flex:1;height:1px;background:var(--bd)"></div></div>`;
+      h+=`<div style="font-size:12px;font-weight:800;color:var(--gy);margin:14px 0 7px;display:flex;align-items:center;gap:8px">${date} · ${agency}<div style="flex:1;height:1px;background:var(--bd)"></div></div>`;
       items.forEach(f=>{
         h+=`<div class="cd" style="margin-bottom:9px"><div style="padding:12px 14px">
           ${f.videoDance?`<a href="${f.videoDance}" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:#EFE4F8;color:var(--dn);font-size:12px;font-weight:700;border-radius:8px;text-decoration:none;margin-bottom:8px">💃 댄스 영상 ↗</a>`:''}
@@ -1642,9 +1640,7 @@ async function renderAdmFbList(c){
     if(!filtered.length)h+='<div class="emp-msg">피드백이 없어요</div>';
     else Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).forEach(([k,items])=>{
       const [date,agency]=k.split('|');
-      // 같은 기획사의 오디션 기록 찾기
-      const relAudit=(s.auditions||[]).find(a=>a.agency===agency&&a.date===date);
-      h+=`<div style="font-size:12px;font-weight:800;color:var(--gy);margin:14px 0 7px;display:flex;align-items:center;gap:8px">${date} · ${agency}${relAudit?`<span style="background:linear-gradient(135deg,var(--or),var(--or2));color:#fff;border-radius:10px;padding:2px 8px;font-size:10px;font-weight:700">📝 지원기록 있음</span>`:''}<div style="flex:1;height:1px;background:var(--bd)"></div></div>`;
+      h+=`<div style="font-size:12px;font-weight:800;color:var(--gy);margin:14px 0 7px;display:flex;align-items:center;gap:8px">${date} · ${agency}<div style="flex:1;height:1px;background:var(--bd)"></div></div>`;
       items.forEach(f=>{h+=`<div class="cd" style="margin-bottom:8px"><div style="padding:11px 13px;display:flex;justify-content:space-between;align-items:flex-start"><span style="font-weight:800">${esc(f.name)}</span><button onclick="dlFb('${f.id}')" class="del-btn">삭제</button></div>
         <div style="padding:0 13px 11px">
           ${f.dText?`<div style="background:#EFE4F8;border-radius:8px;padding:9px 11px;margin-bottom:7px"><div style="font-size:10px;font-weight:800;color:var(--dn);margin-bottom:3px">💃${f.dTeacher?' · '+esc(f.dTeacher):''}</div><div style="font-size:13px;line-height:1.6">${esc(f.dText)}</div></div>`:''}
