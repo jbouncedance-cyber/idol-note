@@ -497,10 +497,12 @@ async function loadAll(){
       const d=c.data();
       DB.adminPw=d.adminPw||DB.adminPw;
       DB.notices=d.notices||[];DB.events=d.events||[];
-      if(d.danceClasses&&d.danceClasses.length)DB.danceClasses=d.danceClasses;
-      if(d.vocalClasses)DB.vocalClasses=d.vocalClasses;
-      if(d.etcClasses)DB.etcClasses=d.etcClasses;
-      if(d.trainingClasses)DB.trainingClasses=d.trainingClasses;
+      // 수업 데이터 로드 - timeStart/timeEnd와 ts/te 둘 다 처리
+      function normCls(arr){return (arr||[]).map(cl=>({...cl,ts:cl.ts||cl.timeStart||'',te:cl.te||cl.timeEnd||''}));}
+      if(d.danceClasses&&d.danceClasses.length)DB.danceClasses=normCls(d.danceClasses);
+      if(d.vocalClasses!==undefined)DB.vocalClasses=normCls(d.vocalClasses);
+      if(d.etcClasses!==undefined)DB.etcClasses=normCls(d.etcClasses);
+      if(d.trainingClasses!==undefined)DB.trainingClasses=normCls(d.trainingClasses);
     }else{await fbCfg();}
     const ss=await db.collection('idol_students').get();
     if(!ss.empty){DB.students=[];ss.forEach(d=>DB.students.push(d.data()));}
@@ -715,8 +717,8 @@ function chkPin(){const s=DB.students.find(x=>x.id===curSid);if(s&&(pinVal===s.p
 
 // PROFILE
 let _pTab=0;
-function openProf(id){_prevPage='pg-main';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));renderPTab(s,0);showPage('pg-prof');}
-function profTab(i){_pTab=i;const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,j)=>b.classList.toggle('on',i===j));renderPTab(s,i);}
+function openProf(id){_prevPage='pg-main';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));showPage('pg-prof');setTimeout(()=>renderPTab(s,0),50);}
+function profTab(i){_pTab=i;const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,j)=>b.classList.toggle('on',i===j));const c=document.getElementById('prof-ct');if(c)c.innerHTML='<div style="padding:20px;text-align:center;color:var(--gy)">불러오는 중...</div>';setTimeout(()=>renderPTab(s,i),30);}
 function renderPTab(s,tab){
   const c=document.getElementById('prof-ct');
   if(!c){console.warn('prof-ct not found');return;}
@@ -1158,7 +1160,7 @@ function saveStudent(){
   closeM('ov-stu');renderAdmCt();renderStuList();
 }
 function dlStu(id){const s=DB.students.find(x=>x.id===id);if(!s)return;if(!confirm(s.name+' 삭제할까요?'))return;DB.students=DB.students.filter(x=>x.id!==id);fbDl('idol_students',id);renderAdmCt();renderStuList();toast('✅ 삭제됨');}
-function admOpenProf(id){_prevPage='pg-adm';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));renderPTab(s,0);showPage('pg-prof');}
+function admOpenProf(id){_prevPage='pg-adm';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));showPage('pg-prof');setTimeout(()=>renderPTab(s,0),50);}
 
 // 피드백 입력
 function renderAdmFbInput(c){
