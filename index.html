@@ -15,21 +15,16 @@
 body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;background:var(--lt);color:var(--bk);height:100vh;overflow:hidden;font-size:15px}
 .page{
   position:fixed;inset:0;
+  display:none;
   flex-direction:column;
-  visibility:hidden;
   overflow:hidden;
-  pointer-events:none;
   z-index:0;
 }
 .page.active{
-  visibility:visible;
+  display:flex;
   overflow-y:auto;
   overflow-x:hidden;
-  pointer-events:auto;
   z-index:1;
-  display:flex;
-  flex-direction:column;
-  min-height:100%;
 }
 .hd{background:var(--wh);border-bottom:1px solid var(--bd);padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
 .logo{font-size:18px;font-weight:900;color:var(--or);letter-spacing:-1px}.hd-sub{font-size:11px;color:var(--gy);margin-top:1px}.hd-r{margin-left:auto;display:flex;gap:6px;align-items:center}
@@ -43,7 +38,7 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif
 .bnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:none;z-index:200;padding-bottom:env(safe-area-inset-bottom,0px);pointer-events:none}
 .nb{flex:1;background:none;border:none;padding:9px 0 7px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-size:10px;color:var(--gy2);font-family:inherit}
 .nb.on{color:var(--or)}.ni{font-size:20px;line-height:1.2}
-.ct{flex:1;padding:12px 12px 90px}
+.ct{padding:12px 12px 90px}
 .cd{background:#fff;border-radius:14px;border:1px solid var(--bd);margin-bottom:10px;overflow:hidden}
 .cd-h{padding:11px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bd);gap:8px}
 .cd-t{font-size:14px;font-weight:700}.cd-b{padding:13px 14px}
@@ -53,7 +48,7 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif
 input,textarea,select{width:100%;padding:10px 12px;border:1.5px solid var(--bd);border-radius:10px;font-size:14px;font-family:inherit;background:#fff;color:var(--bk);outline:none;-webkit-appearance:none}
 input:focus,textarea:focus,select:focus{border-color:var(--or)}textarea{resize:vertical;min-height:80px}
 .fl{font-size:12px;font-weight:700;color:var(--gy);margin-bottom:4px;display:block}.fr{margin-bottom:11px}
-.tb{display:flex;border-bottom:1px solid var(--bd);overflow-x:auto;background:#fff}
+.tb{display:flex;border-bottom:1px solid var(--bd);overflow-x:auto;background:#fff;position:sticky;top:49px;z-index:90;flex-shrink:0}
 .tbtn{padding:10px 15px;border:none;background:none;font-size:13px;font-weight:700;color:var(--gy);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;font-family:inherit;flex-shrink:0}
 .tbtn.on{color:var(--or);border-bottom-color:var(--or)}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:500;display:none;align-items:flex-end;justify-content:center}
@@ -717,16 +712,19 @@ function chkPin(){const s=DB.students.find(x=>x.id===curSid);if(s&&(pinVal===s.p
 
 // PROFILE
 let _pTab=0;
-function openProf(id){_prevPage='pg-main';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));showPage('pg-prof');setTimeout(()=>renderPTab(s,0),50);}
-function profTab(i){_pTab=i;const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,j)=>b.classList.toggle('on',i===j));const c=document.getElementById('prof-ct');if(c)c.innerHTML='<div style="padding:20px;text-align:center;color:var(--gy)">불러오는 중...</div>';setTimeout(()=>renderPTab(s,i),30);}
+function openProf(id){_prevPage='pg-main';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));showPage('pg-prof');setTimeout(()=>renderPTab(s,0),100);}
+function profTab(i){_pTab=i;const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,j)=>b.classList.toggle('on',i===j));const ct=document.getElementById('prof-ct');if(ct){ct.innerHTML='<div style="padding:20px;text-align:center"><div style="width:24px;height:24px;border:3px solid #f5c6a0;border-top-color:var(--or);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div></div>';}setTimeout(()=>renderPTab(s,i),50);}
 function renderPTab(s,tab){
-  const c=document.getElementById('prof-ct');
-  if(!c){console.warn('prof-ct not found');return;}
-  if(tab===0)c.innerHTML=renderPMain(s);
-  else if(tab===1)renderFb(s,c);
-  else if(tab===2)renderRep(s,'dance',c);
-  else if(tab===3)renderRep(s,'vocal',c);
-  else if(tab===4)c.innerHTML=renderIbTab(s);
+  const ct=document.getElementById('prof-ct');
+  if(!ct){
+    // prof-ct 못 찾으면 100ms 후 재시도
+    setTimeout(()=>renderPTab(s,tab),100);return;
+  }
+  if(tab===0)ct.innerHTML=renderPMain(s);
+  else if(tab===1)renderFb(s,ct);
+  else if(tab===2)renderRep(s,'dance',ct);
+  else if(tab===3)renderRep(s,'vocal',ct);
+  else if(tab===4)ct.innerHTML=renderIbTab(s);
   // 스크롤 맨 위로
   const pg=document.getElementById('pg-prof');if(pg)pg.scrollTop=0;
 }
@@ -1160,7 +1158,7 @@ function saveStudent(){
   closeM('ov-stu');renderAdmCt();renderStuList();
 }
 function dlStu(id){const s=DB.students.find(x=>x.id===id);if(!s)return;if(!confirm(s.name+' 삭제할까요?'))return;DB.students=DB.students.filter(x=>x.id!==id);fbDl('idol_students',id);renderAdmCt();renderStuList();toast('✅ 삭제됨');}
-function admOpenProf(id){_prevPage='pg-adm';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));showPage('pg-prof');setTimeout(()=>renderPTab(s,0),50);}
+function admOpenProf(id){_prevPage='pg-adm';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));showPage('pg-prof');setTimeout(()=>renderPTab(s,0),100);}
 
 // 피드백 입력
 function renderAdmFbInput(c){
@@ -1231,19 +1229,58 @@ function renderAdmCls(c){
   const types=[{k:'dance',lbl:'💃 댄스 수업',data:DB.danceClasses},{k:'vocal',lbl:'🎤 보컬 수업',data:DB.vocalClasses},{k:'etc',lbl:'🎵 기타음악 수업',data:DB.etcClasses},{k:'training',lbl:'💪 트레이닝 수업',data:DB.trainingClasses}];
   let h='';
   types.forEach(tp=>{
-    const arr=tp.data||[];h+=`<div style="font-size:11px;font-weight:800;color:var(--gy);margin:12px 0 7px">${tp.lbl}</div><div class="adm-sec">`;
+    const arr=tp.data||[];
+    h+=`<div style="display:flex;align-items:center;justify-content:space-between;margin:12px 0 7px"><div style="font-size:11px;font-weight:800;color:var(--gy)">${tp.lbl} (${arr.length}개)</div><button onclick="openClsAdd('${tp.k}')" style="background:var(--or);color:#fff;border:none;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">+ 추가</button></div>`;
+    h+=`<div class="adm-sec">`;
+    if(!arr.length){h+='<div class="emp-msg" style="padding:12px">없음</div>';}
     arr.forEach((cl,i)=>{
-      const tinfo=cl.day?(cl.day+(cl.ts?' '+cl.ts:'')+(cl.te?'~'+cl.te:'')):'';
+      const ts2=cl.ts||cl.timeStart||'';const te2=cl.te||cl.timeEnd||'';
+      const tinfo=cl.day?(cl.day+(ts2?' '+ts2:'')+(te2?'~'+te2:'')):'';
       h+=`<div class="adm-r">
-        <div style="flex:1"><div style="font-weight:800">${esc(cl.name)}</div>
-        <div style="font-size:12px;color:var(--gy)">${esc(cl.teacher)}${tinfo?' · '+tinfo:''}</div></div>
+        <div style="flex:1;min-width:0"><div style="font-weight:800">${esc(cl.name)}</div>
+        <div style="font-size:12px;color:var(--gy)">${esc(cl.teacher||'')}${tinfo?' · '+tinfo:''}</div></div>
         <button onclick="openClsEdit('${tp.k}',${i})" class="edt-btn">수정</button>
         <button onclick="dlCls('${tp.k}',${i})" class="del-btn">삭제</button>
       </div>`;
     });
-    h+=`<div class="ar"><input type="text" id="${tp.k}-nm" placeholder="수업명" style="flex:2"><input type="text" id="${tp.k}-tr" placeholder="선생님"><input type="text" id="${tp.k}-dy" placeholder="요일" style="width:50px;flex:none"><input type="text" id="${tp.k}-ts" placeholder="시작" style="width:65px;flex:none"><input type="text" id="${tp.k}-te" placeholder="종료" style="width:65px;flex:none"><button onclick="addCls('${tp.k}')">+ 추가</button></div></div>`;
+    h+='</div>';
   });
   c.innerHTML=h;
+}
+let _clsAddType=null;
+function openClsAdd(type){
+  _clsAddType=type;
+  const labels={dance:'💃 댄스 수업',vocal:'🎤 보컬 수업',etc:'🎵 기타음악 수업',training:'💪 트레이닝 수업'};
+  let det=document.getElementById('ov-cls-add');
+  if(!det){det=document.createElement('div');det.id='ov-cls-add';det.className='ov';det.onclick=function(e){if(e.target===this)closeM('ov-cls-add');};document.body.appendChild(det);}
+  det.innerHTML=`<div class="md"><div class="mh"><div class="mt">${labels[type]||'수업'} 추가</div><button class="xb" onclick="closeM('ov-cls-add')">✕</button></div>
+    <div class="mb">
+      <div class="fr"><label class="fl">수업명</label><input type="text" id="ca-nm" placeholder="예: 팝핑기초"></div>
+      <div class="fr"><label class="fl">선생님</label><input type="text" id="ca-tr" placeholder="예: 여린쌤"></div>
+      <div class="fr"><label class="fl">요일</label>
+        <select id="ca-dy" style="margin-bottom:0">
+          <option value="">요일없음</option>
+          <option>월</option><option>화</option><option>수</option><option>목</option><option>금</option><option>토</option><option>일</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" class="fr">
+        <div><label class="fl">시작 시간</label><input type="time" id="ca-ts"></div>
+        <div><label class="fl">종료 시간</label><input type="time" id="ca-te"></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-or" onclick="doAddCls()">추가하기</button></div>
+  </div>`;
+  det.classList.add('on');
+  setTimeout(()=>{const el=document.getElementById('ca-nm');if(el)el.focus();},100);
+}
+function doAddCls(){
+  const nm=(document.getElementById('ca-nm').value||'').trim();if(!nm){alert('수업명을 입력해주세요');return;}
+  const cl={id:_clsAddType[0]+Date.now(),name:nm,teacher:document.getElementById('ca-tr').value.trim(),day:document.getElementById('ca-dy').value,ts:document.getElementById('ca-ts').value,te:document.getElementById('ca-te').value};
+  if(_clsAddType==='dance'){if(!DB.danceClasses)DB.danceClasses=[];DB.danceClasses.push(cl);}
+  else if(_clsAddType==='vocal'){if(!DB.vocalClasses)DB.vocalClasses=[];DB.vocalClasses.push(cl);}
+  else if(_clsAddType==='etc'){if(!DB.etcClasses)DB.etcClasses=[];DB.etcClasses.push(cl);}
+  else{if(!DB.trainingClasses)DB.trainingClasses=[];DB.trainingClasses.push(cl);}
+  fbCfg();closeM('ov-cls-add');renderAdmCt();toast('✅ '+nm+' 추가됨');
 }
 let _clsEditType=null,_clsEditIdx=null;
 function openClsEdit(type,i){
