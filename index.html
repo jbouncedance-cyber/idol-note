@@ -1049,8 +1049,7 @@ function renderAdmBoard(container){
   if(msgs.length){
     let h=`<div style="margin-bottom:12px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><div style="font-size:11px;font-weight:800;color:var(--gy)">📌 오늘의 한마디</div><button class="sbtn or" onclick="openMsgModal()" style="font-size:11px;padding:3px 9px">+ 남기기</button></div>
     <div class="pw">${msgs.map((m,i)=>{const col=PC[i%PC.length];const rp=(m.replies||[]).length;
-      return `<div class="pt" style="background:${col}" onclick="openMsgDet('${m.id}')"><div style="font-size:11px;font-weight:800;margin-bottom:5px;opacity:.8;color:${m.isT?'#b5156d':'#333'}">${m.isT?'👑 ':''}${esc(m.author)}</div><div style="font-size:11px;line-height:1.5;flex:1;word-break:break-all">${esc(m.content).replace(/
-/g,'<br>')}</div><div style="display:flex;justify-content:space-between;margin-top:6px"><span style="font-size:10px;opacity:.6">${m.time}</span>${rp?`<span style="font-size:10px;font-weight:700;opacity:.75">💬${rp}</span>`:''}</div></div>`;}).join('')}
+      return `<div class="pt" style="background:${col}" onclick="openMsgDet('${m.id}')"><div style="font-size:11px;font-weight:800;margin-bottom:5px;opacity:.8;color:${m.isT?'#b5156d':'#333'}">${m.isT?'👑 ':''}${esc(m.author)}</div><div style="font-size:11px;line-height:1.5;flex:1;word-break:break-all">${esc(m.content).replace(/\n/g,'<br>')}</div><div style="display:flex;justify-content:space-between;margin-top:6px"><span style="font-size:10px;opacity:.6">${m.time}</span>${rp?`<span style="font-size:10px;font-weight:700;opacity:.75">💬${rp}</span>`:''}</div></div>`;}).join('')}
     </div></div>`;
     msgW.innerHTML=h;
   }else{
