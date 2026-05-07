@@ -243,10 +243,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
       <button class="sbtn dk" onclick="admOut()">로그아웃</button>
     </div>
   </div>
-  <!-- sticky 탭바 -->
-  <div class="tb" style="flex-shrink:0;position:sticky;top:49px;z-index:90;background:#fff">
-    <button class="tbtn on" onclick="admTab(this,'board')">📋 게시판</button>
-    <button class="tbtn" onclick="admTab(this,'stu')">학생</button>
+  <!-- 관리자 탭바 (게시판+학생 제외) -->
+  <div class="tb" id="adm-tb" style="flex-shrink:0;position:sticky;top:49px;z-index:90;background:#fff">
+    <button class="tbtn on" onclick="admTab(this,'main')">🏠 홈</button>
     <button class="tbtn" onclick="admTab(this,'fb')">피드백입력</button>
     <button class="tbtn" onclick="admTab(this,'fbl')">피드백목록</button>
     <button class="tbtn" onclick="admTab(this,'cls')">수업</button>
@@ -462,7 +461,8 @@ window.DB={
 let DB=window.DB;
 
 // STATE
-let curSid=null,pinVal='',_curCls='audition',admTab_='stu';
+let curSid=null,pinVal='',admTab_='stu';
+let _curCls=localStorage.getItem('jbi_cls')||'audition';
 let _editEvId=null,_editResId=null,_editNtcIdx=null,_editStuId=null,_tmSid=null,_ibSid=null;
 let _curMsgId=null,_resDetId=null,_fbStu=null,_fbCls='audition',_fblCls='audition',_fblFilter='all';
 let _prevPage='pg-main';  // 개인 페이지 뒤로가기용
@@ -511,11 +511,16 @@ async function loadAll(){
     try{const rs=await db.collection('idol_resources').get();DB.resources=[];rs.forEach(d=>DB.resources.push(d.data()));}catch(e){DB.resources=[];}
     window.DB=DB;
   }catch(e){console.warn('로드 실패:',e);}
-  // isAdm 세션 복원
+  // 세션 복원
   if(isAdm){
     const ab=document.getElementById('adm-btn');const an=document.getElementById('adm-nav');
     if(ab)ab.style.display='';if(an)an.style.display='';
     _curCls='all';
+  } else if(_curCls&&_curCls!=='all'){
+    // 학생 반 모드 복원 - 헤더 텍스트 업데이트
+    const ml=document.getElementById('main-logo');const ms=document.getElementById('main-sub');
+    if(ml)ml.textContent='JB IDOL';
+    if(ms)ms.textContent=_curCls==='kids'?'키즈오디션반':'오디션반';
   }
   if(document.getElementById('pg-main').classList.contains('active')) renderMain();
   if(document.getElementById('pg-adm').classList.contains('active')){renderAdm();}
@@ -550,10 +555,10 @@ function goTeacher(){
     document.getElementById('adm-pw-err').textContent='';
   }
 }
-function goClass(cls){_curCls=cls;document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent=cls==='kids'?'키즈오디션반':'오디션반';document.getElementById('adm-btn').style.display='none';document.getElementById('adm-nav').style.display='none';showPage('pg-main');}
+function goClass(cls){_curCls=cls;localStorage.setItem('jbi_cls',cls);document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent=cls==='kids'?'키즈오디션반':'오디션반';document.getElementById('adm-btn').style.display='none';document.getElementById('adm-nav').style.display='none';showPage('pg-main');}
 function goAdmin(){if(isAdm){showPage('pg-adm');renderAdm();}else{showPage('pg-admlk');document.getElementById('adm-pw-inp').value='';document.getElementById('adm-pw-err').textContent='';}}
 function chkAdm(){const pw=document.getElementById('adm-pw-inp').value;if(pw===DB.adminPw){isAdm=true;localStorage.setItem('jbi_adm','1');_curCls='all';document.getElementById('adm-btn').style.display='';document.getElementById('adm-nav').style.display='';showPage('pg-adm');renderAdm();}else document.getElementById('adm-pw-err').textContent='비밀번호가 틀렸습니다';}
-function admOut(){isAdm=false;localStorage.removeItem('jbi_adm');showPage('pg-land');}
+function admOut(){isAdm=false;localStorage.removeItem('jbi_adm');localStorage.removeItem('jbi_cls');showPage('pg-land');}
 function profGoBack(){showPage(_prevPage);if(_prevPage==='pg-adm')renderAdm();}
 function showTT(){const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.getElementById('tt-hd').textContent=s.name+' 시간표';renderTT(s);showPage('pg-tt');}
 function renderTT(s){
@@ -1010,24 +1015,32 @@ function dlEv(id){if(!confirm('삭제할까요?'))return;DB.events=(DB.events||[
 
 // ADMIN
 function renderAdm(){
-  admTab_='board';
-  document.querySelectorAll('#pg-adm .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));
+  admTab_='main';
+  document.querySelectorAll('#adm-tb .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));
   renderAdmCt();
 }
-function renderAdmBoard(container){
-  // container가 있으면 거기에, 없으면 기존 div들에
-  let evW,resW,msgW;
-  if(container){
-    container.innerHTML='<div id="adm-w-ev"></div><div id="adm-w-res"></div><div id="adm-w-msg"></div>';
-    evW=document.getElementById('adm-w-ev');
-    resW=document.getElementById('adm-w-res');
-    msgW=document.getElementById('adm-w-msg');
-  } else {
-    evW=document.getElementById('adm-w-ev');
-    resW=document.getElementById('adm-w-res');
-    msgW=document.getElementById('adm-w-msg');
-    if(!evW||!resW||!msgW) return;
-  }
+function renderAdmMain(container){
+  // 게시판 + 학생목록 합체
+  if(!container) return;
+  container.innerHTML='<div id="adm-w-ntc"></div><div id="adm-w-ev"></div><div id="adm-w-res"></div><div id="adm-w-msg"></div><div id="adm-w-stu"></div>';
+  renderAdmBoard(container,true);
+}
+function renderAdmBoard(container,isMain){
+  let ntcW=document.getElementById('adm-w-ntc');
+  let evW=document.getElementById('adm-w-ev');
+  let resW=document.getElementById('adm-w-res');
+  let msgW=document.getElementById('adm-w-msg');
+  let stuW=document.getElementById('adm-w-stu');
+  if(!evW||!resW||!msgW) return;
+  // 공지사항
+  const ns=DB.notices||[];
+  if(ns.length&&ntcW){
+    let h='<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:800;color:var(--gy);margin-bottom:5px">📢 공지사항</div>';
+    ns.slice(0,3).forEach((n,i)=>{
+      h+=`<div onclick="viewNtc(${i})" style="background:#fff;border:1px solid var(--bd);border-left:3px solid var(--or);border-radius:9px;padding:8px 12px;margin-bottom:5px;cursor:pointer;display:flex;align-items:center;gap:9px"><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:800;color:var(--or)">${esc(n.title)}</div><div style="font-size:10px;color:var(--gy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((n.content||'').replace(/\n/g,' ').substring(0,40))}</div></div><div style="color:var(--gy2)">›</div></div>`;
+    });
+    h+='</div>';ntcW.innerHTML=h;
+  } else if(ntcW){ntcW.innerHTML='';}
   // 행사
   const now=new Date();const evs=(DB.events||[]).filter(e=>e.date>=today()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
   if(evs.length){
@@ -1055,12 +1068,19 @@ function renderAdmBoard(container){
   }else{
     msgW.innerHTML=`<div style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><div style="font-size:11px;font-weight:800;color:var(--gy)">📌 오늘의 한마디</div><button class="sbtn or" onclick="openMsgModal()" style="font-size:11px;padding:3px 9px">+ 남기기</button></div></div>`;
   }
+  // 학생목록 (isMain일 때만)
+  if(isMain&&stuW){
+    const divider='<div style="font-size:11px;font-weight:800;color:var(--gy);letter-spacing:.5px;margin:14px 0 8px;padding-top:8px;border-top:2px solid var(--bd)">👥 전체 학생 명단</div>';
+    const tmpDiv=document.createElement('div');
+    renderAdmStu(tmpDiv);
+    stuW.innerHTML=divider+tmpDiv.innerHTML;
+  }
 }
-async function refreshAdm(){const btn=document.getElementById('adm-refresh-btn');if(btn){btn.style.animation='spin .6s linear infinite';btn.disabled=true;}await loadAll();if(admTab_==='board')renderAdmCt();if(btn){btn.style.animation='';btn.disabled=false;}toast('✅ 업데이트됐어요!');}
-function admTab(btn,tab){admTab_=tab;document.querySelectorAll('#pg-adm .tbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderAdmCt();}
+async function refreshAdm(){const btn=document.getElementById('adm-refresh-btn');if(btn){btn.style.animation='spin .6s linear infinite';btn.disabled=true;}await loadAll();if(admTab_==='main')renderAdmCt();if(btn){btn.style.animation='';btn.disabled=false;}toast('✅ 업데이트됐어요!');}
+function admTab(btn,tab){admTab_=tab;document.querySelectorAll('#adm-tb .tbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderAdmCt();}
 function renderAdmCt(){
   const c=document.getElementById('adm-ct');
-  if(admTab_==='board')renderAdmBoard(c);
+  if(admTab_==='main')renderAdmMain(c);
   else if(admTab_==='stu')renderAdmStu(c);
   else if(admTab_==='fb')renderAdmFbInput(c);
   else if(admTab_==='fbl')renderAdmFbList(c);
