@@ -453,7 +453,7 @@ async function fbCfg(){try{await db.collection('idol_config').doc('main').set({a
 async function loadAll(){
   try{
     const c=await db.collection('idol_config').doc('main').get();
-    if(c.exists()){
+    if(c.exists){
       const d=c.data();
       DB.adminPw=d.adminPw||DB.adminPw;
       DB.notices=d.notices||[];DB.events=d.events||[];
@@ -800,7 +800,7 @@ async function renderRep(s,type,c){
   const keys=[s.cls+':'+s.name,'audition:'+s.name,'kids:'+s.name];
   try{
     let data={};
-    for(const key of keys){const snap=await db.collection('studentData').doc(key).get();if(snap.exists()){data=snap.data();break;}}
+    for(const key of keys){const snap=await db.collection('studentData').doc(key).get();if(snap.exists){data=snap.data();break;}}
     const list=type==='dance'?(data.danceRep||[]):(data.vocalRep||[]);
     const lbl=type==='dance'?'💃 댄스 레파토리':'🎤 보컬 레파토리';const bg=type==='dance'?'#EFE4F8':'#D4F0E8';
     c.innerHTML=`<div class="cd"><div class="cd-h"><div class="cd-t">${lbl}</div></div><div class="cd-b">
