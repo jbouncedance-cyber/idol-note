@@ -120,7 +120,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 </div>
 
 <!-- LANDING -->
-<div id="pg-land" class="page active lnd">
+<div id="pg-land" class="page lnd" style="display:flex">
   <div class="ll" style="margin-bottom:4px">JB IDOL</div>
   <div class="ls" style="margin-bottom:28px">오디션반 · 키즈오디션반 관리 시스템</div>
   <div class="rcard" onclick="goTeacher()"><div class="ric">🎹</div><div class="rl">선생님</div><div class="rs">관리 및 피드백 입력</div></div>
@@ -207,7 +207,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
     <button class="tbtn" onclick="profTab(1)">🎬 오디션피드백</button>
     <button class="tbtn" onclick="profTab(2)">💃 댄스레파토리</button>
     <button class="tbtn" onclick="profTab(3)">🎤 보컬레파토리</button>
-    <button class="tbtn" onclick="profTab(4)">📊 인바디</button>
   </div>
   <div class="ct" id="prof-ct"></div>
 </div>
@@ -529,8 +528,8 @@ async function refreshData(){const btn=document.getElementById('refresh-btn');if
 
 // PAGES
 function showPage(id){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.page').forEach(p=>{p.classList.remove('active');p.style.display='';});
+  const target=document.getElementById(id);target.classList.add('active');target.style.display='flex';
   // bnav: 랜딩/잠금/관리자잠금 페이지에서는 숨기기
   const noNav=['pg-land','pg-lock','pg-admlk'];
   document.querySelectorAll('.bnav').forEach(b=>{const h=noNav.includes(id);b.style.display=h?'none':'flex';b.style.pointerEvents=h?'none':'auto';});
@@ -724,7 +723,7 @@ function renderPTab(s,tab){
   else if(tab===1)renderFb(s,ct);
   else if(tab===2)renderRep(s,'dance',ct);
   else if(tab===3)renderRep(s,'vocal',ct);
-  else if(tab===4)ct.innerHTML=renderIbTab(s);
+  // tab 4는 더 이상 사용 안 함 (인바디는 기본정보 탭 안에)
   // 스크롤 맨 위로
   const pg=document.getElementById('pg-prof');if(pg)pg.scrollTop=0;
 }
@@ -788,7 +787,8 @@ function renderPMain(s){
   <div class="cd"><div class="cd-h"><div class="cd-t">📝 메모</div></div><div class="cd-b">
     <textarea id="mo-${s.id}">${esc(s.memo||'')}</textarea>
     <button class="btn btn-or" style="margin-top:8px" onclick="svMemo(${s.id})">저장</button>
-  </div></div>`;
+  </div></div>
+  ${renderIbTab(s)}`;
 }
 
 function saveIdolGoal(sid){const s=DB.students.find(x=>x.id===sid);if(!s)return;if(!s.goals)s.goals={};s.goals.idol=(document.getElementById('ig-'+sid)||{value:''}).value||'';fbSv('idol_students',s.id,s);toast('✅ 목표 저장됨');}
@@ -908,36 +908,117 @@ async function renderFb(s,c){
 }
 
 // REP TAB
+let _repData={};  // 로드된 레파토리 데이터 캐시
 async function renderRep(s,type,c){
   c.innerHTML='<div style="padding:20px;text-align:center;color:var(--gy)">불러오는 중...</div>';
   const keys=[s.cls+':'+s.name,'audition:'+s.name,'kids:'+s.name];
+  const repKey=s.cls+':'+s.name;
   try{
-    let data={};
-    for(const key of keys){const snap=await db.collection('studentData').doc(key).get();if(snap.exists){data=snap.data();break;}}
+    let data={};let foundKey='';
+    for(const key of keys){const snap=await db.collection('studentData').doc(key).get();if(snap.exists){data=snap.data();foundKey=key;break;}}
+    if(!foundKey)foundKey=repKey;
+    _repData={data,key:foundKey,sid:s.id};
     const list=type==='dance'?(data.danceRep||[]):(data.vocalRep||[]);
-    const lbl=type==='dance'?'💃 댄스 레파토리':'🎤 보컬 레파토리';const bg=type==='dance'?'#EFE4F8':'#D4F0E8';
-    c.innerHTML=`<div class="cd"><div class="cd-h"><div class="cd-t">${lbl}</div></div><div class="cd-b">
-      ${!list.length?'<div style="text-align:center;padding:16px;color:var(--gy);font-size:13px">아직 없어요</div>':list.map(r=>`<div style="padding:9px 11px;background:${bg};border-radius:8px;margin-bottom:6px;font-size:13px;font-weight:700">• ${esc(r)}</div>`).join('')}
-    </div></div>`;
+    const lbl=type==='dance'?'💃 댄스 레파토리':'🎤 보컬 레파토리';
+    const bg=type==='dance'?'#EFE4F8':'#D4F0E8';
+    const color=type==='dance'?'var(--dn)':'var(--vc)';
+    c.innerHTML=`<div class="cd">
+      <div class="cd-h"><div class="cd-t">${lbl}</div><button class="sbtn or" onclick="openRepAdd('${type}','${foundKey}',${s.id})">+ 추가</button></div>
+      <div class="cd-b">
+        ${!list.length?'<div style="text-align:center;padding:16px;color:var(--gy);font-size:13px">아직 없어요. + 추가 버튼으로 입력해보세요!</div>':
+        list.map((r,i)=>`<div style="padding:9px 11px 9px 14px;background:${bg};border-radius:8px;margin-bottom:6px;display:flex;align-items:center;gap:8px">
+          <div style="flex:1;font-size:13px;font-weight:700;color:var(--bk)">• ${esc(r)}</div>
+          <button onclick="openRepEdit('${type}','${foundKey}',${s.id},${i})" style="background:none;border:1px solid var(--bd);color:var(--gy);border-radius:7px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit;flex-shrink:0">수정</button>
+          <button onclick="dlRep('${type}','${foundKey}',${s.id},${i})" class="del-btn" style="padding:3px 8px;font-size:11px;flex-shrink:0">삭제</button>
+        </div>`).join('')}
+      </div>
+    </div>`;
   }catch(e){console.error(e);c.innerHTML='<div class="emp-msg">불러오지 못했어요</div>';}
+}
+let _repEditInfo={};
+function openRepAdd(type,key,sid){
+  _repEditInfo={type,key,sid,idx:-1};
+  const lbl=type==='dance'?'💃 댄스':'🎤 보컬';
+  let det=document.getElementById('ov-rep');
+  if(!det){det=document.createElement('div');det.id='ov-rep';det.className='ov';det.onclick=function(e){if(e.target===this)closeM('ov-rep');};document.body.appendChild(det);}
+  det.innerHTML=`<div class="md"><div class="mh"><div class="mt">${lbl} 레파토리 추가</div><button class="xb" onclick="closeM('ov-rep')">✕</button></div>
+    <div class="mb">
+      <div class="fr"><label class="fl">곡/안무 제목</label><input type="text" id="rep-inp" placeholder="예: Whiplash - aespa"></div>
+    </div>
+    <div class="mf"><button class="btn btn-or" onclick="saveRep()">추가</button></div>
+  </div>`;
+  det.classList.add('on');
+  setTimeout(()=>{const el=document.getElementById('rep-inp');if(el)el.focus();},100);
+}
+function openRepEdit(type,key,sid,idx){
+  _repEditInfo={type,key,sid,idx};
+  const data=_repData.data||{};
+  const list=type==='dance'?(data.danceRep||[]):(data.vocalRep||[]);
+  const cur=list[idx]||'';
+  const lbl=type==='dance'?'💃 댄스':'🎤 보컬';
+  let det=document.getElementById('ov-rep');
+  if(!det){det=document.createElement('div');det.id='ov-rep';det.className='ov';det.onclick=function(e){if(e.target===this)closeM('ov-rep');};document.body.appendChild(det);}
+  det.innerHTML=`<div class="md"><div class="mh"><div class="mt">${lbl} 레파토리 수정</div><button class="xb" onclick="closeM('ov-rep')">✕</button></div>
+    <div class="mb">
+      <div class="fr"><label class="fl">곡/안무 제목</label><input type="text" id="rep-inp" value="${esc(cur)}"></div>
+    </div>
+    <div class="mf"><button class="btn btn-or" onclick="saveRep()">저장</button></div>
+  </div>`;
+  det.classList.add('on');
+  setTimeout(()=>{const el=document.getElementById('rep-inp');if(el)el.focus();},100);
+}
+async function saveRep(){
+  const val=(document.getElementById('rep-inp').value||'').trim();
+  if(!val){alert('내용을 입력해주세요');return;}
+  const {type,key,sid,idx}=_repEditInfo;
+  const s=DB.students.find(x=>x.id===sid);if(!s)return;
+  // studentData 컬렉션에서 데이터 가져와서 수정
+  let data=_repData.data||{};
+  if(!data.danceRep)data.danceRep=[];if(!data.vocalRep)data.vocalRep=[];
+  const field=type==='dance'?'danceRep':'vocalRep';
+  if(idx===-1){data[field].push(val);}
+  else{data[field][idx]=val;}
+  data.name=s.name;data.cls=s.cls;
+  await db.collection('studentData').doc(key).set(data);
+  _repData.data=data;
+  closeM('ov-rep');
+  const tabIdx=type==='dance'?2:3;
+  const ct=document.getElementById('prof-ct');if(ct)ct.innerHTML='<div style="padding:20px;text-align:center"><div style="width:24px;height:24px;border:3px solid #f5c6a0;border-top-color:var(--or);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div></div>';
+  setTimeout(()=>renderPTab(s,tabIdx),50);
+  toast('✅ 저장됨');
+}
+async function dlRep(type,key,sid,idx){
+  if(!confirm('삭제할까요?'))return;
+  const s=DB.students.find(x=>x.id===sid);if(!s)return;
+  let data=_repData.data||{};
+  const field=type==='dance'?'danceRep':'vocalRep';
+  if(!data[field])return;
+  data[field].splice(idx,1);
+  await db.collection('studentData').doc(key).set(data);
+  _repData.data=data;
+  const tabIdx=type==='dance'?2:3;
+  const ct=document.getElementById('prof-ct');if(ct)ct.innerHTML='<div style="padding:20px;text-align:center"><div style="width:24px;height:24px;border:3px solid #f5c6a0;border-top-color:var(--or);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div></div>';
+  setTimeout(()=>renderPTab(s,tabIdx),50);
+  toast('✅ 삭제됨');
 }
 
 // INBODY TAB
 function renderIbTab(s){
   const ibs=(s.inbody||[]).slice().reverse();
   return `<div class="cd"><div class="cd-h"><div class="cd-t">📊 인바디 기록</div><button class="sbtn or" onclick="openIbM(${s.id})">+ 추가</button></div>
-    ${!ibs.length?'<div class="emp-msg">인바디 기록이 없어요</div>':`<div style="overflow-x:auto"><table class="ibt"><thead><tr><th>날짜</th><th>점수</th><th>체중</th><th>골격근</th><th>체지방</th><th>사진</th></tr></thead>
-      <tbody>${ibs.map(ib=>`<tr><td style="font-weight:700">${ib.date}</td><td><span style="font-weight:800;color:var(--gn)">${ib.score||'-'}</span></td><td>${ib.weight?ib.weight+'kg':'-'}</td><td>${ib.muscle?ib.muscle+'kg':'-'}</td><td>${ib.fat?ib.fat+'kg':'-'}</td><td>${ib.imgUrl?`<a href="${ib.imgUrl}" target="_blank" style="font-size:11px;color:var(--bl)">📷</a>`:'-'}</td></tr>`).join('')}</tbody>
+    ${!ibs.length?'<div class="emp-msg">인바디 기록이 없어요</div>':`<div style="overflow-x:auto"><table class="ibt"><thead><tr><th>날짜</th><th>점수</th><th>체중</th><th>골격근</th><th>체지방</th><th>사진</th><th></th></tr></thead>
+      <tbody>${ibs.map((ib,i)=>`<tr><td style="font-weight:700">${ib.date}</td><td><span style="font-weight:800;color:var(--gn)">${ib.score||'-'}</span></td><td>${ib.weight?ib.weight+'kg':'-'}</td><td>${ib.muscle?ib.muscle+'kg':'-'}</td><td>${ib.fat?ib.fat+'kg':'-'}</td><td>${ib.imgUrl?`<a href="${ib.imgUrl}" target="_blank" style="font-size:11px;color:var(--bl)">📷</a>`:'-'}</td><td><button onclick="dlIb(${s.id},${ibs.length-1-i})" class="del-btn" style="padding:2px 7px;font-size:11px">삭제</button></td></tr>`).join('')}</tbody>
     </table></div>`}
   </div>`;
 }
+function dlIb(sid,idx){const s=DB.students.find(x=>x.id===sid);if(!s||!confirm('삭제할까요?'))return;s.inbody.splice(idx,1);fbSv('idol_students',s.id,s);renderPTab(s,0);toast('✅ 삭제됨');}
 function prevIb(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{_ibBase64=e.target.result;const p=document.getElementById('ib-prev');p.src=e.target.result;p.style.display='block';};r.readAsDataURL(f);}
 function openIbM(sid){_ibSid=sid;_ibBase64=null;document.getElementById('ib-dt').value=today();['ib-sc','ib-wt','ib-ms','ib-ft'].forEach(id=>{document.getElementById(id).value='';});document.getElementById('ib-img').value='';document.getElementById('ib-prev').style.display='none';openM('ov-ib');}
 async function saveIb(){
   const s=DB.students.find(x=>x.id===_ibSid);if(!s)return;const dt=document.getElementById('ib-dt').value;if(!dt){alert('날짜를 입력해주세요');return;}
   let imgUrl='';if(_ibBase64){try{const ref=st.ref('idol_inbody/'+_ibSid+'/'+Date.now()+'.jpg');await ref.putString(_ibBase64,'data_url');imgUrl=await ref.getDownloadURL();}catch(e){console.warn('사진 업로드 실패:',e);}}
   const ib={date:dt,score:document.getElementById('ib-sc').value,weight:document.getElementById('ib-wt').value,muscle:document.getElementById('ib-ms').value,fat:document.getElementById('ib-ft').value,imgUrl,ts:Date.now()};
-  if(!s.inbody)s.inbody=[];s.inbody.push(ib);await fbSv('idol_students',s.id,s);closeM('ov-ib');const ss=DB.students.find(x=>x.id===_ibSid);if(ss)renderPTab(ss,4);toast('✅ 인바디 저장됨');
+  if(!s.inbody)s.inbody=[];s.inbody.push(ib);await fbSv('idol_students',s.id,s);closeM('ov-ib');const ss=DB.students.find(x=>x.id===_ibSid);if(ss)renderPTab(ss,0);toast('✅ 인바디 저장됨');
 }
 function handleProfImg(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=async e=>{const s=DB.students.find(x=>x.id===curSid);if(!s)return;try{const ref=st.ref('idol_profiles/'+curSid+'.jpg');await ref.putString(e.target.result,'data_url');s.photo=await ref.getDownloadURL();}catch(err){s.photo=e.target.result;}await fbSv('idol_students',s.id,s);renderPTab(s,0);toast('✅ 사진 저장됨');};r.readAsDataURL(f);}
 
@@ -1366,6 +1447,9 @@ function sendBroadcast(){const nm=(document.getElementById('bc-nm').value||'').t
 // INIT
 window.addEventListener('load',async()=>{
   await new Promise(r=>setTimeout(r,200));
+  // 랜딩 페이지만 표시 (active 클래스 없이 inline style로)
+  document.querySelectorAll('.page').forEach(p=>p.style.display='');
+  document.getElementById('pg-land').style.display='flex';
   document.querySelectorAll('.bnav').forEach(b=>{b.style.display='none';b.style.pointerEvents='none';});
   await loadAll();startMsgSync();
   // isAdm이면 adm 버튼 표시만 (자동 이동은 안 함 - 랜딩 먼저)
