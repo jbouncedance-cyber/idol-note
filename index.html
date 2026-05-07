@@ -165,6 +165,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
   </div>
 </div>
 
+<!-- TIMETABLE -->
+<div id="pg-tt" class="page">
+  <div class="hd">
+    <button class="back" onclick="showPage('pg-prof')">←</button>
+    <div><div class="logo" id="tt-hd">시간표</div><div class="hd-sub">개인 수업 시간표</div></div>
+  </div>
+  <div class="ct" id="tt-ct"></div>
+</div>
+
 <!-- STUDENT LOCK -->
 <div id="pg-lock" class="page">
   <div class="lk">
@@ -193,6 +202,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
   <div class="hd">
     <button class="back" onclick="showPage('pg-main')">←</button>
     <div><div class="logo" id="prof-hd">-</div><div class="hd-sub">개인 페이지</div></div>
+    <div class="hd-r"><button class="sbtn" onclick="showTT()">📋 시간표</button></div>
   </div>
   <div class="tb" id="prof-tabs">
     <button class="tbtn on" onclick="profTab(0)">📋 기본정보</button>
@@ -215,7 +225,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
       <div class="em" id="adm-pw-err"></div>
       <button class="btn btn-or" onclick="chkAdm()" style="margin-top:7px">로그인</button>
     </div>
-    <button class="btn btn-gr" style="max-width:320px;margin-top:13px" onclick="showPage('pg-land')">← 돌아가기</button>
+    <button class="btn btn-gr" style="max-width:320px;margin-top:13px" onclick="showPage('pg-land')">← 랜딩으로</button>
   </div>
 </div>
 
@@ -511,11 +521,54 @@ function showPage(id){
   if(id==='pg-main')renderMain();
   if(id==='pg-sch')renderSch();
 }
-function goTeacher(){_curCls='all';document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent='전체 관리';document.getElementById('adm-btn').style.display='';document.getElementById('adm-nav').style.display='';showPage('pg-main');}
+function goTeacher(){showPage('pg-admlk');document.getElementById('adm-pw-inp').value='';document.getElementById('adm-pw-err').textContent='';}
 function goClass(cls){_curCls=cls;document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent=cls==='kids'?'키즈오디션반':'오디션반';document.getElementById('adm-btn').style.display='none';document.getElementById('adm-nav').style.display='none';showPage('pg-main');}
 function goAdmin(){if(isAdm){showPage('pg-adm');renderAdm();}else{showPage('pg-admlk');document.getElementById('adm-pw-inp').value='';document.getElementById('adm-pw-err').textContent='';}}
-function chkAdm(){const pw=document.getElementById('adm-pw-inp').value;if(pw===DB.adminPw){isAdm=true;showPage('pg-adm');renderAdm();}else document.getElementById('adm-pw-err').textContent='비밀번호가 틀렸습니다';}
+function chkAdm(){const pw=document.getElementById('adm-pw-inp').value;if(pw===DB.adminPw){isAdm=true;_curCls='all';document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent='전체 관리';document.getElementById('adm-btn').style.display='';document.getElementById('adm-nav').style.display='';showPage('pg-main');renderMain();}else document.getElementById('adm-pw-err').textContent='비밀번호가 틀렸습니다';}
 function admOut(){isAdm=false;showPage('pg-land');}
+function showTT(){const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.getElementById('tt-hd').textContent=s.name+' 시간표';renderTT(s);showPage('pg-tt');}
+function renderTT(s){
+  const c=document.getElementById('tt-ct');if(!c)return;
+  const DAYS=['월','화','수','목','금','토','일'];
+  const allCls=[];
+  const getArr=pfx=>Object.keys(s.classes||{}).filter(k=>k[0]===pfx&&s.classes[k]).map(k=>{
+    const arr=pfx==='d'?DB.danceClasses:pfx==='v'?DB.vocalClasses:pfx==='m'?DB.etcClasses:DB.trainingClasses;
+    return (arr||[]).find(x=>x.id===s.classes[k]);
+  }).filter(Boolean);
+  [...getArr('d'),...getArr('v'),...getArr('m'),...getArr('t')].forEach(cl=>allCls.push(cl));
+  const byDay={};DAYS.forEach(d=>byDay[d]=[]);
+  allCls.forEach(cl=>{if(cl.day&&byDay[cl.day])byDay[cl.day].push(cl);});
+  const activeDays=DAYS.filter(d=>byDay[d].length);
+  if(!activeDays.length){c.innerHTML='<div class="emp-msg">등록된 수업이 없어요</div>';return;}
+  let h='';
+  activeDays.forEach(day=>{
+    const dayClass=day==='일'?'var(--rd)':day==='토'?'var(--bl)':'var(--or)';
+    h+=`<div class="cd" style="margin-bottom:10px"><div class="cd-h"><div class="cd-t" style="color:${dayClass}">${day}요일</div></div>`;
+    byDay[day].sort((a,b)=>(a.ts||'').localeCompare(b.ts||'')).forEach(cl=>{
+      const isPfxD=DB.danceClasses.find(x=>x.id===cl.id);
+      const isPfxV=DB.vocalClasses.find(x=>x.id===cl.id);
+      const isPfxM=(DB.etcClasses||[]).find(x=>x.id===cl.id);
+      const color=isPfxD?'var(--dn)':isPfxV?'var(--vc)':isPfxM?'var(--pp)':'var(--bl)';
+      const bg=isPfxD?'#EFE4F8':isPfxV?'#D4F0E8':isPfxM?'var(--ppb)':'var(--blb)';
+      h+=`<div style="padding:11px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px">
+        <div style="text-align:center;min-width:52px;background:${bg};border-radius:8px;padding:5px 4px">
+          <div style="font-size:11px;font-weight:800;color:${color}">${cl.ts||'-'}</div>
+          <div style="font-size:10px;color:var(--gy)">${cl.te?'~'+cl.te:''}</div>
+        </div>
+        <div><div style="font-weight:800;font-size:14px">${esc(cl.name)}</div><div style="font-size:12px;color:${color};margin-top:2px">• ${esc(cl.teacher)}</div></div>
+      </div>`;
+    });
+    h+='</div>';
+  });
+  // 요일 없는 수업
+  const noDay=allCls.filter(cl=>!cl.day);
+  if(noDay.length){
+    h+=`<div class="cd"><div class="cd-h"><div class="cd-t" style="color:var(--gy)">요일 미정</div></div>`;
+    noDay.forEach(cl=>{h+=`<div style="padding:11px 14px;border-bottom:1px solid var(--bd)"><div style="font-weight:800">${esc(cl.name)}</div><div style="font-size:12px;color:var(--gy)">• ${esc(cl.teacher)}</div></div>`;});
+    h+='</div>';
+  }
+  c.innerHTML=h;
+}
 
 // MAIN
 function renderMain(){renderNtc();renderEvs();renderRes();renderMsg();renderStuList();}
@@ -948,8 +1001,8 @@ function renderAdmStu(c){
   ['오디션반','키즈오디션반'].forEach((lbl,li)=>{
     const list=li===0?aud:kids;h+=`<div style="font-size:11px;font-weight:800;color:var(--gy);margin:12px 0 7px">${lbl} (${list.length}명)</div><div class="adm-sec">`;
     list.sort((a,b)=>a.name.localeCompare(b.name,'ko')).forEach(s=>{
-      h+=`<div class="adm-r"><div class="av${li===1?' kav':''}" style="width:34px;height:34px;font-size:14px">${s.photo?`<img src="${s.photo}">`:`${s.name[0]}`}</div>
-        <div style="flex:1"><div style="font-weight:800">${esc(s.name)}</div><div style="font-size:12px;color:var(--gy)">${s.birth||''} · 비번:${s.pw||'미설정'}</div></div>
+      h+=`<div class="adm-r"><div class="av${li===1?' kav':''}" style="width:34px;height:34px;font-size:14px;cursor:pointer" onclick="admOpenProf(${s.id})">${s.photo?`<img src="${s.photo}">`:`${s.name[0]}`}</div>
+        <div style="flex:1;cursor:pointer" onclick="admOpenProf(${s.id})"><div style="font-weight:800">${esc(s.name)}</div><div style="font-size:12px;color:var(--gy)">${s.birth||''} · 비번:${s.pw||'미설정'}</div></div>
         <button onclick="openTMsg(${s.id})" class="edt-btn">💌</button>
         <button onclick="openStuM(${s.id})" class="edt-btn">수정</button>
         <button onclick="dlStu(${s.id})" class="del-btn">삭제</button>
@@ -972,6 +1025,7 @@ function saveStudent(){
   closeM('ov-stu');renderAdmCt();renderStuList();
 }
 function dlStu(id){const s=DB.students.find(x=>x.id===id);if(!s)return;if(!confirm(s.name+' 삭제할까요?'))return;DB.students=DB.students.filter(x=>x.id!==id);fbDl('idol_students',id);renderAdmCt();renderStuList();toast('✅ 삭제됨');}
+function admOpenProf(id){curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));renderPTab(s,0);showPage('pg-prof');}
 
 // 피드백 입력
 function renderAdmFbInput(c){
@@ -1043,12 +1097,47 @@ function renderAdmCls(c){
   let h='';
   types.forEach(tp=>{
     const arr=tp.data||[];h+=`<div style="font-size:11px;font-weight:800;color:var(--gy);margin:12px 0 7px">${tp.lbl}</div><div class="adm-sec">`;
-    arr.forEach((cl,i)=>{h+=`<div class="adm-r"><div style="flex:1"><div style="font-weight:800">${esc(cl.name)}</div><div style="font-size:12px;color:var(--gy)">${esc(cl.teacher)}${cl.day?' · '+cl.day:''}${cl.ts?' '+cl.ts:''}</div></div><button onclick="dlCls('${tp.k}',${i})" class="del-btn">삭제</button></div>`;});
-    h+=`<div class="ar"><input type="text" id="${tp.k}-nm" placeholder="수업명" style="flex:2"><input type="text" id="${tp.k}-tr" placeholder="선생님"><input type="text" id="${tp.k}-dy" placeholder="요일" style="width:50px;flex:none"><input type="text" id="${tp.k}-ts" placeholder="시간" style="flex:1"><button onclick="addCls('${tp.k}')">+ 추가</button></div></div>`;
+    arr.forEach((cl,i)=>{
+      const tinfo=cl.day?(cl.day+(cl.ts?' '+cl.ts:'')+(cl.te?'~'+cl.te:'')):'';
+      h+=`<div class="adm-r">
+        <div style="flex:1"><div style="font-weight:800">${esc(cl.name)}</div>
+        <div style="font-size:12px;color:var(--gy)">${esc(cl.teacher)}${tinfo?' · '+tinfo:''}</div></div>
+        <button onclick="openClsEdit('${tp.k}',${i})" class="edt-btn">수정</button>
+        <button onclick="dlCls('${tp.k}',${i})" class="del-btn">삭제</button>
+      </div>`;
+    });
+    h+=`<div class="ar"><input type="text" id="${tp.k}-nm" placeholder="수업명" style="flex:2"><input type="text" id="${tp.k}-tr" placeholder="선생님"><input type="text" id="${tp.k}-dy" placeholder="요일" style="width:50px;flex:none"><input type="text" id="${tp.k}-ts" placeholder="시작" style="width:65px;flex:none"><input type="text" id="${tp.k}-te" placeholder="종료" style="width:65px;flex:none"><button onclick="addCls('${tp.k}')">+ 추가</button></div></div>`;
   });
   c.innerHTML=h;
 }
-function addCls(type){const nm=document.getElementById(type+'-nm').value.trim();if(!nm)return;const cl={id:type[0]+Date.now(),name:nm,teacher:document.getElementById(type+'-tr').value,day:document.getElementById(type+'-dy').value,ts:document.getElementById(type+'-ts').value,te:''};
+let _clsEditType=null,_clsEditIdx=null;
+function openClsEdit(type,i){
+  _clsEditType=type;_clsEditIdx=i;
+  const arr=type==='dance'?DB.danceClasses:type==='vocal'?DB.vocalClasses:type==='etc'?DB.etcClasses:DB.trainingClasses;
+  const cl=arr[i];if(!cl)return;
+  let det=document.getElementById('ov-cls-edit');
+  if(!det){det=document.createElement('div');det.id='ov-cls-edit';det.className='ov';det.onclick=function(e){if(e.target===this)closeM('ov-cls-edit');};document.body.appendChild(det);}
+  det.innerHTML=`<div class="md"><div class="mh"><div class="mt">수업 수정</div><button class="xb" onclick="closeM('ov-cls-edit')">✕</button></div>
+    <div class="mb">
+      <div class="fr"><label class="fl">수업명</label><input type="text" id="ce-nm" value="${esc(cl.name||'')}"></div>
+      <div class="fr"><label class="fl">선생님</label><input type="text" id="ce-tr" value="${esc(cl.teacher||'')}"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px" class="fr">
+        <div><label class="fl">요일</label><input type="text" id="ce-dy" value="${esc(cl.day||'')}"></div>
+        <div><label class="fl">시작</label><input type="time" id="ce-ts" value="${cl.ts||''}"></div>
+        <div><label class="fl">종료</label><input type="time" id="ce-te" value="${cl.te||''}"></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-or" onclick="saveClsEdit()">저장</button></div>
+  </div>`;det.classList.add('on');
+}
+function saveClsEdit(){
+  const arr=_clsEditType==='dance'?DB.danceClasses:_clsEditType==='vocal'?DB.vocalClasses:_clsEditType==='etc'?DB.etcClasses:DB.trainingClasses;
+  const cl=arr[_clsEditIdx];if(!cl)return;
+  cl.name=document.getElementById('ce-nm').value.trim();cl.teacher=document.getElementById('ce-tr').value.trim();
+  cl.day=document.getElementById('ce-dy').value.trim();cl.ts=document.getElementById('ce-ts').value;cl.te=document.getElementById('ce-te').value;
+  fbCfg();closeM('ov-cls-edit');renderAdmCt();toast('✅ 수업 수정됨');
+}
+function addCls(type){const nm=document.getElementById(type+'-nm').value.trim();if(!nm)return;const cl={id:type[0]+Date.now(),name:nm,teacher:document.getElementById(type+'-tr').value,day:document.getElementById(type+'-dy').value,ts:document.getElementById(type+'-ts').value,te:document.getElementById(type+'-te')?.value||''};
   if(type==='dance'){if(!DB.danceClasses)DB.danceClasses=[];DB.danceClasses.push(cl);}else if(type==='vocal'){if(!DB.vocalClasses)DB.vocalClasses=[];DB.vocalClasses.push(cl);}else if(type==='etc'){if(!DB.etcClasses)DB.etcClasses=[];DB.etcClasses.push(cl);}else{if(!DB.trainingClasses)DB.trainingClasses=[];DB.trainingClasses.push(cl);}
   fbCfg();renderAdmCt();toast('✅ 수업 추가됨');
 }
