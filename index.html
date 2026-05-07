@@ -231,7 +231,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 
 <!-- ADMIN -->
 <div id="pg-adm" class="page">
-  <div class="hd">
+  <!-- sticky 헤더 -->
+  <div class="hd" style="flex-shrink:0">
     <button class="back" onclick="showPage('pg-land')">←</button>
     <div><div class="logo">JB IDOL</div><div class="hd-sub">관리자 모드</div></div>
     <div class="hd-r">
@@ -239,18 +240,10 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
       <button class="sbtn dk" onclick="admOut()">로그아웃</button>
     </div>
   </div>
-  <!-- 공통 게시판 영역 -->
-  <div style="padding:10px 12px 0">
-    <div id="adm-w-ev"></div>
-    <div id="adm-w-res"></div>
-    <div id="adm-w-msg"></div>
-  </div>
-  <!-- 관리자 탭 구분선 -->
-  <div style="padding:8px 12px 0">
-    <div style="font-size:11px;font-weight:800;color:var(--gy);letter-spacing:.5px;margin-bottom:8px">⚙️ 관리 메뉴</div>
-  </div>
-  <div class="tb">
-    <button class="tbtn on" onclick="admTab(this,'stu')">학생</button>
+  <!-- sticky 탭바 -->
+  <div class="tb" style="flex-shrink:0;position:sticky;top:49px;z-index:90;background:#fff">
+    <button class="tbtn on" onclick="admTab(this,'board')">📋 게시판</button>
+    <button class="tbtn" onclick="admTab(this,'stu')">학생</button>
     <button class="tbtn" onclick="admTab(this,'fb')">피드백입력</button>
     <button class="tbtn" onclick="admTab(this,'fbl')">피드백목록</button>
     <button class="tbtn" onclick="admTab(this,'cls')">수업</button>
@@ -259,6 +252,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
     <button class="tbtn" onclick="admTab(this,'res')">영상/지식</button>
     <button class="tbtn" onclick="admTab(this,'cfg')">설정</button>
   </div>
+  <!-- 스크롤 콘텐츠 -->
   <div class="ct" id="adm-ct" style="padding-top:9px"></div>
 </div>
 
@@ -546,12 +540,11 @@ function showPage(id){
 }
 function goTeacher(){
   if(isAdm){
-    // 이미 로그인된 상태 - adm-btn/nav 표시 보장
-    const ab=document.getElementById('adm-btn');const an=document.getElementById('adm-nav');
-    if(ab)ab.style.display='';if(an)an.style.display='';
     showPage('pg-adm');renderAdm();
   }else{
-    showPage('pg-admlk');document.getElementById('adm-pw-inp').value='';document.getElementById('adm-pw-err').textContent='';
+    showPage('pg-admlk');
+    document.getElementById('adm-pw-inp').value='';
+    document.getElementById('adm-pw-err').textContent='';
   }
 }
 function goClass(cls){_curCls=cls;document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent=cls==='kids'?'키즈오디션반':'오디션반';document.getElementById('adm-btn').style.display='none';document.getElementById('adm-nav').style.display='none';showPage('pg-main');}
@@ -1014,18 +1007,24 @@ function dlEv(id){if(!confirm('삭제할까요?'))return;DB.events=(DB.events||[
 
 // ADMIN
 function renderAdm(){
+  admTab_='board';
   document.querySelectorAll('#pg-adm .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));
-  admTab_='stu';
   renderAdmCt();
-  // DOM 업데이트 후 게시판 렌더링
-  setTimeout(renderAdmBoard,50);
 }
-function renderAdmBoard(){
-  // 관리자 페이지 공통 게시판
-  const evW=document.getElementById('adm-w-ev');
-  const resW=document.getElementById('adm-w-res');
-  const msgW=document.getElementById('adm-w-msg');
-  if(!evW||!resW||!msgW) return;
+function renderAdmBoard(container){
+  // container가 있으면 거기에, 없으면 기존 div들에
+  let evW,resW,msgW;
+  if(container){
+    container.innerHTML='<div id="adm-w-ev"></div><div id="adm-w-res"></div><div id="adm-w-msg"></div>';
+    evW=document.getElementById('adm-w-ev');
+    resW=document.getElementById('adm-w-res');
+    msgW=document.getElementById('adm-w-msg');
+  } else {
+    evW=document.getElementById('adm-w-ev');
+    resW=document.getElementById('adm-w-res');
+    msgW=document.getElementById('adm-w-msg');
+    if(!evW||!resW||!msgW) return;
+  }
   // 행사
   const now=new Date();const evs=(DB.events||[]).filter(e=>e.date>=today()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
   if(evs.length){
@@ -1055,11 +1054,12 @@ function renderAdmBoard(){
     msgW.innerHTML=`<div style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><div style="font-size:11px;font-weight:800;color:var(--gy)">📌 오늘의 한마디</div><button class="sbtn or" onclick="openMsgModal()" style="font-size:11px;padding:3px 9px">+ 남기기</button></div></div>`;
   }
 }
-async function refreshAdm(){const btn=document.getElementById('adm-refresh-btn');if(btn){btn.style.animation='spin .6s linear infinite';btn.disabled=true;}await loadAll();renderAdmBoard();if(btn){btn.style.animation='';btn.disabled=false;}toast('✅ 업데이트됐어요!');}
+async function refreshAdm(){const btn=document.getElementById('adm-refresh-btn');if(btn){btn.style.animation='spin .6s linear infinite';btn.disabled=true;}await loadAll();if(admTab_==='board')renderAdmCt();if(btn){btn.style.animation='';btn.disabled=false;}toast('✅ 업데이트됐어요!');}
 function admTab(btn,tab){admTab_=tab;document.querySelectorAll('#pg-adm .tbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderAdmCt();}
 function renderAdmCt(){
   const c=document.getElementById('adm-ct');
-  if(admTab_==='stu')renderAdmStu(c);
+  if(admTab_==='board')renderAdmBoard(c);
+  else if(admTab_==='stu')renderAdmStu(c);
   else if(admTab_==='fb')renderAdmFbInput(c);
   else if(admTab_==='fbl')renderAdmFbList(c);
   else if(admTab_==='cls')renderAdmCls(c);
