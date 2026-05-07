@@ -511,16 +511,10 @@ async function loadAll(){
     try{const rs=await db.collection('idol_resources').get();DB.resources=[];rs.forEach(d=>DB.resources.push(d.data()));}catch(e){DB.resources=[];}
     window.DB=DB;
   }catch(e){console.warn('로드 실패:',e);}
-  // 세션 복원
+  // 세션 복원 (UI 상태만 - 페이지 이동 없음)
   if(isAdm){
     const ab=document.getElementById('adm-btn');const an=document.getElementById('adm-nav');
     if(ab)ab.style.display='';if(an)an.style.display='';
-    _curCls='all';
-  } else if(_curCls&&_curCls!=='all'){
-    // 학생 반 모드 복원 - 헤더 텍스트 업데이트
-    const ml=document.getElementById('main-logo');const ms=document.getElementById('main-sub');
-    if(ml)ml.textContent='JB IDOL';
-    if(ms)ms.textContent=_curCls==='kids'?'키즈오디션반':'오디션반';
   }
   if(document.getElementById('pg-main').classList.contains('active')) renderMain();
   if(document.getElementById('pg-adm').classList.contains('active')){renderAdm();}
@@ -548,6 +542,10 @@ function showPage(id){
 }
 function goTeacher(){
   if(isAdm){
+    // 이미 로그인됨 - 바로 관리자로
+    _curCls='all';
+    const ab=document.getElementById('adm-btn');const an=document.getElementById('adm-nav');
+    if(ab)ab.style.display='';if(an)an.style.display='';
     showPage('pg-adm');renderAdm();
   }else{
     showPage('pg-admlk');
@@ -721,11 +719,14 @@ function openProf(id){_prevPage='pg-main';curSid=id;const s=DB.students.find(x=>
 function profTab(i){_pTab=i;const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,j)=>b.classList.toggle('on',i===j));renderPTab(s,i);}
 function renderPTab(s,tab){
   const c=document.getElementById('prof-ct');
+  if(!c){console.warn('prof-ct not found');return;}
   if(tab===0)c.innerHTML=renderPMain(s);
   else if(tab===1)renderFb(s,c);
   else if(tab===2)renderRep(s,'dance',c);
   else if(tab===3)renderRep(s,'vocal',c);
   else if(tab===4)c.innerHTML=renderIbTab(s);
+  // 스크롤 맨 위로
+  const pg=document.getElementById('pg-prof');if(pg)pg.scrollTop=0;
 }
 
 function renderPMain(s){
@@ -1328,11 +1329,10 @@ window.addEventListener('load',async()=>{
   await new Promise(r=>setTimeout(r,200));
   document.querySelectorAll('.bnav').forEach(b=>{b.style.display='none';b.style.pointerEvents='none';});
   await loadAll();startMsgSync();
-  // 세션에 관리자 로그인 기록이 있으면 자동으로 관리자 페이지로
+  // isAdm이면 adm 버튼 표시만 (자동 이동은 안 함 - 랜딩 먼저)
   if(isAdm){
     const ab=document.getElementById('adm-btn');const an=document.getElementById('adm-nav');
     if(ab)ab.style.display='';if(an)an.style.display='';
-    _curCls='all';showPage('pg-adm');renderAdm();
   }
   setTimeout(()=>{const ov=document.getElementById('lov');if(ov){ov.style.opacity='0';ov.style.transition='opacity .3s';setTimeout(()=>ov&&ov.remove(),300);}},200);
 });
