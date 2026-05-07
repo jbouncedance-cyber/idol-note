@@ -9,8 +9,8 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--or:#C2621A;--or2:#e07830;--ob:#FFF3EB;--k:#3E7FA8;--kb:#EBF5FF;--bk:#111;--gy:#777;--gy2:#bbb;--lt:#f5f5f7;--wh:#fff;--bd:#e8e8e8;--gn:#16a34a;--gnb:#f0fdf4;--rd:#ef4444;--rdb:#fef2f2;--rdbd:#fecaca;--bl:#2563eb;--blb:#eff6ff;--am:#b45309;--amb:#fffbeb;--ambd:#fde68a;--pp:#7c3aed;--ppb:#f5f3ff;--ppbd:#ddd6fe;--dn:#7B4FA0;--vc:#1A6B5A}
-body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;background:var(--lt);color:var(--bk);min-height:100vh;overflow-x:hidden;font-size:15px}
-.page{display:none;min-height:100vh;flex-direction:column}.page.active{display:flex}
+body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;background:var(--lt);color:var(--bk);height:100vh;overflow:hidden;font-size:15px}
+.page{display:none;height:100vh;flex-direction:column;overflow-y:auto;overflow-x:hidden}.page.active{display:flex}
 .hd{background:var(--wh);border-bottom:1px solid var(--bd);padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
 .logo{font-size:18px;font-weight:900;color:var(--or);letter-spacing:-1px}.hd-sub{font-size:11px;color:var(--gy);margin-top:1px}.hd-r{margin-left:auto;display:flex;gap:6px;align-items:center}
 .back{background:none;border:none;font-size:22px;cursor:pointer;padding:4px 10px 4px 0;color:var(--bk);line-height:1}
@@ -20,7 +20,7 @@ body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif
 .btn-or{background:var(--or);color:#fff}.btn-out{background:#fff;color:var(--or);border:1.5px solid var(--or)}.btn-gr{background:var(--lt);color:var(--bk);border:1px solid var(--bd)}
 .del-btn{background:none;border:1px solid var(--rdbd);color:var(--rd);border-radius:8px;padding:4px 9px;font-size:12px;cursor:pointer;font-family:inherit;flex-shrink:0}
 .edt-btn{background:none;border:1px solid var(--bd);color:var(--gy);border-radius:8px;padding:4px 9px;font-size:12px;cursor:pointer;font-family:inherit;flex-shrink:0}
-.bnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:flex;z-index:200;padding-bottom:env(safe-area-inset-bottom,0px)}
+.bnav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:none;z-index:200;padding-bottom:env(safe-area-inset-bottom,0px)}.page.active .bnav{display:flex}
 .nb{flex:1;background:none;border:none;padding:9px 0 7px;display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;font-size:10px;color:var(--gy2);font-family:inherit}
 .nb.on{color:var(--or)}.ni{font-size:20px;line-height:1.2}
 .ct{flex:1;padding:12px 12px 90px}
@@ -53,7 +53,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--or)}textarea{resize:v
 .pp-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:4px}
 .pk{background:var(--lt);border:1px solid var(--bd);border-radius:11px;padding:14px;font-size:20px;font-weight:700;cursor:pointer;text-align:center;font-family:inherit}
 .pk:active{background:var(--ob);border-color:var(--or);color:var(--or)}.em{color:var(--rd);font-size:12px;text-align:center;min-height:17px;margin-top:3px}
-.lnd{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 20px;background:linear-gradient(160deg,var(--ob),#f5f5f7)}
+.lnd{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 20px;background:linear-gradient(160deg,var(--ob),#f5f5f7);overflow-y:auto}
 .rcard{background:#fff;border:1.5px solid var(--bd);border-radius:18px;padding:28px 22px;cursor:pointer;transition:all .15s;text-align:center;width:100%;max-width:280px;margin-bottom:12px}
 .rcard:active{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.1)}
 .rcard.oc{border-color:var(--or);background:var(--ob)}.rcard.kc{border-color:var(--k);background:var(--kb)}
@@ -471,7 +471,7 @@ async function loadAll(){
     try{const rs=await db.collection('idol_resources').get();DB.resources=[];rs.forEach(d=>DB.resources.push(d.data()));}catch(e){DB.resources=[];}
     window.DB=DB;
   }catch(e){console.warn('로드 실패:',e);}
-  renderMain();
+  if(document.getElementById('pg-main').classList.contains('active')) renderMain();
   const ov=document.getElementById('lov');
   if(ov){ov.style.opacity='0';ov.style.transition='opacity .3s';setTimeout(()=>ov&&ov.remove(),300);}
 }
