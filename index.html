@@ -465,10 +465,12 @@ window.DB={
 let DB=window.DB;
 
 // STATE
-let curSid=null,isAdm=false,pinVal='',_curCls='audition',admTab_='stu';
+let curSid=null,pinVal='',_curCls='audition',admTab_='stu';
 let _editEvId=null,_editResId=null,_editNtcIdx=null,_editStuId=null,_tmSid=null,_ibSid=null;
 let _curMsgId=null,_resDetId=null,_fbStu=null,_fbCls='audition',_fblCls='audition',_fblFilter='all';
 let _prevPage='pg-main';  // 개인 페이지 뒤로가기용
+// 비번 세션 유지 - sessionStorage 사용
+let isAdm=sessionStorage.getItem('jbi_adm')==='1';
 let _clsSel={};let _ibBase64=null;
 const PC=['#fef08a','#bbf7d0','#bfdbfe','#fecdd3','#e9d5ff','#fed7aa','#a5f3fc','#fde68a'];
 const DEF_AG=['SM엔터테인먼트','JYP엔터테인먼트','YG엔터테인먼트','HYBE','더블랙레이블','FNC엔터테인먼트','스타쉽엔터테인먼트','카카오엔터테인먼트','빅히트뮤직','WM엔터테인먼트'];
@@ -512,7 +514,14 @@ async function loadAll(){
     try{const rs=await db.collection('idol_resources').get();DB.resources=[];rs.forEach(d=>DB.resources.push(d.data()));}catch(e){DB.resources=[];}
     window.DB=DB;
   }catch(e){console.warn('로드 실패:',e);}
+  // isAdm 세션 복원
+  if(isAdm){
+    const ab=document.getElementById('adm-btn');const an=document.getElementById('adm-nav');
+    if(ab)ab.style.display='';if(an)an.style.display='';
+    _curCls='all';
+  }
   if(document.getElementById('pg-main').classList.contains('active')) renderMain();
+  if(document.getElementById('pg-adm').classList.contains('active')){renderAdm();}
   const ov=document.getElementById('lov');
   if(ov){ov.style.opacity='0';ov.style.transition='opacity .3s';setTimeout(()=>ov&&ov.remove(),300);}
 }
@@ -535,11 +544,20 @@ function showPage(id){
   if(id==='pg-main')renderMain();
   if(id==='pg-sch')renderSch();
 }
-function goTeacher(){if(isAdm){showPage('pg-adm');renderAdm();}else{showPage('pg-admlk');document.getElementById('adm-pw-inp').value='';document.getElementById('adm-pw-err').textContent='';}}
+function goTeacher(){
+  if(isAdm){
+    // 이미 로그인된 상태 - adm-btn/nav 표시 보장
+    const ab=document.getElementById('adm-btn');const an=document.getElementById('adm-nav');
+    if(ab)ab.style.display='';if(an)an.style.display='';
+    showPage('pg-adm');renderAdm();
+  }else{
+    showPage('pg-admlk');document.getElementById('adm-pw-inp').value='';document.getElementById('adm-pw-err').textContent='';
+  }
+}
 function goClass(cls){_curCls=cls;document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent=cls==='kids'?'키즈오디션반':'오디션반';document.getElementById('adm-btn').style.display='none';document.getElementById('adm-nav').style.display='none';showPage('pg-main');}
 function goAdmin(){if(isAdm){showPage('pg-adm');renderAdm();}else{showPage('pg-admlk');document.getElementById('adm-pw-inp').value='';document.getElementById('adm-pw-err').textContent='';}}
-function chkAdm(){const pw=document.getElementById('adm-pw-inp').value;if(pw===DB.adminPw){isAdm=true;_curCls='all';document.getElementById('adm-btn').style.display='';document.getElementById('adm-nav').style.display='';showPage('pg-adm');renderAdm();}else document.getElementById('adm-pw-err').textContent='비밀번호가 틀렸습니다';}
-function admOut(){isAdm=false;showPage('pg-land');}
+function chkAdm(){const pw=document.getElementById('adm-pw-inp').value;if(pw===DB.adminPw){isAdm=true;sessionStorage.setItem('jbi_adm','1');_curCls='all';document.getElementById('adm-btn').style.display='';document.getElementById('adm-nav').style.display='';showPage('pg-adm');renderAdm();}else document.getElementById('adm-pw-err').textContent='비밀번호가 틀렸습니다';}
+function admOut(){isAdm=false;sessionStorage.removeItem('jbi_adm');showPage('pg-land');}
 function profGoBack(){showPage(_prevPage);if(_prevPage==='pg-adm')renderAdm();}
 function showTT(){const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.getElementById('tt-hd').textContent=s.name+' 시간표';renderTT(s);showPage('pg-tt');}
 function renderTT(s){
@@ -698,7 +716,7 @@ function chkPin(){const s=DB.students.find(x=>x.id===curSid);if(s&&(pinVal===s.p
 
 // PROFILE
 let _pTab=0;
-function openProf(id){_prevPage='pg-lock';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));renderPTab(s,0);showPage('pg-prof');}
+function openProf(id){_prevPage='pg-main';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));renderPTab(s,0);showPage('pg-prof');}
 function profTab(i){_pTab=i;const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,j)=>b.classList.toggle('on',i===j));renderPTab(s,i);}
 function renderPTab(s,tab){
   const c=document.getElementById('prof-ct');
@@ -999,7 +1017,8 @@ function renderAdm(){
   document.querySelectorAll('#pg-adm .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));
   admTab_='stu';
   renderAdmCt();
-  renderAdmBoard();
+  // DOM 업데이트 후 게시판 렌더링
+  setTimeout(renderAdmBoard,50);
 }
 function renderAdmBoard(){
   // 관리자 페이지 공통 게시판
@@ -1287,7 +1306,13 @@ window.addEventListener('load',async()=>{
   await new Promise(r=>setTimeout(r,200));
   document.querySelectorAll('.bnav').forEach(b=>{b.style.display='none';b.style.pointerEvents='none';});
   await loadAll();startMsgSync();
-  setTimeout(()=>{const ov=document.getElementById('lov');if(ov){ov.style.opacity='0';ov.style.transition='opacity .3s';setTimeout(()=>ov&&ov.remove(),300);}},1000);
+  // 세션에 관리자 로그인 기록이 있으면 자동으로 관리자 페이지로
+  if(isAdm){
+    const ab=document.getElementById('adm-btn');const an=document.getElementById('adm-nav');
+    if(ab)ab.style.display='';if(an)an.style.display='';
+    _curCls='all';showPage('pg-adm');renderAdm();
+  }
+  setTimeout(()=>{const ov=document.getElementById('lov');if(ov){ov.style.opacity='0';ov.style.transition='opacity .3s';setTimeout(()=>ov&&ov.remove(),300);}},200);
 });
 </script>
 </body>
