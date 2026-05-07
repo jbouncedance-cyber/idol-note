@@ -168,7 +168,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 <!-- TIMETABLE -->
 <div id="pg-tt" class="page">
   <div class="hd">
-    <button class="back" onclick="showPage('pg-prof')">←</button>
+    <button class="back" onclick="showPage('pg-prof');document.querySelectorAll('.bnav').forEach(b=>{b.style.display='flex';b.style.pointerEvents='auto';})">←</button>
     <div><div class="logo" id="tt-hd">시간표</div><div class="hd-sub">개인 수업 시간표</div></div>
   </div>
   <div class="ct" id="tt-ct"></div>
@@ -200,7 +200,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 <!-- PROFILE -->
 <div id="pg-prof" class="page">
   <div class="hd">
-    <button class="back" onclick="showPage('pg-main')">←</button>
+    <button class="back" onclick="profGoBack()">←</button>
     <div><div class="logo" id="prof-hd">-</div><div class="hd-sub">개인 페이지</div></div>
     <div class="hd-r"><button class="sbtn" onclick="showTT()">📋 시간표</button></div>
   </div>
@@ -232,9 +232,22 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 <!-- ADMIN -->
 <div id="pg-adm" class="page">
   <div class="hd">
-    <button class="back" onclick="showPage('pg-main')">←</button>
-    <div><div class="logo">관리자</div><div class="hd-sub">JB IDOL 오디션반</div></div>
-    <div class="hd-r"><button class="sbtn dk" onclick="admOut()">로그아웃</button></div>
+    <button class="back" onclick="showPage('pg-land')">←</button>
+    <div><div class="logo">JB IDOL</div><div class="hd-sub">관리자 모드</div></div>
+    <div class="hd-r">
+      <button class="sbtn" id="adm-refresh-btn" onclick="refreshAdm()" style="font-size:16px">🔄</button>
+      <button class="sbtn dk" onclick="admOut()">로그아웃</button>
+    </div>
+  </div>
+  <!-- 공통 게시판 영역 -->
+  <div style="padding:10px 12px 0">
+    <div id="adm-w-ev"></div>
+    <div id="adm-w-res"></div>
+    <div id="adm-w-msg"></div>
+  </div>
+  <!-- 관리자 탭 구분선 -->
+  <div style="padding:8px 12px 0">
+    <div style="font-size:11px;font-weight:800;color:var(--gy);letter-spacing:.5px;margin-bottom:8px">⚙️ 관리 메뉴</div>
   </div>
   <div class="tb">
     <button class="tbtn on" onclick="admTab(this,'stu')">학생</button>
@@ -455,6 +468,7 @@ let DB=window.DB;
 let curSid=null,isAdm=false,pinVal='',_curCls='audition',admTab_='stu';
 let _editEvId=null,_editResId=null,_editNtcIdx=null,_editStuId=null,_tmSid=null,_ibSid=null;
 let _curMsgId=null,_resDetId=null,_fbStu=null,_fbCls='audition',_fblCls='audition',_fblFilter='all';
+let _prevPage='pg-main';  // 개인 페이지 뒤로가기용
 let _clsSel={};let _ibBase64=null;
 const PC=['#fef08a','#bbf7d0','#bfdbfe','#fecdd3','#e9d5ff','#fed7aa','#a5f3fc','#fde68a'];
 const DEF_AG=['SM엔터테인먼트','JYP엔터테인먼트','YG엔터테인먼트','HYBE','더블랙레이블','FNC엔터테인먼트','스타쉽엔터테인먼트','카카오엔터테인먼트','빅히트뮤직','WM엔터테인먼트'];
@@ -521,11 +535,12 @@ function showPage(id){
   if(id==='pg-main')renderMain();
   if(id==='pg-sch')renderSch();
 }
-function goTeacher(){showPage('pg-admlk');document.getElementById('adm-pw-inp').value='';document.getElementById('adm-pw-err').textContent='';}
+function goTeacher(){if(isAdm){showPage('pg-adm');renderAdm();}else{showPage('pg-admlk');document.getElementById('adm-pw-inp').value='';document.getElementById('adm-pw-err').textContent='';}}
 function goClass(cls){_curCls=cls;document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent=cls==='kids'?'키즈오디션반':'오디션반';document.getElementById('adm-btn').style.display='none';document.getElementById('adm-nav').style.display='none';showPage('pg-main');}
 function goAdmin(){if(isAdm){showPage('pg-adm');renderAdm();}else{showPage('pg-admlk');document.getElementById('adm-pw-inp').value='';document.getElementById('adm-pw-err').textContent='';}}
 function chkAdm(){const pw=document.getElementById('adm-pw-inp').value;if(pw===DB.adminPw){isAdm=true;_curCls='all';document.getElementById('adm-btn').style.display='';document.getElementById('adm-nav').style.display='';showPage('pg-adm');renderAdm();}else document.getElementById('adm-pw-err').textContent='비밀번호가 틀렸습니다';}
 function admOut(){isAdm=false;showPage('pg-land');}
+function profGoBack(){showPage(_prevPage);if(_prevPage==='pg-adm')renderAdm();}
 function showTT(){const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.getElementById('tt-hd').textContent=s.name+' 시간표';renderTT(s);showPage('pg-tt');}
 function renderTT(s){
   const c=document.getElementById('tt-ct');if(!c)return;
@@ -683,7 +698,7 @@ function chkPin(){const s=DB.students.find(x=>x.id===curSid);if(s&&(pinVal===s.p
 
 // PROFILE
 let _pTab=0;
-function openProf(id){curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));renderPTab(s,0);showPage('pg-prof');}
+function openProf(id){_prevPage='pg-lock';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));renderPTab(s,0);showPage('pg-prof');}
 function profTab(i){_pTab=i;const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,j)=>b.classList.toggle('on',i===j));renderPTab(s,i);}
 function renderPTab(s,tab){
   const c=document.getElementById('prof-ct');
@@ -980,7 +995,48 @@ function saveEvEdit(){const ev=(DB.events||[]).find(e=>e.id===_editEvId);if(!ev)
 function dlEv(id){if(!confirm('삭제할까요?'))return;DB.events=(DB.events||[]).filter(e=>e.id!==id);fbCfg();renderSch();renderEvs();toast('✅ 삭제됨');}
 
 // ADMIN
-function renderAdm(){document.querySelectorAll('#pg-adm .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));admTab_='stu';renderAdmCt();}
+function renderAdm(){
+  document.querySelectorAll('#pg-adm .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));
+  admTab_='stu';
+  renderAdmCt();
+  renderAdmBoard();
+}
+function renderAdmBoard(){
+  // 관리자 페이지 공통 게시판
+  const evW=document.getElementById('adm-w-ev');
+  const resW=document.getElementById('adm-w-res');
+  const msgW=document.getElementById('adm-w-msg');
+  if(!evW||!resW||!msgW) return;
+  // 행사
+  const now=new Date();const evs=(DB.events||[]).filter(e=>e.date>=today()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
+  if(evs.length){
+    let h='<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:800;color:var(--gy);margin-bottom:5px">📅 다가오는 행사</div>';
+    evs.forEach(ev=>{const d=new Date(ev.date);const diff=Math.round((d-now)/864e5);const dt=diff===0?'오늘':diff===1?'내일':diff+'일 후';const ug=diff<=3;
+      h+=`<div style="background:#fff;border:1px solid var(--bd);border-left:3px solid ${ug?'var(--rd)':'var(--bl)'};border-radius:9px;padding:8px 12px;margin-bottom:5px;display:flex;align-items:center;gap:9px"><div style="min-width:32px;text-align:center;font-size:10px;font-weight:800;color:${ug?'var(--rd)':'var(--bl)'}">${dt}</div><div style="flex:1"><div style="font-size:12px;font-weight:800">${esc(ev.name)}</div><div style="font-size:10px;color:var(--gy)">${ev.date}</div></div></div>`;
+    });h+='</div>';evW.innerHTML=h;
+  }else{evW.innerHTML='';}
+  // 영상/지식 최신 2개
+  const res=(DB.resources||[]).slice().reverse().slice(0,2);
+  if(res.length){
+    let h='<div style="margin-bottom:8px"><div style="font-size:11px;font-weight:800;color:var(--gy);margin-bottom:5px">🎬 최근 영상/지식</div>';
+    res.forEach(r=>{const cnt=(r.comments||[]).length;
+      h+=`<div onclick="openResDet('${r.id}')" style="background:#fff;border:1px solid var(--bd);border-radius:9px;padding:8px 12px;margin-bottom:5px;cursor:pointer;display:flex;align-items:center;gap:8px"><div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.title)}</div><div style="font-size:10px;color:var(--gy)">${r.time||''}${cnt?' · 💬'+cnt:''}</div></div><div style="color:var(--gy2)">›</div></div>`;
+    });h+='</div>';resW.innerHTML=h;
+  }else{resW.innerHTML='';}
+  // 한마디 최신 4개 (포스트잇)
+  const msgs=(DB.messages||[]).slice().reverse().slice(0,4);
+  if(msgs.length){
+    let h=`<div style="margin-bottom:12px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><div style="font-size:11px;font-weight:800;color:var(--gy)">📌 오늘의 한마디</div><button class="sbtn or" onclick="openMsgModal()" style="font-size:11px;padding:3px 9px">+ 남기기</button></div>
+    <div class="pw">${msgs.map((m,i)=>{const col=PC[i%PC.length];const rp=(m.replies||[]).length;
+      return `<div class="pt" style="background:${col}" onclick="openMsgDet('${m.id}')"><div style="font-size:11px;font-weight:800;margin-bottom:5px;opacity:.8;color:${m.isT?'#b5156d':'#333'}">${m.isT?'👑 ':''}${esc(m.author)}</div><div style="font-size:11px;line-height:1.5;flex:1;word-break:break-all">${esc(m.content).replace(/
+/g,'<br>')}</div><div style="display:flex;justify-content:space-between;margin-top:6px"><span style="font-size:10px;opacity:.6">${m.time}</span>${rp?`<span style="font-size:10px;font-weight:700;opacity:.75">💬${rp}</span>`:''}</div></div>`;}).join('')}
+    </div></div>`;
+    msgW.innerHTML=h;
+  }else{
+    msgW.innerHTML=`<div style="margin-bottom:8px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px"><div style="font-size:11px;font-weight:800;color:var(--gy)">📌 오늘의 한마디</div><button class="sbtn or" onclick="openMsgModal()" style="font-size:11px;padding:3px 9px">+ 남기기</button></div></div>`;
+  }
+}
+async function refreshAdm(){const btn=document.getElementById('adm-refresh-btn');if(btn){btn.style.animation='spin .6s linear infinite';btn.disabled=true;}await loadAll();renderAdmBoard();if(btn){btn.style.animation='';btn.disabled=false;}toast('✅ 업데이트됐어요!');}
 function admTab(btn,tab){admTab_=tab;document.querySelectorAll('#pg-adm .tbtn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderAdmCt();}
 function renderAdmCt(){
   const c=document.getElementById('adm-ct');
@@ -1060,7 +1116,7 @@ function saveStudent(){
   closeM('ov-stu');renderAdmCt();renderStuList();
 }
 function dlStu(id){const s=DB.students.find(x=>x.id===id);if(!s)return;if(!confirm(s.name+' 삭제할까요?'))return;DB.students=DB.students.filter(x=>x.id!==id);fbDl('idol_students',id);renderAdmCt();renderStuList();toast('✅ 삭제됨');}
-function admOpenProf(id){curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));renderPTab(s,0);showPage('pg-prof');}
+function admOpenProf(id){_prevPage='pg-adm';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));renderPTab(s,0);showPage('pg-prof');}
 
 // 피드백 입력
 function renderAdmFbInput(c){
