@@ -966,8 +966,7 @@ function renderAuditionRecord(s){
         </div>`
       :records.map((r,i)=>{
         const ridx=(s.auditions||[]).length-1-i;
-        const rc=resultColors[r.result]||'var(--gy)';
-        const rb=resultBg[r.result]||'var(--lt)';
+
         return `<div style="background:#fff;border-radius:14px;border:1px solid #E8DEFF;margin-bottom:12px;overflow:hidden;box-shadow:0 2px 12px rgba(107,63,160,0.08)">
           <!-- 헤더 -->
           <div style="background:linear-gradient(135deg,#2D1054,#4A2080);padding:12px 14px;display:flex;align-items:center;justify-content:space-between">
@@ -1005,7 +1004,7 @@ function renderAuditionRecord(s){
   </div>`;
 }
 
-const AUDIT_TYPES=['내방오디션','이메일오디션','공개오디션','온라인오디션','서류심사'];
+const AUDIT_TYPES=['내방오디션','본사오디션','이메일오디션','공개오디션','온라인오디션','서류심사'];
 const AUDIT_FIELDS=['댄스','보컬','댄스+보컬','랩','연기','기타'];
 
 let _auditSid=null,_auditIdx=-1;
