@@ -1124,12 +1124,17 @@ async function renderFb(s,c){
 let _repData={};  // 로드된 레파토리 데이터 캐시
 async function renderRep(s,type,c){
   c.innerHTML='<div style="padding:20px;text-align:center;color:var(--gy)">불러오는 중...</div>';
-  const keys=[s.cls+':'+s.name,'audition:'+s.name,'kids:'+s.name];
-  const repKey=s.cls+':'+s.name;
+  // 가능한 모든 키 시도 (기존 데이터 호환)
+  const clsKey=s.cls+':'+s.name;
+  const keys=[clsKey,'audition:'+s.name,'kids:'+s.name,s.name];
   try{
-    let data={};let foundKey='';
-    for(const key of keys){const snap=await db.collection('studentData').doc(key).get();if(snap.exists){data=snap.data();foundKey=key;break;}}
-    if(!foundKey)foundKey=repKey;
+    let data={};let foundKey=clsKey;
+    for(const key of keys){
+      try{
+        const snap=await db.collection('studentData').doc(key).get();
+        if(snap.exists){data=snap.data();foundKey=key;break;}
+      }catch(e){}
+    }
     _repData={data,key:foundKey,sid:s.id};
     const list=type==='dance'?(data.danceRep||[]):(data.vocalRep||[]);
     const lbl=type==='dance'?'💃 댄스 레파토리':'🎤 보컬 레파토리';
@@ -1185,15 +1190,16 @@ async function saveRep(){
   if(!val){alert('내용을 입력해주세요');return;}
   const {type,key,sid,idx}=_repEditInfo;
   const s=DB.students.find(x=>x.id===sid);if(!s)return;
-  // studentData 컬렉션에서 데이터 가져와서 수정
   let data=_repData.data||{};
   if(!data.danceRep)data.danceRep=[];if(!data.vocalRep)data.vocalRep=[];
   const field=type==='dance'?'danceRep':'vocalRep';
   if(idx===-1){data[field].push(val);}
   else{data[field][idx]=val;}
   data.name=s.name;data.cls=s.cls;
-  await db.collection('studentData').doc(key).set(data);
-  _repData.data=data;
+  // 키가 없으면 cls:이름 형식으로 새로 생성
+  const saveKey=key||(s.cls+':'+s.name);
+  await db.collection('studentData').doc(saveKey).set(data);
+  _repData={data,key:saveKey,sid:s.id};
   closeM('ov-rep');
   const tabIdx=type==='dance'?3:4;
   toast('✅ 저장됨');
@@ -1206,7 +1212,8 @@ async function dlRep(type,key,sid,idx){
   const field=type==='dance'?'danceRep':'vocalRep';
   if(!data[field])return;
   data[field].splice(idx,1);
-  await db.collection('studentData').doc(key).set(data);
+  const dlKey=key||(DB.students.find(x=>x.id===sid)||{}).cls+':'+(DB.students.find(x=>x.id===sid)||{}).name;
+  await db.collection('studentData').doc(dlKey||key).set(data);
   _repData.data=data;
   const tabIdx=type==='dance'?3:4;
   toast('✅ 삭제됨');
@@ -1641,8 +1648,13 @@ async function renderAdmRep(c){
   if(!c)return;
   c.innerHTML='<div style="text-align:center;padding:30px;color:var(--gy)"><div style="width:24px;height:24px;border:3px solid #f5c6a0;border-top-color:var(--or);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px"></div>불러오는 중...</div>';
   const results=await Promise.allSettled(DB.students.map(async s=>{
-    const keys=[s.cls+':'+s.name,'audition:'+s.name,'kids:'+s.name];
-    for(const key of keys){try{const snap=await db.collection('studentData').doc(key).get();if(snap.exists()){return {student:s,data:snap.data()};}}catch(e){}}
+    const keys=[s.cls+':'+s.name,'audition:'+s.name,'kids:'+s.name,s.name];
+    for(const key of keys){
+      try{
+        const snap=await db.collection('studentData').doc(key).get();
+        if(snap.exists){return {student:s,data:snap.data()};}
+      }catch(e){}
+    }
     return {student:s,data:{}};
   }));
   const stuData=results.map(r=>r.value||{student:null,data:{}}).filter(x=>x.student);
