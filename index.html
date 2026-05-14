@@ -246,6 +246,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
   <!-- 관리자 탭바 -->
   <div class="tb" id="adm-tb">
     <button class="tbtn on" onclick="admTab(this,'main')">🏠 홈</button>
+    <button class="tbtn" onclick="admTab(this,'audit')">📝 오디션기록</button>
+    <button class="tbtn" onclick="admTab(this,'rep')">🎵 레파토리</button>
     <button class="tbtn" onclick="admTab(this,'fb')">피드백입력</button>
     <button class="tbtn" onclick="admTab(this,'fbl')">피드백목록</button>
     <button class="tbtn" onclick="admTab(this,'cls')">수업</button>
@@ -525,8 +527,10 @@ async function loadAll(){
   const ov=document.getElementById('lov');
   if(ov){ov.style.opacity='0';ov.style.transition='opacity .3s';setTimeout(()=>ov&&ov.remove(),300);}
 }
+let _unsubMsg=null;
 function startMsgSync(){
-  db.collection('idol_messages').onSnapshot(snap=>{
+  if(_unsubMsg){try{_unsubMsg();}catch(e){}}
+  _unsubMsg=db.collection('idol_messages').onSnapshot(snap=>{
     snap.docChanges().forEach(ch=>{const m=ch.doc.data();if(ch.type==='removed')DB.messages=DB.messages.filter(x=>x.id!==m.id);else{const i=DB.messages.findIndex(x=>x.id===m.id);if(i>=0)DB.messages[i]=m;else DB.messages.push(m);}});
     DB.messages.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
     if(document.getElementById('pg-main').classList.contains('active'))renderMain();
@@ -1509,6 +1513,8 @@ function renderAdmCt(){
   const c=document.getElementById('adm-ct');
   if(admTab_==='main')renderAdmMain(c);
   else if(admTab_==='stu')renderAdmStu(c);
+  else if(admTab_==='audit')renderAdmAudit(c);
+  else if(admTab_==='rep')renderAdmRep(c);
   else if(admTab_==='fb')renderAdmFbInput(c);
   else if(admTab_==='fbl')renderAdmFbList(c);
   else if(admTab_==='cls')renderAdmCls(c);
@@ -1585,6 +1591,98 @@ function saveStudent(){
 }
 function dlStu(id){const s=DB.students.find(x=>x.id===id);if(!s)return;if(!confirm(s.name+' 삭제할까요?'))return;DB.students=DB.students.filter(x=>x.id!==id);fbDl('idol_students',id);renderAdmCt();renderStuList();toast('✅ 삭제됨');}
 function admOpenProf(id){_prevPage='pg-adm';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));showPage('pg-prof');setTimeout(()=>renderPTab(s,0),100);}
+
+// 오디션 기록 전체 보기
+function renderAdmAudit(c){
+  if(!c)return;
+  const allRecords=[];
+  DB.students.forEach(s=>{(s.auditions||[]).forEach(r=>{allRecords.push({...r,studentName:s.name,studentCls:s.cls||'audition',studentId:s.id});});});
+  allRecords.sort((a,b)=>b.date.localeCompare(a.date));
+  const _ac=window._admAuditCls||'all';
+  const filtered=_ac==='all'?allRecords:allRecords.filter(r=>r.studentCls===_ac);
+  const audCnt=allRecords.filter(r=>r.studentCls==='audition'||!r.studentCls).length;
+  const kidsCnt=allRecords.filter(r=>r.studentCls==='kids').length;
+  let h=`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px;align-items:center">
+    ${[['all','전체',allRecords.length,'var(--or)','var(--ob)'],['audition','오디션반',audCnt,'var(--or)','var(--ob)'],['kids','키즈오디션반',kidsCnt,'var(--k)','var(--kb)']].map(([val,lbl,cnt,col,bg])=>
+      `<button onclick="window._admAuditCls='${val}';renderAdmCt()" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${_ac===val?col:'var(--bd)'};background:${_ac===val?bg:'#fff'};color:${_ac===val?col:'var(--gy)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${lbl} (${cnt})</button>`).join('')}
+    <span style="font-size:11px;color:var(--gy);margin-left:auto">총 ${filtered.length}건</span>
+  </div>`;
+  if(!filtered.length){c.innerHTML=h+'<div class="emp-msg">오디션 지원 기록이 없어요</div>';return;}
+  const groups={};filtered.forEach(r=>{if(!groups[r.date])groups[r.date]=[];groups[r.date].push(r);});
+  Object.keys(groups).sort((a,b)=>b.localeCompare(a)).forEach(date=>{
+    h+=`<div style="font-size:11px;font-weight:800;color:var(--gy);margin:14px 0 8px;display:flex;align-items:center;gap:8px">📅 ${date}<div style="flex:1;height:1px;background:var(--bd)"></div></div>`;
+    groups[date].forEach(r=>{
+      const isK=r.studentCls==='kids';
+      h+=`<div style="background:#fff;border-radius:14px;border:1px solid #E8DEFF;margin-bottom:10px;overflow:hidden;box-shadow:0 2px 8px rgba(107,63,160,0.06)">
+        <div style="background:linear-gradient(135deg,#2D1054,#4A2080);padding:11px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="admOpenProf(${r.studentId})">
+          <div style="display:flex;align-items:center;gap:9px">
+            <div style="width:32px;height:32px;border-radius:50%;background:rgba(201,162,39,0.2);border:1.5px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--gold)">${r.studentName[0]}</div>
+            <div><div style="font-size:14px;font-weight:800;color:#fff">${esc(r.studentName)}</div><div style="font-size:10px;color:rgba(255,255,255,0.5)">${isK?'키즈오디션반':'오디션반'}</div></div>
+          </div>
+          <div style="text-align:right"><div style="font-size:13px;font-weight:800;color:var(--gold)">${esc(r.agency)}</div><div style="font-size:10px;color:rgba(255,255,255,0.6)">${esc(r.type||'')}</div></div>
+        </div>
+        <div style="padding:11px 14px">
+          ${r.field?`<span style="background:#EFE4F8;color:var(--dn);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700;display:inline-block;margin-bottom:8px">🎵 ${esc(r.field)}</span>`:''}
+          ${(r.linkDance||r.linkVocal)?`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px">
+            ${r.linkDance?`<a href="${esc(r.linkDance)}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:#EFE4F8;color:var(--dn);border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700;text-decoration:none">💃 댄스 영상 ↗</a>`:''}
+            ${r.linkVocal?`<a href="${esc(r.linkVocal)}" target="_blank" style="display:inline-flex;align-items:center;gap:4px;background:#D4F0E8;color:var(--vc);border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700;text-decoration:none">🎤 보컬 영상 ↗</a>`:''}
+          </div>`:''}
+          ${r.feeling?`<div style="background:rgba(107,63,160,0.05);border-left:3px solid var(--or);border-radius:0 8px 8px 0;padding:8px 12px;margin-bottom:7px"><div style="font-size:10px;font-weight:800;color:var(--or);margin-bottom:3px">💭 느낀 점</div><div style="font-size:13px;line-height:1.6;color:var(--bk);white-space:pre-wrap">${esc(r.feeling)}</div></div>`:''}
+          ${r.improve?`<div style="background:rgba(201,162,39,0.06);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;padding:8px 12px"><div style="font-size:10px;font-weight:800;color:var(--gold);margin-bottom:3px">📈 보완할 점</div><div style="font-size:13px;line-height:1.6;color:var(--bk);white-space:pre-wrap">${esc(r.improve)}</div></div>`:''}
+        </div>
+      </div>`;
+    });
+  });
+  c.innerHTML=h;
+}
+
+// 레파토리 전체 보기
+async function renderAdmRep(c){
+  if(!c)return;
+  c.innerHTML='<div style="text-align:center;padding:30px;color:var(--gy)"><div style="width:24px;height:24px;border:3px solid #f5c6a0;border-top-color:var(--or);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px"></div>불러오는 중...</div>';
+  const results=await Promise.allSettled(DB.students.map(async s=>{
+    const keys=[s.cls+':'+s.name,'audition:'+s.name,'kids:'+s.name];
+    for(const key of keys){try{const snap=await db.collection('studentData').doc(key).get();if(snap.exists()){return {student:s,data:snap.data()};}}catch(e){}}
+    return {student:s,data:{}};
+  }));
+  const stuData=results.map(r=>r.value||{student:null,data:{}}).filter(x=>x.student);
+  let h='';
+  // 댄스
+  h+=`<div style="font-size:13px;font-weight:800;color:var(--dn);margin-bottom:10px;display:flex;align-items:center;gap:8px">💃 댄스 레파토리<div style="flex:1;height:2px;background:#EFE4F8;border-radius:1px"></div></div>`;
+  const hasDance=stuData.some(({data})=>(data.danceRep||[]).length);
+  if(!hasDance){h+='<div class="emp-msg" style="margin-bottom:16px">댄스 레파토리가 없어요</div>';}
+  else stuData.forEach(({student:s,data})=>{
+    const list=data.danceRep||[];if(!list.length)return;
+    const isK=s.cls==='kids';
+    h+=`<div style="background:#fff;border-radius:12px;border:1px solid #E8DEFF;margin-bottom:8px;overflow:hidden">
+      <div style="padding:9px 13px;display:flex;align-items:center;gap:9px;background:rgba(123,79,160,0.05);border-bottom:1px solid #E8DEFF;cursor:pointer" onclick="admOpenProf(${s.id})">
+        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#E8D8FF,var(--ob));border:1.5px solid var(--or2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--or)">${s.name[0]}</div>
+        <div style="font-size:13px;font-weight:800">${esc(s.name)}</div>
+        <span style="font-size:10px;color:var(--gy);background:var(--lt);border-radius:10px;padding:2px 7px">${isK?'키즈':'오디션'}</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--dn);font-weight:700">${list.length}곡</span>
+      </div>
+      <div style="padding:9px 13px;display:flex;flex-wrap:wrap;gap:5px">${list.map(r=>`<span style="background:#EFE4F8;border:1px solid #d4b8f0;border-radius:7px;padding:3px 10px;font-size:12px;color:var(--dn)">• ${esc(r)}</span>`).join('')}</div>
+    </div>`;
+  });
+  // 보컬
+  h+=`<div style="font-size:13px;font-weight:800;color:var(--vc);margin:16px 0 10px;display:flex;align-items:center;gap:8px">🎤 보컬 레파토리<div style="flex:1;height:2px;background:#D4F0E8;border-radius:1px"></div></div>`;
+  const hasVocal=stuData.some(({data})=>(data.vocalRep||[]).length);
+  if(!hasVocal){h+='<div class="emp-msg">보컬 레파토리가 없어요</div>';}
+  else stuData.forEach(({student:s,data})=>{
+    const list=data.vocalRep||[];if(!list.length)return;
+    const isK=s.cls==='kids';
+    h+=`<div style="background:#fff;border-radius:12px;border:1px solid #E8DEFF;margin-bottom:8px;overflow:hidden">
+      <div style="padding:9px 13px;display:flex;align-items:center;gap:9px;background:rgba(26,107,90,0.05);border-bottom:1px solid #D4F0E8;cursor:pointer" onclick="admOpenProf(${s.id})">
+        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#D4F0E8,#f0fff8);border:1.5px solid var(--vc);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--vc)">${s.name[0]}</div>
+        <div style="font-size:13px;font-weight:800">${esc(s.name)}</div>
+        <span style="font-size:10px;color:var(--gy);background:var(--lt);border-radius:10px;padding:2px 7px">${isK?'키즈':'오디션'}</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--vc);font-weight:700">${list.length}곡</span>
+      </div>
+      <div style="padding:9px 13px;display:flex;flex-wrap:wrap;gap:5px">${list.map(r=>`<span style="background:#D4F0E8;border:1px solid #a0d8c8;border-radius:7px;padding:3px 10px;font-size:12px;color:var(--vc)">• ${esc(r)}</span>`).join('')}</div>
+    </div>`;
+  });
+  c.innerHTML=h;
+}
 
 // 피드백 입력
 function renderAdmFbInput(c){
