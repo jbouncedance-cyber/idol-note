@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>오늘의 오디션 소식 · JB IDOL Note</title>
+<style>
+  :root{
+    --purple:#6B3FA0; --pink:#8B3FA0; --deep:#2D1054;
+    --bg:#FAF7FF; --card:#ffffff; --ink:#1A0A2E; --sub:#6B5E8A;
+    --line:#EEE6FB; --gold:#C9A227;
+    --chip-open:#e8f9ee; --chip-open-t:#1c9e5b;
+    --chip-soon:#ffeaea; --chip-soon-t:#e0324b;
+    --chip-new:#eef1ff; --chip-new-t:#4257e0;
+    --chip-cast:#fff3e0; --chip-cast-t:#e08600;
+    --shadow:0 10px 30px rgba(107,63,160,.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.65; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:820px;margin:0 auto;padding:0 16px 60px}
+
+  .backbar{max-width:820px;margin:0 auto;padding:12px 16px 0}
+  .backbar a{display:inline-flex;align-items:center;gap:6px;text-decoration:none;
+    color:var(--purple);font-weight:700;font-size:14px;
+    background:#fff;border:1px solid var(--line);padding:8px 14px;border-radius:999px;
+    box-shadow:0 4px 12px rgba(107,63,160,.08)}
+
+  .hero{background:linear-gradient(135deg,var(--purple) 0%,var(--pink) 100%);
+    color:#fff;border-radius:26px;padding:38px 26px 34px;text-align:center;
+    box-shadow:0 14px 40px rgba(139,63,160,.28);position:relative;overflow:hidden;margin-top:12px}
+  .hero::after{content:"";position:absolute;inset:0;
+    background:radial-gradient(circle at 80% 15%,rgba(255,255,255,.22),transparent 45%),
+               radial-gradient(circle at 12% 85%,rgba(255,255,255,.16),transparent 40%);}
+  .hero .badge{display:inline-block;background:rgba(255,255,255,.22);padding:6px 16px;
+    border-radius:999px;font-size:13px;font-weight:600;letter-spacing:.5px;margin-bottom:14px;position:relative}
+  .hero h1{font-size:29px;font-weight:800;letter-spacing:-.5px;position:relative}
+  .hero .date{margin-top:10px;font-size:15px;opacity:.95;position:relative;font-weight:500}
+  .hero .tag{margin-top:14px;font-size:14px;opacity:.95;position:relative}
+
+  section{margin-top:32px}
+  .sec-head{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .sec-head .em{font-size:22px}
+  .sec-head h2{font-size:20px;font-weight:800;color:var(--deep)}
+  .sec-head .line{flex:1;height:2px;background:linear-gradient(90deg,var(--line),transparent);border-radius:2px}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:20px 22px;margin-bottom:14px;box-shadow:var(--shadow);transition:transform .15s}
+  .card:hover{transform:translateY(-2px)}
+  .card .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .card h3{font-size:17px;font-weight:750;color:var(--ink)}
+  .card p{font-size:14.5px;color:var(--sub);margin-top:8px}
+  .card .meta{font-size:13.5px;color:var(--purple);font-weight:600;margin-top:10px}
+  .card .link{font-size:13px;color:var(--sub);margin-top:4px;word-break:break-all}
+  .card .link a,.card .meta a{color:var(--purple);font-weight:700;text-decoration:none;border-bottom:1px solid #DDB8F0}
+  .card .link a:hover,.card .meta a:hover{opacity:.7;border-bottom-color:var(--purple)}
+
+  .chip{display:inline-block;padding:4px 12px;border-radius:999px;font-size:12.5px;font-weight:700;white-space:nowrap}
+  .c-open{background:var(--chip-open);color:var(--chip-open-t)}
+  .c-soon{background:var(--chip-soon);color:var(--chip-soon-t)}
+  .c-new{background:var(--chip-new);color:var(--chip-new-t)}
+  .c-cast{background:var(--chip-cast);color:var(--chip-cast-t)}
+
+  .cal{background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:8px 6px;box-shadow:var(--shadow);overflow:hidden}
+  .cal .row{display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .cal .row:last-child{border-bottom:none}
+  .cal .day{min-width:52px;text-align:center;font-weight:800;color:var(--pink);font-size:15px;line-height:1.15}
+  .cal .day span{display:block;font-size:11px;color:var(--sub);font-weight:600}
+  .cal .info{flex:1}
+  .cal .info b{font-size:15px;color:var(--ink)}
+  .cal .info em{font-style:normal;color:var(--sub);font-size:13.5px}
+  .cal .kind{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px}
+  .k-debut{background:var(--chip-open);color:var(--chip-open-t)}
+  .k-comeback{background:var(--chip-new);color:var(--chip-new-t)}
+
+  .news{background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:18px 22px;margin-bottom:14px;box-shadow:var(--shadow)}
+  .news h3{font-size:15.5px;font-weight:750;color:var(--ink);margin-bottom:6px}
+  .news p{font-size:14px;color:var(--sub)}
+  .news a{color:var(--purple);font-weight:700;text-decoration:none;border-bottom:1px solid #DDB8F0}
+  .news a:hover{opacity:.7}
+
+  .tip{background:linear-gradient(135deg,#fff5fb,#f3edff);border:1.5px dashed var(--pink);
+    border-radius:20px;padding:24px 26px;box-shadow:var(--shadow)}
+  .tip .lbl{display:inline-block;background:var(--pink);color:#fff;font-size:12.5px;font-weight:700;
+    padding:5px 14px;border-radius:999px;margin-bottom:12px}
+  .tip h3{font-size:18px;color:var(--deep);font-weight:800;margin-bottom:8px}
+  .tip p{font-size:15px;color:var(--ink)}
+
+  .cheer{margin-top:32px;text-align:center;background:linear-gradient(135deg,var(--purple),var(--pink));
+    color:#fff;border-radius:22px;padding:30px 26px;box-shadow:0 14px 34px rgba(107,63,160,.25)}
+  .cheer .q{font-size:18px;font-weight:800;letter-spacing:-.3px}
+  .cheer .s{font-size:14px;opacity:.95;margin-top:8px}
+
+  footer{margin-top:28px;padding:20px 22px;background:#f4eefe;border-radius:16px;
+    font-size:12.8px;color:var(--sub);line-height:1.7}
+  footer b{color:var(--deep)}
+</style>
+</head>
+<body>
+<div class="backbar"><a href="./">← JB IDOL Note 홈으로</a></div>
+
+<div class="wrap">
+<div class="hero">
+  <div class="badge">🎤 오디션반 데일리 브리핑</div>
+  <h1>오늘의 오디션 소식</h1>
+  <div class="date" id="today-date">2026년 7월 30일 (목요일)</div>
+  <div class="tag">✨ 오늘도 꿈을 향해 한 걸음! 오늘의 소식 확인해 볼까요? ✨</div>
+</div>
+
+  <!-- 지원 가능한 오디션 -->
+  <section>
+    <div class="sec-head"><span class="em">📢</span><h2>지금 지원 가능한 오디션</h2><span class="line"></span></div>
+
+    <div class="card">
+      <div class="top"><h3>SM 2026 글로벌 오디션</h3><span class="chip c-open">상시모집</span></div>
+      <p>전 세계 여러 지역에서 열리는 초대형 신인 모집! 보컬·랩·댄스 중 <b>자신 있는 한 분야</b>를 골라 도전할 수 있어요. 에스파·라이즈를 배출한 SM의 정식 오디션이에요.</p>
+      <p class="meta">🗓️ 온라인 상시 접수 · 지역별 현장 오디션은 홈페이지에서 일정 확인</p>
+      <p class="link">🔗 <a href="https://audition.smtown.com" target="_blank" rel="noopener">audition.smtown.com</a></p>
+    </div>
+
+    <div class="card">
+      <div class="top"><h3>JYP 온라인 오디션</h3><span class="chip c-open">상시모집</span></div>
+      <p>트와이스·스트레이 키즈·엔믹스를 만든 JYP의 <b>온라인 상시 오디션</b>! 보컬·랩·댄스·모델 중 한 분야로 언제든 지원할 수 있어요. 공식 사이트에서 진행 중인 오디션을 확인해 보세요.</p>
+      <p class="meta">🗓️ 온라인 상시 접수 · 보컬/랩/댄스/모델</p>
+      <p class="link">🔗 <a href="https://audition.jype.com" target="_blank" rel="noopener">audition.jype.com</a></p>
+    </div>
+
+    <div class="card">
+      <div class="top"><h3>YG 오디션</h3><span class="chip c-open">상시모집</span></div>
+      <p>블랙핑크·베이비몬스터의 YG 온라인 오디션! 노래·랩·댄스·비주얼·끼 중 <b>자신 있는 한 분야</b>를 1분 이내 영상으로 보여주면 돼요. 얼굴이 잘 보이게 찍는 게 포인트!</p>
+      <p class="meta">🗓️ 국적 무관 · 온라인 상시 접수</p>
+      <p class="link">🔗 <a href="https://www.yg-audition.com" target="_blank" rel="noopener">yg-audition.com</a></p>
+    </div>
+
+    <div class="card">
+      <div class="top"><h3>CUBE 이메일 오디션</h3><span class="chip c-open">상시모집</span></div>
+      <p>(여자)아이들·펜타곤·라이트썸의 큐브엔터 <b>상시 이메일 오디션</b>! 나이·성별·국적 제한 없이 보컬·랩·댄스·비주얼로 지원 가능해요. 얼굴·전신 사진과 지원 영상을 이메일로 보내면 돼요.</p>
+      <p class="meta">🗓️ 상시 이메일 접수 · <a href="mailto:auditionint@cubeent.co.kr">auditionint@cubeent.co.kr</a></p>
+      <p class="link">🔗 <a href="https://www.cubeent.co.kr" target="_blank" rel="noopener">cubeent.co.kr</a> · <a href="https://www.instagram.com/cubeaudition_official/" target="_blank" rel="noopener">@cubeaudition_official</a></p>
+    </div>
+
+    <div class="card">
+      <div class="top"><h3>THEBLACKLABEL 2026 글로벌 투어 오디션</h3><span class="chip c-soon">🔥 8월 진행 · 마감 임박</span></div>
+      <p>태양·전소미·미야오의 더블랙레이블 <b>대규모 글로벌 투어 오디션</b>! 8월부터 아시아·미주·호주 여러 도시를 돌아 서울에서 마무리돼요. 온라인 사전지원 후 현장 오디션에 참여할 수 있어요.</p>
+      <p class="meta">🗓️ 국적 무관 · <b>지역별 마감일이 다르니</b> 홈페이지에서 우리 도시 일정을 꼭 확인!</p>
+      <p class="link">🔗 <a href="https://theblacklabel-globalaudition.com" target="_blank" rel="noopener">theblacklabel-globalaudition.com</a> · <a href="https://www.instagram.com/theblacklabel_audition/" target="_blank" rel="noopener">@theblacklabel_audition</a></p>
+    </div>
+
+    <div class="card">
+      <div class="top"><h3>스타쉽(Starship) 상시 온라인 오디션</h3><span class="chip c-open">상시모집</span></div>
+      <p>아이브·몬스타엑스, 그리고 새 보이그룹 <b>AEN(에이엔)</b>의 스타쉽엔터 <b>상시 온라인 오디션</b>! 보컬·댄스·랩·비주얼 분야로 지원할 수 있어요. 공식 홈페이지에서 자기소개 영상을 제출하면 돼요.</p>
+      <p class="meta">🗓️ 온라인 상시 접수</p>
+      <p class="link">🔗 <a href="https://www.starship-ent.com/audition/info" target="_blank" rel="noopener">starship-ent.com/audition</a></p>
+    </div>
+
+    <div class="card">
+      <div class="top"><h3>SOURCE MUSIC 데일리 오디션</h3><span class="chip c-open">상시모집</span></div>
+      <p>르세라핌을 만든 쏘스뮤직의 <b>상시(데일리) 오디션</b>이에요. 언제든 영상을 준비해 이메일·홈페이지로 지원할 수 있어서, 마음먹었을 때 바로 도전하기 좋아요!</p>
+      <p class="meta">🗓️ 상시 접수 · <a href="mailto:audition@sourcemusic.com">audition@sourcemusic.com</a></p>
+      <p class="link">🔗 <a href="https://www.sourcemusic.com/audition/index" target="_blank" rel="noopener">sourcemusic.com/audition</a></p>
+    </div>
+
+    <div class="card">
+      <div class="top"><h3>PLEDIS · KOZ · 카카오엔터 · WAKEONE 상시 오디션</h3><span class="chip c-open">상시모집</span></div>
+      <p>세븐틴·투어스의 플레디스, 지코의 KOZ, 카카오엔터, 케플러·제로베이스원의 웨이크원도 홈페이지로 <b>상시 지원</b>을 받고 있어요. 한 군데만 넣지 말고 여러 곳에 꾸준히 도전해 보는 것도 좋은 방법이에요 😊</p>
+      <p class="meta">🔗 <a href="https://pledisaudition.co.kr/" target="_blank" rel="noopener">pledisaudition.co.kr</a> · <a href="https://www.kozofficial.com/audition/index" target="_blank" rel="noopener">kozofficial.com/audition</a> · <a href="https://audition.kakaoent.com/" target="_blank" rel="noopener">audition.kakaoent.com</a> · <a href="https://wake-one.com/en/audition/" target="_blank" rel="noopener">wake-one.com/audition</a></p>
+    </div>
+
+    <div class="card">
+      <div class="top"><h3>FNC · RBW · 판타지오 · 위버스 오디션</h3><span class="chip c-open">상시모집</span></div>
+      <p>이 밖에도 여러 기획사가 온라인 상시 오디션을 열고 있어요. FNC(14세 미만은 보호자 동의 필요)·RBW·판타지오(가수·모델 부문)는 홈페이지로 상시 접수하고, <b>위버스 오디션</b>에서는 여러 기획사 공고를 한눈에 볼 수 있어요.</p>
+      <p class="meta">🔗 <a href="https://fncent.com" target="_blank" rel="noopener">fncent.com</a> · <a href="https://www.rbbridge.com" target="_blank" rel="noopener">rbbridge.com</a> · <a href="http://www.fantagio.kr/auditions/periodical/" target="_blank" rel="noopener">fantagio.kr</a> · <a href="https://weverse.io" target="_blank" rel="noopener">weverse.io</a></p>
+    </div>
+
+    <div class="card">
+      <div class="top"><h3>My KPOP Star 2026 (글로벌 오디션)</h3><span class="chip c-cast">참가자 모집</span></div>
+      <p>국적·나이·경력 제한 없이 누구나 지원 가능한 글로벌 오디션! 보컬·밴드·댄스·복합 퍼포먼스 모두 OK, 개인·팀 모두 참가할 수 있어요. 지원 접수가 진행 중이에요.</p>
+      <p class="meta">🗓️ 지원 접수 진행 중 · 자유 분야</p>
+    </div>
+  </section>
+
+  <!-- 엔터 업계 소식 / 컴백 캘린더 -->
+  <section>
+    <div class="sec-head"><span class="em">📰</span><h2>엔터 업계 소식 · 8월 컴백 캘린더</h2><span class="line"></span></div>
+
+    <div class="news">
+      <h3>🆕 하이브, '2026 HYBE Next New Creator' 프로듀서 오디션</h3>
+      <p>하이브가 팝 뮤직 특화 트랙 프로듀서를 뽑는 오디션을 열었어요. 만 19세 이상이면 성별·경력·국적 관계없이 지원할 수 있고, 데모 파일을 내면 돼요. 접수는 <b>8월 12일까지</b>, 합격자는 빅히트·빌리프랩·플레디스 등 하이브 산하 레이블에서 활동해요. (작사·작곡에 관심 있는 친구들에게 좋은 기회!) · <a href="https://view.asiae.co.kr/article/2026070710280500689" target="_blank" rel="noopener">기사 보기</a></p>
+    </div>
+
+    <div class="news">
+      <h3>🎉 스타쉽 새 보이그룹 'AEN(에이엔)' 8월 5일 데뷔</h3>
+      <p>아이브의 스타쉽에서 신인 보이그룹 <b>AEN</b>이 첫 EP 《A NEW ERA OF NOW》로 데뷔해요. 신인 그룹의 데뷔 무대는 콘셉트·안무·무대 매너를 공부하기에 딱 좋은 교재랍니다!</p>
+    </div>
+
+    <div class="cal">
+      <div class="row"><div class="day">8/1<span>토</span></div><div class="info"><b>스트레이 키즈</b> <em>· 《SKZ-REPLAY 2026 Pt.1》</em></div><span class="kind k-comeback">컴백</span></div>
+      <div class="row"><div class="day">8/3<span>월</span></div><div class="info"><b>레드벨벳</b> <em>· 여름 미니 《Velvet Summer》</em></div><span class="kind k-comeback">컴백</span></div>
+      <div class="row"><div class="day">8/3<span>월</span></div><div class="info"><b>피철린 (세븐틴 디노)</b> <em>· 첫 솔로 미니 《吉BOARD》</em></div><span class="kind k-debut">솔로 데뷔</span></div>
+      <div class="row"><div class="day">8/4<span>화</span></div><div class="info"><b>키스오브라이프</b> <em>· 세 번째 싱글 《SWEAT》</em></div><span class="kind k-comeback">컴백</span></div>
+      <div class="row"><div class="day">8/5<span>수</span></div><div class="info"><b>AEN (에이엔)</b> <em>· 스타쉽 신인 보이그룹 데뷔 《A NEW ERA OF NOW》</em></div><span class="kind k-debut">신인 데뷔</span></div>
+      <div class="row"><div class="day">8/7<span>금</span></div><div class="info"><b>스트레이 키즈 · ARTMS</b> <em>· 《THIS &amp; THAT》 / 《Hyper-Ego》</em></div><span class="kind k-comeback">컴백</span></div>
+      <div class="row"><div class="day">8/10<span>월</span></div><div class="info"><b>WayV · KiiiKiii</b> <em>· 《Vision Wings》 / 《WhyKiiiKiii》</em></div><span class="kind k-comeback">컴백</span></div>
+      <div class="row"><div class="day">8/11<span>화</span></div><div class="info"><b>정은지 (에이핑크)</b> <em>· 다섯 번째 미니 《Summer, I》</em></div><span class="kind k-comeback">컴백</span></div>
+      <div class="row"><div class="day">8/21<span>금</span></div><div class="info"><b>ENHYPEN</b> <em>· 여덟 번째 미니 《THE SIN : BLISS》</em></div><span class="kind k-comeback">컴백</span></div>
+      <div class="row"><div class="day">8/24<span>월</span></div><div class="info"><b>NCT 127</b> <em>· 정규 7집 《BLINGY》</em></div><span class="kind k-comeback">컴백</span></div>
+    </div>
+    <p style="font-size:12.5px;color:var(--sub);margin-top:10px;padding-left:4px">
+      💡 신인 그룹의 데뷔 무대와 선배 그룹의 컴백을 보면서, 무대 매너·표정·안무 포인트를 나만의 노트에 정리해 보면 큰 공부가 돼요! (일정은 변동될 수 있어요)
+    </p>
+  </section>
+
+  <!-- 오늘의 팁 -->
+  <section>
+    <div class="sec-head"><span class="em">🌟</span><h2>오늘의 오디션 팁</h2><span class="line"></span></div>
+    <div class="tip">
+      <span class="lbl">TIP · 7월 30일</span>
+      <h3>첫 15초 자기소개, '한 문장'으로 나를 각인시키기</h3>
+      <p>오디션은 <b>첫인상 15초</b>가 절반이에요. "안녕하세요, ○○ 지망생 △△입니다"로 끝내지 말고, 나를 기억하게 만드는 <b>한 문장</b>을 준비해 보세요. 예를 들면 "무대 위에서 가장 밝게 웃는 △△입니다!" 처럼요. 이름은 또박또박, 목소리는 평소보다 한 톤 밝고 크게, 그리고 말할 때 심사위원의 눈을 보며 미소를 잊지 마세요. 거울 앞에서 '입 모양·표정·목소리'까지 세 가지를 함께 연습하면 훨씬 자연스러워진답니다. 오늘은 나만의 자기소개 한 문장을 만들어 세 번 소리 내어 연습해 볼까요? 😊</p>
+    </div>
+  </section>
+
+  <div class="cheer">
+    <div class="q">"연습은 배신하지 않아요. 오늘의 땀이 내일의 무대예요! 💜"</div>
+    <div class="s">우리 오디션반 친구들, 오늘도 파이팅! 대표님이 항상 응원할게요 🎀</div>
+  </div>
+
+  <footer>
+    <b>ℹ️ 안내</b><br>
+    · 위 오디션 공고·일정·컴백 정보는 검색 시점 기준으로 정리한 내용이며, <b>공고와 일정은 변동될 수 있으니 지원 전 각 기획사·주최 측 공식 채널에서 반드시 최종 확인</b>하세요.<br>
+    · 지원 시 개인정보 요구·비용 요구 등 이상한 점이 있으면 꼭 부모님·선생님(대표님)과 먼저 상의해요.<br>
+    · 본 브리핑은 오디션반 학생들의 학습·정보 공유를 위해 매일 자동으로 갱신됩니다.<br>
+    <span style="color:#a99fc4">최종 업데이트: 2026-07-30 · JB IDOL Note</span>
+  </footer>
+</div>
+</body>
+</html>
