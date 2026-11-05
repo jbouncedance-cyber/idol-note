@@ -254,6 +254,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
   <!-- 관리자 탭바 -->
   <div class="tb" id="adm-tb">
     <button class="tbtn on" onclick="admTab(this,'main')">🏠 홈</button>
+    <button class="tbtn" onclick="admTab(this,'dash')">📅 현황판</button>
     <button class="tbtn" onclick="admTab(this,'chart')">📊 학생 현황</button>
     <button class="tbtn" onclick="admTab(this,'audit')">📝 오디션기록</button>
     <button class="tbtn" onclick="admTab(this,'hist')">🏆 오디션 히스토리</button>
@@ -469,7 +470,7 @@ window.DB={
     {id:'r37',name:'재즈',teacher:'설화',day:'수',ts:'21:00',te:'22:00'},{id:'r38',name:'코레오그래피',teacher:'아이씨',day:'목',ts:'19:00',te:'20:00'}
   ],
   vocalClasses:[],etcClasses:[],trainingClasses:[],
-  notices:[],events:[],messages:[],resources:[]
+  notices:[],events:[],messages:[],resources:[],schedules:[]
 };
 let DB=window.DB;
 
@@ -525,6 +526,7 @@ async function loadAll(){
     DB.messages=[];ms.forEach(d=>DB.messages.push(d.data()));
     DB.messages.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
     try{const rs=await db.collection('idol_resources').get();DB.resources=[];rs.forEach(d=>DB.resources.push(d.data()));}catch(e){DB.resources=[];}
+    try{const sc=await db.collection('idol_schedules').get();DB.schedules=[];sc.forEach(d=>DB.schedules.push(d.data()));}catch(e){DB.schedules=[];}
     window.DB=DB;
   }catch(e){console.warn('로드 실패:',e);}
   // 세션 복원 (UI 상태만 - 페이지 이동 없음)
@@ -776,6 +778,7 @@ function renderPMain(s){
     </div>
   </div></div>
 
+  ${pScheduleCard(s)}
   <div class="cd"><div class="cd-h"><div class="cd-t">🏆 지망 1순위 기획사</div></div><div class="cd-b">
     <div style="background:linear-gradient(135deg,rgba(107,63,160,0.08),rgba(201,162,39,0.05));border:1px solid #E8DEFF;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--gy)">
       ⭐ 목표하는 기획사와 이유, 목표 시기 등을 자유롭게 적어보세요
@@ -1546,6 +1549,7 @@ function renderAdmCt(){
   const c=document.getElementById('adm-ct');
   if(admTab_==='main')renderAdmMain(c);
   else if(admTab_==='stu')renderAdmStu(c);
+  else if(admTab_==='dash')renderAdmDash(c);
   else if(admTab_==='chart')renderAdmChart(c);
   else if(admTab_==='audit')renderAdmAudit(c);
   else if(admTab_==='hist')renderAdmHist(c);
@@ -1557,6 +1561,72 @@ function renderAdmCt(){
   else if(admTab_==='ntc')renderAdmNtc(c);
   else if(admTab_==='res')renderAdmRes(c);
   else if(admTab_==='cfg')renderAdmCfg(c);
+}
+
+// 현황판: 촬영·오디션 일정과 의무 촬영 (일정은 idol_schedules에 건별 저장)
+const SCH_KINDS=['댄스촬영','보컬촬영','댄스+보컬촬영','프로필촬영','오디션2차','오디션최종'];
+const SCH_DAYS=60,SHOOT_MONTHS=2;
+let _schEditId=null,_dashPast=false;
+function schAddDays(d,n){const x=new Date(d+'T00:00:00');x.setDate(x.getDate()+n);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');}
+function schAddMonths(d,n){const [y,m,dd]=d.split('-').map(Number);const last=new Date(y,m-1+n+1,0).getDate();const x=new Date(y,m-1+n,Math.min(dd,last));return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');}
+function schOf(sid){return (DB.schedules||[]).filter(x=>x.sid===sid);}
+function schUpcoming(sid){const t=today();return schOf(sid).filter(x=>x.date>=t).sort((a,b)=>a.date.localeCompare(b.date));}
+function shootStatus(s){
+  const t=today();const list=schOf(s.id);
+  const calc=(kind)=>{const hit=list.filter(x=>x.kind===kind||x.kind==='댄스+보컬촬영');
+    const past=hit.filter(x=>x.date<=t).map(x=>x.date).sort();const last=past.length?past[past.length-1]:'';
+    const planned=hit.some(x=>x.date>t);
+    return {last,need:!planned&&(!last||schAddMonths(last,SHOOT_MONTHS)<=t)};};
+  return {dance:calc('댄스촬영'),vocal:calc('보컬촬영')};
+}
+function schDateTxt(d){return String(d||'').slice(5).replace('-','/');}
+function pScheduleCard(s){
+  const up=schUpcoming(s.id);if(!up.length)return '';
+  return `<div class="cd"><div class="cd-h"><div class="cd-t">📅 예정 일정</div></div><div class="cd-b">${up.map(x=>`<div style="padding:5px 0;font-size:13px;line-height:1.5"><b>${esc(schDateTxt(x.date))}</b> ${esc(x.kind)}${x.memo?` <span style="color:var(--gy)">· ${esc(x.memo)}</span>`:''}</div>`).join('')}</div></div>`;
+}
+function renderAdmDash(c){
+  if(!c)return;
+  const t=today();const until=schAddDays(t,SCH_DAYS);
+  const act=(DB.students||[]).filter(s=>!s.inactive);
+  const nm=id=>{const s=(DB.students||[]).find(x=>x.id===id);return s?s.name:'(삭제된 학생)';};
+  const all=(DB.schedules||[]).slice();
+  const up=all.filter(x=>x.date>=t&&x.date<=until).sort((a,b)=>a.date.localeCompare(b.date));
+  const past=all.filter(x=>x.date<t).sort((a,b)=>b.date.localeCompare(a.date));
+  const need=act.filter(s=>s.cls!=='kids').map(s=>({s,st:shootStatus(s)})).filter(x=>x.st.dance.need||x.st.vocal.need).sort((a,b)=>String(a.s.name).localeCompare(String(b.s.name),'ko'));
+  const tile=(l,v)=>`<div class="cd" style="margin:0;padding:12px;text-align:center"><div style="font-size:12px;color:var(--gy);font-weight:700">${l}</div><div style="font-size:24px;font-weight:900;margin-top:3px">${v}</div></div>`;
+  const row=x=>`<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:9px 13px;border-top:1px solid var(--bd)"><div style="font-size:12px;color:var(--gy);width:78px">${esc(x.date)}</div><div style="font-weight:800;min-width:56px;cursor:pointer" onclick="admOpenProf(${Number(x.sid)||0})">${esc(nm(x.sid))}</div><span class="bx ${String(x.kind).startsWith('오디션')?'or':'dn'}">${esc(x.kind)}</span><div style="flex:1;min-width:100px;font-size:13px">${esc(x.memo||'')}</div><button onclick="openSch('${esc(x.id)}')" class="edt-btn" style="font-size:11px;padding:3px 7px">수정</button><button onclick="dlSch('${esc(x.id)}')" class="del-btn" style="font-size:11px;padding:3px 7px">삭제</button></div>`;
+  c.innerHTML=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">${tile('재원 학생',act.length)}${tile('앞으로 '+SCH_DAYS+'일 일정',up.length)}${tile('촬영 필요',need.length)}</div>
+  <button class="btn btn-or" onclick="openSch(null)" style="margin-bottom:12px">+ 일정 추가</button>
+  <div class="cd"><div class="cd-h"><div class="cd-t">앞으로 ${SCH_DAYS}일 일정</div></div>${up.length?up.map(row).join(''):'<div class="emp-msg">예정된 일정이 없어요</div>'}</div>
+  <div class="cd"><div class="cd-h"><div class="cd-t">오디션반 촬영 필요 (${SHOOT_MONTHS}개월 기준)</div></div>${need.length?need.map(({s,st})=>`<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:9px 13px;border-top:1px solid var(--bd);cursor:pointer" onclick="admOpenProf(${s.id})"><div style="font-weight:800;min-width:56px">${esc(s.name)}</div>${st.dance.need?'<span class="bx dn">댄스 필요</span>':''}${st.vocal.need?'<span class="bx vc">보컬 필요</span>':''}<div style="margin-left:auto;font-size:12px;color:var(--gy)">마지막 댄스 ${esc(st.dance.last||'없음')} · 보컬 ${esc(st.vocal.last||'없음')}</div></div>`).join(''):'<div class="emp-msg">촬영이 필요한 학생이 없어요</div>'}</div>
+  <div class="cd"><div class="cd-h" style="cursor:pointer" onclick="_dashPast=!_dashPast;renderAdmCt()"><div class="cd-t">지난 일정 ${past.length}건</div><div style="font-size:12px;color:var(--gy)">${_dashPast?'접기 ▲':'펼치기 ▼'}</div></div>${_dashPast?(past.length?past.map(row).join(''):'<div class="emp-msg">지난 일정이 없어요</div>'):''}</div>`;
+}
+function openSch(id){
+  _schEditId=id;const r=id?(DB.schedules||[]).find(x=>x.id===id)||{}:{};
+  let det=document.getElementById('ov-sch');
+  if(!det){det=document.createElement('div');det.id='ov-sch';det.className='ov';det.onclick=function(e){if(e.target===this)closeM('ov-sch');};document.body.appendChild(det);}
+  const stu=(DB.students||[]).filter(s=>!s.inactive||s.id===r.sid).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko'));
+  det.innerHTML=`<div class="md"><div class="mh"><div class="mt">📅 일정 ${id?'수정':'추가'}</div><button class="xb" onclick="closeM('ov-sch')">✕</button></div><div class="mb">
+    <div class="fr"><label class="fl">학생</label><select id="sc-stu">${stu.map(s=>`<option value="${s.id}" ${s.id===r.sid?'selected':''}>${esc(s.name)}</option>`).join('')}</select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" class="fr"><div><label class="fl">날짜</label><input type="date" id="sc-date" value="${esc(r.date||today())}"></div>
+    <div><label class="fl">구분</label><select id="sc-kind">${SCH_KINDS.map(v=>`<option value="${v}" ${r.kind===v?'selected':''}>${v}</option>`).join('')}</select></div></div>
+    <div class="fr" style="margin-bottom:0"><label class="fl">내용 (학생에게도 보여요)</label><input type="text" id="sc-memo" placeholder="예: A2O, 정기 촬영, 흰 티셔츠 준비" value="${esc(r.memo||'')}"></div>
+  </div><div class="mf"><button class="btn btn-or" onclick="saveSch()">저장하기</button></div></div>`;
+  det.classList.add('on');
+}
+async function saveSch(){
+  const raw=document.getElementById('sc-stu').value;const st=(DB.students||[]).find(x=>String(x.id)===raw);
+  const date=document.getElementById('sc-date').value;
+  if(!st){alert('학생을 선택해주세요');return;}if(!date){alert('날짜를 입력해주세요');return;}
+  const rec={id:_schEditId||('sc'+Date.now()),sid:st.id,date,kind:document.getElementById('sc-kind').value,memo:(document.getElementById('sc-memo').value||'').trim()};
+  try{await db.collection('idol_schedules').doc(rec.id).set(rec);}catch(e){alert('저장 실패: '+e.message);return;}
+  const i=(DB.schedules||[]).findIndex(x=>x.id===rec.id);if(i>=0)DB.schedules[i]=rec;else DB.schedules.push(rec);
+  closeM('ov-sch');toast('✅ 일정 저장됨');renderAdmCt();
+}
+async function dlSch(id){
+  if(!confirm('이 일정을 삭제할까요?'))return;
+  try{await db.collection('idol_schedules').doc(id).delete();}catch(e){alert('삭제 실패: '+e.message);return;}
+  DB.schedules=(DB.schedules||[]).filter(x=>x.id!==id);toast('✅ 삭제됨');renderAdmCt();
 }
 
 // 오디션 히스토리 (2차 이상)
@@ -1584,7 +1654,7 @@ async function admBackup(btn){
   if(btn){btn.disabled=true;btn.textContent='백업 중...';}
   try{
     const out={backupAt:new Date().toISOString()};
-    for(const col of ['idol_config','idol_students','idol_messages','idol_resources','feedbacks','studentData']){
+    for(const col of ['idol_config','idol_students','idol_messages','idol_resources','idol_schedules','feedbacks','studentData']){
       const snap=await db.collection(col).get();out[col]={};snap.forEach(d=>{out[col][d.id]=d.data();});
     }
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(out,null,1)],{type:'application/json'}));
@@ -1633,6 +1703,8 @@ function renderAdmChartList(){
       </div>
       <div style="font-size:12px;color:var(--gy);margin-top:8px">${[age!==null?'만 '+age+'세':'',s.height?esc(s.height)+'cm':'',ib&&ib.weight?esc(ib.weight)+'kg':'',auds?'오디션 기록 '+auds+'건':''].filter(Boolean).join(' · ')||'기본정보 미입력'}</div>
       ${blocks||'<div style="font-size:12px;color:var(--gy2);margin-top:9px">배정된 수업 없음</div>'}
+      ${(()=>{const up=schUpcoming(s.id);return up.length?`<div style="margin-top:9px"><div style="font-size:11px;font-weight:800;color:var(--or);margin-bottom:3px">📅 예정 일정</div>${up.map(x=>`<div style="font-size:12px;line-height:1.55"><b>${esc(schDateTxt(x.date))}</b> ${esc(x.kind)}${x.memo?' · '+esc(x.memo):''}</div>`).join('')}</div>`:'';})()}
+      ${(()=>{if(k)return '';const st=shootStatus(s);const n=[st.dance.need?'댄스':'',st.vocal.need?'보컬':''].filter(Boolean);return n.length?`<div style="margin-top:9px"><span class="bx gy">촬영 필요: ${n.join(' · ')}</span></div>`:'';})()}
       ${(()=>{const pass=(s.auditions||[]).filter(r=>r.stage&&r.result==='합격').sort((a,b)=>String(b.date).localeCompare(String(a.date)));return pass.length?`<div style="margin-top:9px"><div style="font-size:11px;font-weight:800;color:var(--am);margin-bottom:3px">🏆 합격 이력</div>${pass.map(r=>`<div style="font-size:12px;line-height:1.55">${esc(String(r.date||'').slice(2,7).replace('-','.'))} <b>${esc(r.agency)}</b> ${auditPassTxt(r)}</div>`).join('')}</div>`:'';})()}
     </div></div>`;}).join('')}</div>`;
 }
