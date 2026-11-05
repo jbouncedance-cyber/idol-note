@@ -1541,6 +1541,21 @@ function renderAdmCt(){
   else if(admTab_==='cfg')renderAdmCfg(c);
 }
 
+// 전체 데이터 백업 (읽기 전용, 이 기기에 파일로 저장)
+async function admBackup(btn){
+  if(btn){btn.disabled=true;btn.textContent='백업 중...';}
+  try{
+    const out={backupAt:new Date().toISOString()};
+    for(const col of ['idol_config','idol_students','idol_messages','idol_resources','feedbacks','studentData']){
+      const snap=await db.collection(col).get();out[col]={};snap.forEach(d=>{out[col][d.id]=d.data();});
+    }
+    const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(out,null,1)],{type:'application/json'}));
+    a.download='JB_IDOL_backup_'+today()+'.json';document.body.appendChild(a);a.click();a.remove();
+    toast('✅ 백업 파일을 받았어요');
+  }catch(e){alert('백업 실패: '+e.message);}
+  if(btn){btn.disabled=false;btn.textContent='💾 백업 받기';}
+}
+
 // 학생 현황 (보기 전용: 개인 페이지에 등록된 정보를 그대로 표시)
 let _chartCls='all',_chartQ='';
 function chartAge(b){if(!b)return null;const d=new Date(b);if(isNaN(d))return null;const n=new Date();let a=n.getFullYear()-d.getFullYear();if(n.getMonth()<d.getMonth()||(n.getMonth()===d.getMonth()&&n.getDate()<d.getDate()))a--;return a;}
@@ -1961,7 +1976,8 @@ function dlRes(id){if(!confirm('삭제할까요?'))return;DB.resources=(DB.resou
 // 설정
 function renderAdmCfg(c){
   c.innerHTML=`<div class="adm-sec" style="margin-bottom:12px"><div class="adm-r"><div style="flex:1"><div style="font-weight:800">관리자 비밀번호</div><div style="font-size:12px;color:var(--gy)">현재: ${DB.adminPw}</div></div></div><div class="ar"><input type="password" id="new-apw" placeholder="새 비밀번호"><button onclick="chgAdmPw()">변경</button></div></div>
-  <div class="adm-sec"><div class="adm-r"><div style="flex:1;font-weight:800">전체 메시지 보내기</div><button onclick="openM('ov-bc')" class="edt-btn">📢 전송</button></div></div>`;
+  <div class="adm-sec"><div class="adm-r"><div style="flex:1;font-weight:800">전체 메시지 보내기</div><button onclick="openM('ov-bc')" class="edt-btn">📢 전송</button></div></div>
+  <div class="adm-sec" style="margin-top:12px"><div class="adm-r"><div style="flex:1"><div style="font-weight:800">전체 데이터 백업</div><div style="font-size:12px;color:var(--gy)">학생 정보, 기록, 피드백을 이 기기에 파일로 저장해요. 비밀번호도 들어 있으니 안전한 곳에 보관하세요.</div></div><button onclick="admBackup(this)" class="edt-btn">💾 백업 받기</button></div></div>`;
 }
 function chgAdmPw(){const pw=document.getElementById('new-apw').value.trim();if(!pw){alert('비밀번호를 입력해주세요');return;}DB.adminPw=pw;fbCfg();toast('✅ 비밀번호 변경됨');renderAdmCt();}
 function sendBroadcast(){const nm=(document.getElementById('bc-nm').value||'').trim();const ct=document.getElementById('bc-ct').value.trim();if(!nm||!ct){alert('이름과 메시지를 입력해주세요');return;}if(!confirm('모든 학생 '+DB.students.length+'명에게 전송할까요?'))return;DB.students.forEach(s=>{if(!s.teacherMessages)s.teacherMessages=[];s.teacherMessages.push({id:'tm'+Date.now()+Math.random(),content:'['+nm+'] '+ct,date:nowT(),read:false});fbSv('idol_students',s.id,s);});toast('✅ 전송 완료');closeM('ov-bc');}
