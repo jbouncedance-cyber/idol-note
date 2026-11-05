@@ -527,6 +527,8 @@ async function loadAll(){
     DB.messages.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
     try{const rs=await db.collection('idol_resources').get();DB.resources=[];rs.forEach(d=>DB.resources.push(d.data()));}catch(e){DB.resources=[];}
     try{const sc=await db.collection('idol_schedules').get();DB.schedules=[];sc.forEach(d=>DB.schedules.push(d.data()));}catch(e){DB.schedules=[];}
+    try{const mt=await db.collection('idol_student_meta').get();DB.meta={};mt.forEach(d=>{DB.meta[d.id]=d.data();});}catch(e){DB.meta={};}
+    DB.grades=null;
     window.DB=DB;
   }catch(e){console.warn('로드 실패:',e);}
   // 세션 복원 (UI 상태만 - 페이지 이동 없음)
@@ -776,6 +778,7 @@ function renderPMain(s){
       <span class="bx ${isK?'kk':'or'}">${isK?'키즈오디션반':'오디션반'}</span>
       ${lastIb?`<span class="bx gr">📊 인바디 ${lastIb.score}점</span>`:''}
     </div>
+    ${(()=>{const m=metaOf(s.id);const t=[m.homeroom?'담임 '+esc(m.homeroom):'',m.vocal?'보컬 '+esc(m.vocal):'',m.position?'포지션 '+esc(m.position):''].filter(Boolean).join(' · ');return t?`<div style="font-size:12px;color:var(--gy);margin-top:8px">${t}</div>`:'';})()}
   </div></div>
 
   ${pScheduleCard(s)}
@@ -1563,6 +1566,46 @@ function renderAdmCt(){
   else if(admTab_==='cfg')renderAdmCfg(c);
 }
 
+// 담당 선생님·포지션(공개)과 등급(선생님 화면에서만 불러옴)
+const HOMEROOM_TEACHERS=['김함비 선생님','Stia 선생님'];
+const VOCAL_TEACHERS=['김선우 선생님','김다금 선생님','한지예 선생님','김선령 선생님','장지은 선생님'];
+const GRADES=['','A','B','C','D'];
+let _chartTeacher='all';
+function metaOf(id){return (DB.meta||{})[String(id)]||{};}
+function gradeOf(id){return (DB.grades||{})[String(id)]||{};}
+async function ensureGrades(){
+  if(DB.grades)return;
+  try{const g=await db.collection('idol_student_grades').get();const o={};g.forEach(d=>{o[d.id]=d.data();});DB.grades=o;}catch(e){DB.grades={};}
+}
+function gradeBadge(l,v){return v?`<span class="bx ${v==='A'?'gr':'gy'}">${l} ${esc(v)}</span>`:'';}
+async function openMeta(id){
+  await ensureGrades();
+  const st=(DB.students||[]).find(x=>x.id===id);if(!st)return;
+  const m=metaOf(id),g=gradeOf(id);
+  let det=document.getElementById('ov-meta');
+  if(!det){det=document.createElement('div');det.id='ov-meta';det.className='ov';det.onclick=function(e){if(e.target===this)closeM('ov-meta');};document.body.appendChild(det);}
+  const sel=(idn,opts,cur)=>`<select id="${idn}">${opts.map(v=>`<option value="${esc(v)}" ${(cur||'')===v?'selected':''}>${v?esc(v):'선택 안 함'}</option>`).join('')}</select>`;
+  det.innerHTML=`<div class="md"><div class="mh"><div class="mt">${esc(st.name)} 담당·등급</div><button class="xb" onclick="closeM('ov-meta')">✕</button></div><div class="mb">
+    <div class="fr"><label class="fl">담임 선생님</label>${sel('mt-home',['',...HOMEROOM_TEACHERS],m.homeroom)}</div>
+    <div class="fr"><label class="fl">보컬 담당 선생님</label><input type="text" id="mt-vocal" list="mt-vocal-list" placeholder="선택 또는 직접 입력" value="${esc(m.vocal||'')}"><datalist id="mt-vocal-list">${VOCAL_TEACHERS.map(v=>`<option value="${esc(v)}">`).join('')}</datalist></div>
+    <div class="fr"><label class="fl">주 포지션</label><input type="text" id="mt-pos" placeholder="예: 댄스, 보컬·댄스" value="${esc(m.position||'')}"></div>
+    <label class="fl">등급 (선생님 화면에만 표시)</label>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"><div><label class="fl">댄스</label>${sel('mt-gd',GRADES,g.dance)}</div><div><label class="fl">보컬</label>${sel('mt-gv',GRADES,g.vocal)}</div><div><label class="fl">랩</label>${sel('mt-gr',GRADES,g.rap)}</div></div>
+  </div><div class="mf"><button class="btn btn-or" onclick="saveMeta(${id})">저장하기</button></div></div>`;
+  det.classList.add('on');
+}
+async function saveMeta(id){
+  const v=x=>(document.getElementById(x).value||'').trim();
+  const meta={sid:id,homeroom:v('mt-home'),vocal:v('mt-vocal'),position:v('mt-pos')};
+  const grade={sid:id,dance:v('mt-gd'),vocal:v('mt-gv'),rap:v('mt-gr')};
+  try{
+    await db.collection('idol_student_meta').doc(String(id)).set(meta);
+    await db.collection('idol_student_grades').doc(String(id)).set(grade);
+  }catch(e){alert('저장 실패: '+e.message);return;}
+  if(!DB.meta)DB.meta={};DB.meta[String(id)]=meta;if(!DB.grades)DB.grades={};DB.grades[String(id)]=grade;
+  closeM('ov-meta');toast('✅ 저장됨');renderAdmCt();
+}
+
 // 현황판: 촬영·오디션 일정과 의무 촬영 (일정은 idol_schedules에 건별 저장)
 const SCH_KINDS=['댄스촬영','보컬촬영','댄스+보컬촬영','프로필촬영','오디션2차','오디션최종'];
 const SCH_DAYS=60,SHOOT_MONTHS=2;
@@ -1654,7 +1697,7 @@ async function admBackup(btn){
   if(btn){btn.disabled=true;btn.textContent='백업 중...';}
   try{
     const out={backupAt:new Date().toISOString()};
-    for(const col of ['idol_config','idol_students','idol_messages','idol_resources','idol_schedules','feedbacks','studentData']){
+    for(const col of ['idol_config','idol_students','idol_messages','idol_resources','idol_schedules','idol_student_meta','idol_student_grades','feedbacks','studentData']){
       const snap=await db.collection(col).get();out[col]={};snap.forEach(d=>{out[col][d.id]=d.data();});
     }
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(out,null,1)],{type:'application/json'}));
@@ -1674,22 +1717,26 @@ function chartClsBlock(lbl,col,list){
   if(!list.length)return '';
   return `<div style="margin-top:9px"><div style="font-size:11px;font-weight:800;color:${col};margin-bottom:3px">${lbl} ${list.length}</div>${list.map(cl=>`<div style="font-size:12px;line-height:1.55"><b>${esc(cl.name)}</b> · ${esc(cl.teacher)}${cl.day?` <span style="color:var(--gy)">${esc(cl.day)} ${esc(cl.ts)}${cl.te?'~'+esc(cl.te):''}</span>`:''}</div>`).join('')}</div>`;
 }
-function renderAdmChart(c){
+async function renderAdmChart(c){
   if(!c)return;
+  await ensureGrades();
+  if(admTab_!=='chart')return;
   const act=(DB.students||[]).filter(s=>!s.inactive);
   const isKid=s=>s.cls==='kids';
   const fBtn=(v,l,n)=>`<button onclick="_chartCls='${v}';renderAdmCt()" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${_chartCls===v?'var(--or)':'var(--bd)'};background:${_chartCls===v?'var(--ob)':'#fff'};color:${_chartCls===v?'var(--or)':'var(--gy)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${l} ${n}</button>`;
   let h=`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;align-items:center">
     ${fBtn('all','전체',act.length)}${fBtn('audition','오디션반',act.filter(s=>!isKid(s)).length)}${fBtn('kids','키즈오디션반',act.filter(isKid).length)}
     <input id="chart-q" type="text" value="${esc(_chartQ)}" placeholder="이름 검색" oninput="_chartQ=this.value;renderAdmChartList()" style="flex:1;min-width:120px;padding:7px 11px;border:1px solid var(--bd);border-radius:9px;font-size:13px;font-family:inherit">
-  </div><div id="chart-list"></div>`;
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px">${[['all','담임 전체'],...HOMEROOM_TEACHERS.map(t=>[t,t.replace(' 선생님','')]),['none','담임 미배정']].map(([v,l])=>`<button onclick="_chartTeacher='${v}';renderAdmCt()" style="padding:5px 12px;border-radius:20px;border:1.5px solid ${_chartTeacher===v?'var(--or)':'var(--bd)'};background:${_chartTeacher===v?'var(--ob)':'#fff'};color:${_chartTeacher===v?'var(--or)':'var(--gy)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${l}</button>`).join('')}</div>
+  <div id="chart-list"></div>`;
   c.innerHTML=h;
   renderAdmChartList();
 }
 function renderAdmChartList(){
   const w=document.getElementById('chart-list');if(!w)return;
   const isKid=s=>s.cls==='kids';const q=_chartQ.trim();
-  const list=(DB.students||[]).filter(s=>!s.inactive&&(_chartCls==='all'||(_chartCls==='kids')===isKid(s))&&(!q||String(s.name||'').includes(q))).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko'));
+  const list=(DB.students||[]).filter(s=>!s.inactive&&(_chartCls==='all'||(_chartCls==='kids')===isKid(s))&&(!q||String(s.name||'').includes(q))&&(_chartTeacher==='all'||(_chartTeacher==='none'?!metaOf(s.id).homeroom:metaOf(s.id).homeroom===_chartTeacher))).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko'));
   if(!list.length){w.innerHTML='<div class="emp-msg">해당하는 학생이 없어요</div>';return;}
   w.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${list.map(s=>{
     const k=isKid(s);const age=chartAge(s.birth);const ib=s.inbody&&s.inbody.length?s.inbody[s.inbody.length-1]:null;
@@ -1699,8 +1746,10 @@ function renderAdmChartList(){
       <div style="display:flex;align-items:center;gap:10px">
         <div class="av${k?' kav':''}" style="width:46px;height:46px;font-size:18px;flex-shrink:0">${s.photo?`<img src="${esc(s.photo)}">`:esc(String(s.name||'?')[0])}</div>
         <div style="min-width:0;flex:1"><div style="font-size:15px;font-weight:800">${esc(s.name)}</div>
-          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;align-items:center"><span class="bx ${k?'kk':'or'}">${k?'키즈오디션반':'오디션반'}</span></div></div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;align-items:center"><span class="bx ${k?'kk':'or'}">${k?'키즈오디션반':'오디션반'}</span>${gradeBadge('댄스',gradeOf(s.id).dance)}${gradeBadge('보컬',gradeOf(s.id).vocal)}${gradeBadge('랩',gradeOf(s.id).rap)}</div></div>
+        <button onclick="event.stopPropagation();openMeta(${s.id})" class="edt-btn" style="font-size:11px;padding:3px 7px;flex-shrink:0">담당·등급</button>
       </div>
+      <div style="font-size:12px;margin-top:8px">담임 <b>${esc(metaOf(s.id).homeroom||'미배정')}</b> · 보컬 <b>${esc(metaOf(s.id).vocal||'미배정')}</b>${metaOf(s.id).position?` · 포지션 <b>${esc(metaOf(s.id).position)}</b>`:''}</div>
       <div style="font-size:12px;color:var(--gy);margin-top:8px">${[age!==null?'만 '+age+'세':'',s.height?esc(s.height)+'cm':'',ib&&ib.weight?esc(ib.weight)+'kg':'',auds?'오디션 기록 '+auds+'건':''].filter(Boolean).join(' · ')||'기본정보 미입력'}</div>
       ${blocks||'<div style="font-size:12px;color:var(--gy2);margin-top:9px">배정된 수업 없음</div>'}
       ${(()=>{const up=schUpcoming(s.id);return up.length?`<div style="margin-top:9px"><div style="font-size:11px;font-weight:800;color:var(--or);margin-bottom:3px">📅 예정 일정</div>${up.map(x=>`<div style="font-size:12px;line-height:1.55"><b>${esc(schDateTxt(x.date))}</b> ${esc(x.kind)}${x.memo?' · '+esc(x.memo):''}</div>`).join('')}</div>`:'';})()}
