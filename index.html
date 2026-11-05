@@ -254,6 +254,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
   <!-- 관리자 탭바 -->
   <div class="tb" id="adm-tb">
     <button class="tbtn on" onclick="admTab(this,'main')">🏠 홈</button>
+    <button class="tbtn" onclick="admTab(this,'chart')">📊 학생 현황</button>
     <button class="tbtn" onclick="admTab(this,'audit')">📝 오디션기록</button>
     <button class="tbtn" onclick="admTab(this,'rep')">🎵 레파토리</button>
     <button class="tbtn" onclick="admTab(this,'fb')">피드백입력</button>
@@ -1528,6 +1529,7 @@ function renderAdmCt(){
   const c=document.getElementById('adm-ct');
   if(admTab_==='main')renderAdmMain(c);
   else if(admTab_==='stu')renderAdmStu(c);
+  else if(admTab_==='chart')renderAdmChart(c);
   else if(admTab_==='audit')renderAdmAudit(c);
   else if(admTab_==='rep')renderAdmRep(c);
   else if(admTab_==='fb')renderAdmFbInput(c);
@@ -1537,6 +1539,48 @@ function renderAdmCt(){
   else if(admTab_==='ntc')renderAdmNtc(c);
   else if(admTab_==='res')renderAdmRes(c);
   else if(admTab_==='cfg')renderAdmCfg(c);
+}
+
+// 학생 현황 (보기 전용: 개인 페이지에 등록된 정보를 그대로 표시)
+let _chartCls='all',_chartQ='';
+function chartAge(b){if(!b)return null;const d=new Date(b);if(isNaN(d))return null;const n=new Date();let a=n.getFullYear()-d.getFullYear();if(n.getMonth()<d.getMonth()||(n.getMonth()===d.getMonth()&&n.getDate()<d.getDate()))a--;return a;}
+function chartCls(s,pfx,arr){
+  return Object.keys(s.classes||{}).filter(k=>k[0]===pfx&&s.classes[k]).sort().map(k=>(arr||[]).find(x=>x.id===s.classes[k])).filter(Boolean);
+}
+function chartClsBlock(lbl,col,list){
+  if(!list.length)return '';
+  return `<div style="margin-top:9px"><div style="font-size:11px;font-weight:800;color:${col};margin-bottom:3px">${lbl} ${list.length}</div>${list.map(cl=>`<div style="font-size:12px;line-height:1.55"><b>${esc(cl.name)}</b> · ${esc(cl.teacher)}${cl.day?` <span style="color:var(--gy)">${esc(cl.day)} ${esc(cl.ts)}${cl.te?'~'+esc(cl.te):''}</span>`:''}</div>`).join('')}</div>`;
+}
+function renderAdmChart(c){
+  if(!c)return;
+  const act=(DB.students||[]).filter(s=>!s.inactive);
+  const isKid=s=>s.cls==='kids';
+  const fBtn=(v,l,n)=>`<button onclick="_chartCls='${v}';renderAdmCt()" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${_chartCls===v?'var(--or)':'var(--bd)'};background:${_chartCls===v?'var(--ob)':'#fff'};color:${_chartCls===v?'var(--or)':'var(--gy)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${l} ${n}</button>`;
+  let h=`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;align-items:center">
+    ${fBtn('all','전체',act.length)}${fBtn('audition','오디션반',act.filter(s=>!isKid(s)).length)}${fBtn('kids','키즈오디션반',act.filter(isKid).length)}
+    <input id="chart-q" type="text" value="${esc(_chartQ)}" placeholder="이름 검색" oninput="_chartQ=this.value;renderAdmChartList()" style="flex:1;min-width:120px;padding:7px 11px;border:1px solid var(--bd);border-radius:9px;font-size:13px;font-family:inherit">
+  </div><div id="chart-list"></div>`;
+  c.innerHTML=h;
+  renderAdmChartList();
+}
+function renderAdmChartList(){
+  const w=document.getElementById('chart-list');if(!w)return;
+  const isKid=s=>s.cls==='kids';const q=_chartQ.trim();
+  const list=(DB.students||[]).filter(s=>!s.inactive&&(_chartCls==='all'||(_chartCls==='kids')===isKid(s))&&(!q||String(s.name||'').includes(q))).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko'));
+  if(!list.length){w.innerHTML='<div class="emp-msg">해당하는 학생이 없어요</div>';return;}
+  w.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${list.map(s=>{
+    const k=isKid(s);const age=chartAge(s.birth);const ib=s.inbody&&s.inbody.length?s.inbody[s.inbody.length-1]:null;
+    const auds=(s.auditions||[]).length;
+    const blocks=chartClsBlock('💃 댄스','var(--dn)',chartCls(s,'d',DB.danceClasses))+chartClsBlock('🎤 보컬','var(--vc)',chartCls(s,'v',DB.vocalClasses))+chartClsBlock('🎵 기타음악','var(--pp)',chartCls(s,'m',DB.etcClasses))+chartClsBlock('💪 트레이닝','var(--bl)',chartCls(s,'t',DB.trainingClasses));
+    return `<div class="cd" style="margin:0;cursor:pointer" onclick="admOpenProf(${s.id})"><div style="padding:12px 13px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="av${k?' kav':''}" style="width:46px;height:46px;font-size:18px;flex-shrink:0">${s.photo?`<img src="${esc(s.photo)}">`:esc(String(s.name||'?')[0])}</div>
+        <div style="min-width:0;flex:1"><div style="font-size:15px;font-weight:800">${esc(s.name)}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;align-items:center"><span class="bx ${k?'kk':'or'}">${k?'키즈오디션반':'오디션반'}</span></div></div>
+      </div>
+      <div style="font-size:12px;color:var(--gy);margin-top:8px">${[age!==null?'만 '+age+'세':'',s.height?esc(s.height)+'cm':'',ib&&ib.weight?esc(ib.weight)+'kg':'',auds?'오디션 기록 '+auds+'건':''].filter(Boolean).join(' · ')||'기본정보 미입력'}</div>
+      ${blocks||'<div style="font-size:12px;color:var(--gy2);margin-top:9px">배정된 수업 없음</div>'}
+    </div></div>`;}).join('')}</div>`;
 }
 
 // 학생 관리
