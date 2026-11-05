@@ -256,6 +256,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
     <button class="tbtn on" onclick="admTab(this,'main')">🏠 홈</button>
     <button class="tbtn" onclick="admTab(this,'chart')">📊 학생 현황</button>
     <button class="tbtn" onclick="admTab(this,'audit')">📝 오디션기록</button>
+    <button class="tbtn" onclick="admTab(this,'hist')">🏆 오디션 히스토리</button>
     <button class="tbtn" onclick="admTab(this,'rep')">🎵 레파토리</button>
     <button class="tbtn" onclick="admTab(this,'fb')">피드백입력</button>
     <button class="tbtn" onclick="admTab(this,'fbl')">피드백목록</button>
@@ -971,6 +972,7 @@ function renderAuditionRecord(s){
       </div>
       <button onclick="openAuditionAdd(${s.id})" style="background:linear-gradient(135deg,var(--or),var(--or2));color:#fff;border:none;border-radius:10px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(107,63,160,0.3)">+ 기록 추가</button>
     </div>
+    ${(()=>{const pass=records.filter(r=>r.stage&&r.result==='합격').sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));return pass.length?`<div style="background:var(--goldb);border:1px solid var(--gold2);border-radius:12px;padding:11px 13px;margin-bottom:12px"><div style="font-size:13px;font-weight:800;color:var(--am);margin-bottom:5px">🏆 오디션 합격 기록</div>${pass.map(r=>`<div style="font-size:13px;line-height:1.7">${esc(r.date)} · <b>${esc(r.agency)}</b> ${esc(r.stage)} 합격</div>`).join('')}</div>`:'';})()}
     ${!records.length
       ?`<div style="text-align:center;padding:40px 20px;background:#fff;border-radius:14px;border:1px solid #E8DEFF">
           <div style="font-size:40px;margin-bottom:12px">🎯</div>
@@ -992,6 +994,7 @@ function renderAuditionRecord(s){
           <!-- 내용 -->
           <div style="padding:12px 14px">
             <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+              ${r.stage&&(isAdm||r.result==='합격')?`<span style="background:var(--goldb);color:var(--am);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:800">🏆 ${esc(r.stage)} ${esc(r.result||'')}</span>`:''}
               ${r.field?`<span style="background:#EFE4F8;color:var(--dn);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700">🎵 ${esc(r.field)}</span>`:''}
               ${r.type?`<span style="background:rgba(201,162,39,0.12);color:var(--gold);border-radius:20px;padding:3px 10px;font-size:12px;font-weight:700">📋 ${esc(r.type)}</span>`:''}
             </div>
@@ -1009,7 +1012,7 @@ function renderAuditionRecord(s){
             </div>`:''}
             <div style="display:flex;gap:8px;padding-top:8px;border-top:1px solid #E8DEFF">
               <button onclick="openAuditionEdit(${s.id},${ridx})" style="flex:1;background:none;border:1px solid #E8DEFF;border-radius:8px;padding:7px;font-size:12px;font-weight:700;color:var(--gy);cursor:pointer;font-family:inherit">수정</button>
-              <button onclick="delAudition(${s.id},${ridx})" style="background:none;border:1px solid var(--rdbd);border-radius:8px;padding:7px;font-size:12px;font-weight:700;color:var(--rd);cursor:pointer;font-family:inherit">삭제</button>
+              ${(isAdm||!r.stage)?`<button onclick="delAudition(${s.id},${ridx})" style="background:none;border:1px solid var(--rdbd);border-radius:8px;padding:7px;font-size:12px;font-weight:700;color:var(--rd);cursor:pointer;font-family:inherit">삭제</button>`:''}
             </div>
           </div>
         </div>`;
@@ -1022,6 +1025,8 @@ const AUDIT_FIELDS=['댄스','보컬','댄스+보컬','랩','연기','기타'];
 
 let _auditSid=null,_auditIdx=-1;
 
+const AUDIT_STAGES=['','2차','최종'];const AUDIT_RESULTS=['','합격','불합격','보류'];
+function auditRefresh(){if(document.getElementById('pg-adm').classList.contains('active'))renderAdmCt();else refreshPTab(1);}
 function openAuditionAdd(sid){
   _auditSid=sid;_auditIdx=-1;
   showAuditModal('오디션 지원 기록 추가',{});
@@ -1046,6 +1051,10 @@ function showAuditModal(title,r){
           </select>
         </div>
       </div>
+      ${isAdm?`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;background:var(--goldb);border-radius:10px;padding:10px;margin-bottom:11px">
+        <div><label class="fl">전형 (선생님 입력)</label><select id="au-stage">${AUDIT_STAGES.map(v=>`<option value="${v}" ${(r.stage||'')===v?'selected':''}>${v||'선택 안 함'}</option>`).join('')}</select></div>
+        <div><label class="fl">결과 (선생님 입력)</label><select id="au-result">${AUDIT_RESULTS.map(v=>`<option value="${v}" ${(r.result||'')===v?'selected':''}>${v||'선택 안 함'}</option>`).join('')}</select></div>
+      </div>`:''}
       <div class="fr"><label class="fl">기획사명</label>
         <input type="text" id="au-agency" placeholder="예: SM엔터테인먼트" value="${esc(r.agency||'')}">
       </div>
@@ -1087,13 +1096,17 @@ async function saveAudition(){
   };
   const s=DB.students.find(x=>x.id===_auditSid);if(!s)return;
   if(!s.auditions)s.auditions=[];
+  const prevAu=_auditIdx>=0?s.auditions[_auditIdx]:null;
+  const stEl=document.getElementById('au-stage');
+  if(stEl){if(stEl.value)record.stage=stEl.value;const rsV=document.getElementById('au-result').value;if(rsV)record.result=rsV;}
+  else if(prevAu){if(prevAu.stage)record.stage=prevAu.stage;if(prevAu.result)record.result=prevAu.result;}
   if(_auditIdx>=0)s.auditions[_auditIdx]=record;
   else s.auditions.push(record);
   try{
     await fbSv('idol_students',s.id,s);
     closeM('ov-audit');
     toast('✅ 오디션 기록 저장됨');
-    setTimeout(()=>refreshPTab(1),100);
+    setTimeout(auditRefresh,100);
   }catch(e){alert('저장 실패: '+e.message);}
 }
 async function delAudition(sid,idx){
@@ -1102,7 +1115,7 @@ async function delAudition(sid,idx){
   s.auditions.splice(idx,1);
   await fbSv('idol_students',s.id,s);
   toast('✅ 삭제됨');
-  setTimeout(()=>refreshPTab(1),100);
+  setTimeout(auditRefresh,100);
 }
 
 async function renderFb(s,c){
@@ -1531,6 +1544,7 @@ function renderAdmCt(){
   else if(admTab_==='stu')renderAdmStu(c);
   else if(admTab_==='chart')renderAdmChart(c);
   else if(admTab_==='audit')renderAdmAudit(c);
+  else if(admTab_==='hist')renderAdmHist(c);
   else if(admTab_==='rep')renderAdmRep(c);
   else if(admTab_==='fb')renderAdmFbInput(c);
   else if(admTab_==='fbl')renderAdmFbList(c);
@@ -1541,6 +1555,26 @@ function renderAdmCt(){
   else if(admTab_==='cfg')renderAdmCfg(c);
 }
 
+// 오디션 히스토리 (2차 이상)
+let _histCls='all',_histRes='all';
+function renderAdmHist(c){
+  if(!c)return;
+  const all=[];(DB.students||[]).forEach(s=>{(s.auditions||[]).forEach((r,idx)=>{if(r.stage)all.push({r,s,idx});});});
+  all.sort((a,b)=>String(b.r.date||'').localeCompare(String(a.r.date||'')));
+  const list=all.filter(x=>(_histCls==='all'||(_histCls==='kids')===(x.s.cls==='kids'))&&(_histRes==='all'||x.r.result===_histRes));
+  const fb=(act,v,l,cur)=>`<button onclick="${act}='${v}';renderAdmCt()" style="padding:6px 13px;border-radius:20px;border:1.5px solid ${cur===v?'var(--or)':'var(--bd)'};background:${cur===v?'var(--ob)':'#fff'};color:${cur===v?'var(--or)':'var(--gy)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${l}</button>`;
+  const resC={'합격':'gr','불합격':'gy','보류':'gy'};
+  const stuOpts=(DB.students||[]).filter(s=>!s.inactive).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko')).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('');
+  c.innerHTML=`<div style="display:flex;gap:7px;margin-bottom:10px"><select id="hist-stu" style="flex:1;padding:8px;border:1px solid var(--bd);border-radius:9px;font-size:13px;font-family:inherit">${stuOpts}</select><button onclick="openAuditionAdd(Number(document.getElementById('hist-stu').value)||document.getElementById('hist-stu').value)" class="btn-or" style="border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">+ 기록 추가</button></div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">${fb('_histCls','all','전체',_histCls)}${fb('_histCls','audition','오디션반',_histCls)}${fb('_histCls','kids','키즈오디션반',_histCls)}<span style="width:8px"></span>${fb('_histRes','all','결과 전체',_histRes)}${fb('_histRes','합격','합격',_histRes)}${fb('_histRes','불합격','불합격',_histRes)}${fb('_histRes','보류','보류',_histRes)}<span style="font-size:11px;color:var(--gy);margin-left:auto;align-self:center">총 ${list.length}건</span></div>
+  ${list.length?list.map(({r,s,idx})=>`<div class="cd" style="margin-bottom:8px"><div style="padding:11px 13px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <div style="font-size:12px;color:var(--gy);width:78px">${esc(r.date)}</div>
+    <div style="font-weight:800;min-width:60px;cursor:pointer" onclick="admOpenProf(${s.id})">${esc(s.name)}</div>
+    <div style="flex:1;min-width:120px;font-size:13px"><b>${esc(r.agency)}</b> ${esc(r.stage)}</div>
+    ${r.result?`<span class="bx ${resC[r.result]||'gy'}">${esc(r.result)}</span>`:'<span class="bx gy">결과 미입력</span>'}
+    <button onclick="openAuditionEdit(${s.id},${idx})" class="edt-btn" style="font-size:11px;padding:3px 7px">수정</button>
+  </div></div>`).join(''):'<div class="emp-msg">2차 이상 오디션 기록이 없어요</div>'}`;
+}
 // 전체 데이터 백업 (읽기 전용, 이 기기에 파일로 저장)
 async function admBackup(btn){
   if(btn){btn.disabled=true;btn.textContent='백업 중...';}
@@ -1595,6 +1629,7 @@ function renderAdmChartList(){
       </div>
       <div style="font-size:12px;color:var(--gy);margin-top:8px">${[age!==null?'만 '+age+'세':'',s.height?esc(s.height)+'cm':'',ib&&ib.weight?esc(ib.weight)+'kg':'',auds?'오디션 기록 '+auds+'건':''].filter(Boolean).join(' · ')||'기본정보 미입력'}</div>
       ${blocks||'<div style="font-size:12px;color:var(--gy2);margin-top:9px">배정된 수업 없음</div>'}
+      ${(()=>{const pass=(s.auditions||[]).filter(r=>r.stage&&r.result==='합격').sort((a,b)=>String(b.date).localeCompare(String(a.date)));return pass.length?`<div style="margin-top:9px"><div style="font-size:11px;font-weight:800;color:var(--am);margin-bottom:3px">🏆 합격 이력</div>${pass.map(r=>`<div style="font-size:12px;line-height:1.55">${esc(String(r.date||'').slice(2,7).replace('-','.'))} <b>${esc(r.agency)}</b> ${esc(r.stage)} 합격</div>`).join('')}</div>`:'';})()}
     </div></div>`;}).join('')}</div>`;
 }
 
