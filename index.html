@@ -122,6 +122,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 </head>
 <body>
 <div id="lov" style="position:fixed;inset:0;background:#fff;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px">
@@ -1693,12 +1694,76 @@ function renderAdmHist(c){
     <button onclick="openAuditionEdit(${s.id},${idx})" class="edt-btn" style="font-size:11px;padding:3px 7px">수정</button>
   </div></div>`).join(''):'<div class="emp-msg">2차 이상 오디션 기록이 없어요</div>'}`;
 }
+// 로그인 계정 관리 (Firebase Auth. 지금은 만들기만 하고 로그인 전환 전까지 쓰이지 않음)
+let _acctApp=null,_acctMap=null,_acctIds={};
+function acctAuth(){if(!_acctApp)_acctApp=firebase.initializeApp(FC,'acct');return _acctApp.auth();}
+function acctEmail(id){return id+'@'+(FC.authDomain||'jb-idol.firebaseapp.com');}
+function acctBirth6(b){const d=String(b||'').replace(/\D/g,'');const x=d.length>=8?d.slice(2,8):d.length===6?d:'';if(!x)return '';const m=+x.slice(2,4),dd=+x.slice(4,6);return m>=1&&m<=12&&dd>=1&&dd<=31?x:'';}
+function acctInitial(name){
+  const CH=['k','k','n','d','d','r','m','b','b','s','s','','j','j','c','k','t','p','h'];
+  const V={0:'a',1:'a',2:'y',3:'y',4:'e',5:'e',6:'y',7:'y',8:'o',9:'w',10:'w',11:'o',12:'y',13:'u',14:'w',15:'w',16:'u',17:'y',18:'e',19:'u',20:'i'};
+  let o='';for(const ch of String(name||'').trim()){const c=ch.charCodeAt(0);if(c>=0xAC00&&c<=0xD7A3){const n=c-0xAC00;const cho=Math.floor(n/588),ju=Math.floor((n%588)/28);o+=CH[cho]||V[ju];}else if(/[a-zA-Z]/.test(ch))o+=ch.toLowerCase();}
+  return o;
+}
+function acctPlan(){
+  const used={};Object.values(_acctMap||{}).forEach(a=>{used[a.loginId]=1;});
+  const done={};Object.values(_acctMap||{}).forEach(a=>{if(a.role==='student')done[String(a.sid)]=a;});
+  return (DB.students||[]).filter(s=>!s.inactive).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko')).map(s=>{
+    const a=done[String(s.id)];if(a)return {s,id:a.loginId,pw:acctBirth6(s.birth),state:'done'};
+    const pw=acctBirth6(s.birth);const ini=acctInitial(s.name);if(!pw||!ini)return {s,id:'',pw:'',state:'nobirth'};
+    let id=ini+pw,n=2;while(used[id]){id=ini+pw+n;n++;}used[id]=1;return {s,id,pw,state:'todo'};
+  });
+}
+async function acctOpen(){
+  const w=document.getElementById('acct-sec');if(!w)return;
+  w.innerHTML='<div style="padding:12px;color:var(--gy);font-size:13px">불러오는 중...</div>';
+  try{const q=await db.collection('idol_accounts').get();_acctMap={};q.forEach(d=>{_acctMap[d.id]=d.data();});}catch(e){w.innerHTML='<div style="padding:12px;color:#c33;font-size:13px">불러오기 실패: '+esc(e.message)+'</div>';return;}
+  acctDraw();
+}
+function acctDraw(msg){
+  const w=document.getElementById('acct-sec');if(!w)return;
+  const plan=acctPlan();const todo=plan.filter(x=>x.state==='todo').length,nob=plan.filter(x=>x.state==='nobirth').length,don=plan.filter(x=>x.state==='done').length;
+  const st=Object.values(_acctMap||{});const has=r=>st.find(a=>a.role===r);
+  const staff=(role,lbl,def)=>{const a=has(role);return a?`<div style="font-size:13px;padding:6px 0"><b>${lbl}</b> 아이디 <b>${esc(a.loginId)}</b> <span class="bx gr">만듦</span></div>`:`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:6px 0"><b style="font-size:13px;width:52px">${lbl}</b><input id="ac-${role}-id" value="${def}" placeholder="아이디" style="flex:1;min-width:90px;padding:7px;border:1px solid var(--bd);border-radius:8px;font-family:inherit"><input id="ac-${role}-pw" type="password" autocomplete="new-password" placeholder="비밀번호 6자 이상" style="flex:1;min-width:120px;padding:7px;border:1px solid var(--bd);border-radius:8px;font-family:inherit"><button class="edt-btn" onclick="acctStaff('${role}')">만들기</button></div>`;};
+  w.innerHTML=`<div style="padding:12px 2px 2px">
+    ${msg?`<div style="background:var(--goldb);border-radius:8px;padding:8px 10px;font-size:12px;margin-bottom:10px">${esc(msg)}</div>`:''}
+    <div style="font-weight:800;font-size:13px;margin-bottom:4px">선생님·관리자 계정</div>${staff('teacher','선생님','teacher')}${staff('admin','관리자','admin')}
+    <div style="display:flex;align-items:center;gap:8px;margin:12px 0 8px;flex-wrap:wrap"><div style="font-weight:800;font-size:13px">학생 계정</div><span style="font-size:12px;color:var(--gy)">만듦 ${don} · 만들 예정 ${todo} · 생년월일 필요 ${nob}</span>${todo?`<button id="acct-go" class="edt-btn" style="margin-left:auto" onclick="acctBulk(this)">학생 계정 ${todo}개 만들기</button>`:''}</div>
+    <div style="max-height:360px;overflow:auto;border:1px solid var(--bd);border-radius:9px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--lt);position:sticky;top:0"><th style="padding:7px;text-align:left">이름</th><th style="text-align:left">아이디</th><th style="text-align:left">비밀번호</th><th style="text-align:left">상태</th></tr></thead><tbody>${plan.map(x=>`<tr style="border-top:1px solid var(--bd)"><td style="padding:7px;font-weight:700">${esc(x.s.name)}</td><td>${esc(x.id)||'-'}</td><td>${esc(x.pw)||'-'}</td><td>${x.state==='done'?'<span class="bx gr">만듦</span>':x.state==='todo'?(_acctIds[x.s.id]?`<span class="bx gy" title="${esc(_acctIds[x.s.id])}">실패</span>`:'<span class="bx gy">대기</span>'):'<span class="bx gy">생년월일 필요</span>'}</td></tr>`).join('')}</tbody></table></div>
+  </div>`;
+}
+async function acctCreate(loginId,pw,role,sid){
+  const a=acctAuth();const email=acctEmail(loginId);let cred;
+  try{cred=await a.createUserWithEmailAndPassword(email,pw);}
+  catch(e){if(e.code==='auth/email-already-in-use'){cred=await a.signInWithEmailAndPassword(email,pw);}else throw e;}
+  const uid=cred.user.uid;const rec={uid,role,loginId};if(sid!==undefined)rec.sid=sid;
+  await db.collection('idol_accounts').doc(uid).set(rec);
+  await a.signOut();_acctMap[uid]=rec;return rec;
+}
+function acctErr(e){const c=e&&e.code||'';if(c==='auth/operation-not-allowed'||c==='auth/configuration-not-found')return 'Firebase에서 이메일/비밀번호 로그인을 먼저 켜주세요';if(c==='auth/too-many-requests')return '요청이 많아 잠시 막혔어요. 나중에 다시 눌러주세요';if(c==='auth/wrong-password'||c==='auth/invalid-login-credentials')return '이미 있는 아이디인데 비밀번호가 달라요';if(c==='auth/weak-password')return '비밀번호는 6자 이상이어야 해요';return (e&&e.message)||'오류';}
+async function acctBulk(btn){
+  const todo=acctPlan().filter(x=>x.state==='todo');let ok=0,bad=0,last='';btn.disabled=true;
+  for(const x of todo){
+    btn.textContent='만드는 중 '+(ok+bad+1)+'/'+todo.length;
+    try{await acctCreate(x.id,x.pw,'student',x.s.id);ok++;delete _acctIds[x.s.id];}
+    catch(e){bad++;last=acctErr(e);_acctIds[x.s.id]=last;if(e&&(e.code==='auth/operation-not-allowed'||e.code==='auth/configuration-not-found'||e.code==='auth/too-many-requests'))break;}
+    await new Promise(r=>setTimeout(r,250));
+  }
+  acctDraw(ok+'개 만들었어요'+(bad?' · 실패 '+bad+'건: '+last:'')+'.');
+}
+async function acctStaff(role){
+  const id=(document.getElementById('ac-'+role+'-id').value||'').trim().toLowerCase();const pw=document.getElementById('ac-'+role+'-pw').value||'';
+  if(!/^[a-z0-9._-]{3,30}$/.test(id)){alert('아이디는 영문 소문자와 숫자로 3자 이상 입력해주세요');return;}
+  if(pw.length<6){alert('비밀번호는 6자 이상이어야 해요');return;}
+  try{await acctCreate(id,pw,role);acctDraw((role==='admin'?'관리자':'선생님')+' 계정을 만들었어요.');}catch(e){alert(acctErr(e));}
+}
+
 // 전체 데이터 백업 (읽기 전용, 이 기기에 파일로 저장)
 async function admBackup(btn){
   if(btn){btn.disabled=true;btn.textContent='백업 중...';}
   try{
     const out={backupAt:new Date().toISOString()};
-    for(const col of ['idol_config','idol_students','idol_messages','idol_resources','idol_schedules','idol_student_meta','idol_student_grades','idol_rep_status','feedbacks','studentData']){
+    for(const col of ['idol_config','idol_students','idol_messages','idol_resources','idol_schedules','idol_student_meta','idol_student_grades','idol_rep_status','idol_accounts','feedbacks','studentData']){
       const snap=await db.collection(col).get();out[col]={};snap.forEach(d=>{out[col][d.id]=d.data();});
     }
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(out,null,1)],{type:'application/json'}));
@@ -2135,7 +2200,8 @@ function dlRes(id){if(!confirm('삭제할까요?'))return;DB.resources=(DB.resou
 function renderAdmCfg(c){
   c.innerHTML=`<div class="adm-sec" style="margin-bottom:12px"><div class="adm-r"><div style="flex:1"><div style="font-weight:800">관리자 비밀번호</div><div style="font-size:12px;color:var(--gy)">현재: ${DB.adminPw}</div></div></div><div class="ar"><input type="password" id="new-apw" placeholder="새 비밀번호"><button onclick="chgAdmPw()">변경</button></div></div>
   <div class="adm-sec"><div class="adm-r"><div style="flex:1;font-weight:800">전체 메시지 보내기</div><button onclick="openM('ov-bc')" class="edt-btn">📢 전송</button></div></div>
-  <div class="adm-sec" style="margin-top:12px"><div class="adm-r"><div style="flex:1"><div style="font-weight:800">전체 데이터 백업</div><div style="font-size:12px;color:var(--gy)">학생 정보, 기록, 피드백을 이 기기에 파일로 저장해요. 비밀번호도 들어 있으니 안전한 곳에 보관하세요.</div></div><button onclick="admBackup(this)" class="edt-btn">💾 백업 받기</button></div></div>`;
+  <div class="adm-sec" style="margin-top:12px"><div class="adm-r"><div style="flex:1"><div style="font-weight:800">전체 데이터 백업</div><div style="font-size:12px;color:var(--gy)">학생 정보, 기록, 피드백을 이 기기에 파일로 저장해요. 비밀번호도 들어 있으니 안전한 곳에 보관하세요.</div></div><button onclick="admBackup(this)" class="edt-btn">💾 백업 받기</button></div></div>
+  <div class="adm-sec" style="margin-top:12px"><div class="adm-r"><div style="flex:1"><div style="font-weight:800">로그인 계정 관리</div><div style="font-size:12px;color:var(--gy)">학생·선생님·관리자 계정을 미리 만들어요. 만들어도 지금 로그인 방식은 그대로예요.</div></div><button onclick="acctOpen()" class="edt-btn">👤 계정 관리</button></div><div id="acct-sec"></div></div>`;
 }
 function chgAdmPw(){const pw=document.getElementById('new-apw').value.trim();if(!pw){alert('비밀번호를 입력해주세요');return;}DB.adminPw=pw;fbCfg();toast('✅ 비밀번호 변경됨');renderAdmCt();}
 function sendBroadcast(){const nm=(document.getElementById('bc-nm').value||'').trim();const ct=document.getElementById('bc-ct').value.trim();if(!nm||!ct){alert('이름과 메시지를 입력해주세요');return;}if(!confirm('모든 학생 '+DB.students.length+'명에게 전송할까요?'))return;DB.students.forEach(s=>{if(!s.teacherMessages)s.teacherMessages=[];s.teacherMessages.push({id:'tm'+Date.now()+Math.random(),content:'['+nm+'] '+ct,date:nowT(),read:false});fbSv('idol_students',s.id,s);});toast('✅ 전송 완료');closeM('ov-bc');}
