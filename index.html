@@ -529,6 +529,7 @@ async function loadAll(){
     try{const sc=await db.collection('idol_schedules').get();DB.schedules=[];sc.forEach(d=>DB.schedules.push(d.data()));}catch(e){DB.schedules=[];}
     try{const mt=await db.collection('idol_student_meta').get();DB.meta={};mt.forEach(d=>{DB.meta[d.id]=d.data();});}catch(e){DB.meta={};}
     DB.grades=null;
+    try{const rs2=await db.collection('idol_rep_status').get();DB.repStatus={};rs2.forEach(d=>{DB.repStatus[d.id]=d.data();});}catch(e){DB.repStatus={};}
     window.DB=DB;
   }catch(e){console.warn('로드 실패:',e);}
   // 세션 복원 (UI 상태만 - 페이지 이동 없음)
@@ -1177,7 +1178,7 @@ async function renderRep(s,type,c){
       <div class="cd-b">
         ${!list.length?'<div style="text-align:center;padding:16px;color:var(--gy);font-size:13px">아직 없어요. + 추가 버튼으로 입력해보세요!</div>':
         list.map((r,i)=>`<div style="padding:9px 11px 9px 14px;background:${bg};border-radius:8px;margin-bottom:6px;display:flex;align-items:center;gap:8px">
-          <div style="flex:1;font-size:13px;font-weight:700;color:var(--bk)">• ${esc(r)}</div>
+          <div style="flex:1;font-size:13px;font-weight:700;color:var(--bk)">• ${esc(r)}${repStatusOf(s.id,type,r)?` <span style="${repChipStyle(repStatusOf(s.id,type,r))};border-radius:6px;padding:1px 7px;font-size:11px;margin-left:4px;white-space:nowrap">${repStatusOf(s.id,type,r)}</span>`:''}</div>
           <button onclick="openRepEdit('${type}','${foundKey}',${s.id},${i})" style="background:none;border:1px solid var(--bd);color:var(--gy);border-radius:7px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit;flex-shrink:0">수정</button>
           <button onclick="dlRep('${type}','${foundKey}',${s.id},${i})" class="del-btn" style="padding:3px 8px;font-size:11px;flex-shrink:0">삭제</button>
         </div>`).join('')}
@@ -1226,7 +1227,7 @@ async function saveRep(){
   if(!data.danceRep)data.danceRep=[];if(!data.vocalRep)data.vocalRep=[];
   const field=type==='dance'?'danceRep':'vocalRep';
   if(idx===-1){data[field].push(val);}
-  else{data[field][idx]=val;}
+  else{const oldK=repKey(data[field][idx]),newK=repKey(val);const rd=(DB.repStatus||{})[String(sid)];if(oldK!==newK&&rd&&rd[type]&&rd[type][oldK]){rd[type][newK]=rd[type][oldK];delete rd[type][oldK];try{await db.collection('idol_rep_status').doc(String(sid)).set(rd);}catch(e){}}data[field][idx]=val;}
   data.name=s.name;data.cls=s.cls;
   // 키가 없으면 cls:이름 형식으로 새로 생성
   const saveKey=key||(s.cls+':'+s.name);
@@ -1697,7 +1698,7 @@ async function admBackup(btn){
   if(btn){btn.disabled=true;btn.textContent='백업 중...';}
   try{
     const out={backupAt:new Date().toISOString()};
-    for(const col of ['idol_config','idol_students','idol_messages','idol_resources','idol_schedules','idol_student_meta','idol_student_grades','feedbacks','studentData']){
+    for(const col of ['idol_config','idol_students','idol_messages','idol_resources','idol_schedules','idol_student_meta','idol_student_grades','idol_rep_status','feedbacks','studentData']){
       const snap=await db.collection(col).get();out[col]={};snap.forEach(d=>{out[col][d.id]=d.data();});
     }
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(out,null,1)],{type:'application/json'}));
@@ -1884,8 +1885,33 @@ function renderAdmAudit(c){
 }
 
 // 레파토리 전체 보기
-async function renderAdmRep(c){
+// 레파토리 완성도 (곡 제목별 연습 중 / 가능, idol_rep_status에 학생별 저장)
+let _repView='song',_repStu=null;
+function repKey(t){return String(t||'').trim().toLowerCase().replace(/\s+/g,' ');}
+function repStatusOf(sid,type,title){const d=(DB.repStatus||{})[String(sid)];return d&&d[type]?(d[type][repKey(title)]||''):'';}
+function repChipStyle(st){return st==='가능'?'background:#C6E8C9;border:1.5px solid #5FB36A;color:#1F6B2A':st==='연습 중'?'background:#FFF2CC;border:1.5px solid #E0B84A;color:#7A5A00':'background:#fff;border:1.5px dashed var(--bd);color:var(--gy)';}
+function repChip(sid,type,title,label){const st=repStatusOf(sid,type,title);return `<button data-sid="${sid}" data-type="${type}" data-title="${esc(title)}" onclick="event.stopPropagation();repCycle(this)" title="누를 때마다 미체크 → 연습 중 → 가능" style="${repChipStyle(st)};border-radius:7px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${esc(label)}${st?' · '+st:' · 미체크'}</button>`;}
+async function repCycle(btn){
+  const sid=Number(btn.dataset.sid)||btn.dataset.sid,type=btn.dataset.type,title=btn.dataset.title;
+  if(!DB.repStatus)DB.repStatus={};const id=String(sid);
+  const doc=JSON.parse(JSON.stringify(DB.repStatus[id]||{sid,dance:{},vocal:{}}));if(!doc[type])doc[type]={};
+  const k=repKey(title);const cur=doc[type][k]||'';const nx=cur===''?'연습 중':cur==='연습 중'?'가능':'';
+  if(nx)doc[type][k]=nx;else delete doc[type][k];
+  btn.disabled=true;
+  try{await db.collection('idol_rep_status').doc(id).set(doc);}catch(e){alert('저장 실패: '+e.message);btn.disabled=false;return;}
+  DB.repStatus[id]=doc;renderAdmRep(document.getElementById('adm-ct'),true);
+}
+function repViewBar(){const b=(v,l)=>`<button onclick="_repView='${v}';renderAdmRep(document.getElementById('adm-ct'),true)" class="ctbtn ${_repView===v?'oa':''}">${l}</button>`;return `<div class="ctab" style="margin-bottom:10px">${b('song','곡별 완성도')}${b('student','학생별 보기')}</div><div style="font-size:12px;color:var(--gy);margin-bottom:12px">표시를 누를 때마다 <b>미체크 → 연습 중 → 가능</b> 순서로 바뀌어요. 제목이 같아야 한 곡으로 묶여요.</div>`;}
+function repSongSection(stuData,type,lbl,col){
+  const g={};
+  stuData.filter(x=>!x.student.inactive).forEach(({student:s,data})=>{(data[type==='dance'?'danceRep':'vocalRep']||[]).forEach(t=>{const k=repKey(t);if(!k)return;if(!g[k])g[k]={title:String(t).trim(),rows:[]};if(!g[k].rows.some(r=>r.s.id===s.id))g[k].rows.push({s,t});});});
+  const list=Object.values(g).sort((a,b)=>b.rows.length-a.rows.length||a.title.localeCompare(b.title,'ko'));
+  return `<div style="font-size:13px;font-weight:800;color:${col};margin:6px 0 10px">${lbl} ${list.length}곡</div>`+(list.length?list.map(x=>{const ok=x.rows.filter(r=>repStatusOf(r.s.id,type,r.t)==='가능').length;return `<div class="cd" style="margin-bottom:8px"><div style="padding:10px 13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--bd)"><div style="font-weight:800;flex:1;min-width:140px">${esc(x.title)}</div><div style="font-size:12px;color:var(--gy)">가능 <b>${ok}</b> / ${x.rows.length}명</div></div><div style="padding:9px 13px;display:flex;flex-wrap:wrap;gap:6px">${x.rows.sort((a,b)=>String(a.s.name).localeCompare(String(b.s.name),'ko')).map(r=>repChip(r.s.id,type,r.t,r.s.name)).join('')}</div></div>`;}).join(''):'<div class="emp-msg" style="margin-bottom:14px">레파토리가 없어요</div>');
+}
+async function renderAdmRep(c,cached){
   if(!c)return;
+  let stuData;
+  if(cached&&_repStu){stuData=_repStu;}else{
   c.innerHTML='<div style="text-align:center;padding:30px;color:var(--gy)"><div style="width:24px;height:24px;border:3px solid #f5c6a0;border-top-color:var(--or);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px"></div>불러오는 중...</div>';
   const results=await Promise.allSettled(DB.students.map(async s=>{
     const keys=[s.cls+':'+s.name,'audition:'+s.name,'kids:'+s.name,s.name];
@@ -1897,8 +1923,12 @@ async function renderAdmRep(c){
     }
     return {student:s,data:{}};
   }));
-  const stuData=results.map(r=>r.value||{student:null,data:{}}).filter(x=>x.student);
-  let h='';
+  stuData=results.map(r=>r.value||{student:null,data:{}}).filter(x=>x.student);
+  _repStu=stuData;
+  }
+  if(admTab_!=='rep'&&!cached)return;
+  if(_repView==='song'){c.innerHTML=repViewBar()+repSongSection(stuData,'dance','💃 댄스 레파토리','var(--dn)')+repSongSection(stuData,'vocal','🎤 보컬 레파토리','var(--vc)');return;}
+  let h=repViewBar();
   // 댄스
   h+=`<div style="font-size:13px;font-weight:800;color:var(--dn);margin-bottom:10px;display:flex;align-items:center;gap:8px">💃 댄스 레파토리<div style="flex:1;height:2px;background:#EFE4F8;border-radius:1px"></div></div>`;
   const hasDance=stuData.some(({data})=>(data.danceRep||[]).length);
@@ -1913,7 +1943,7 @@ async function renderAdmRep(c){
         <span style="font-size:10px;color:var(--gy);background:var(--lt);border-radius:10px;padding:2px 7px">${isK?'키즈':'오디션'}</span>
         <span style="margin-left:auto;font-size:11px;color:var(--dn);font-weight:700">${list.length}곡</span>
       </div>
-      <div style="padding:9px 13px;display:flex;flex-wrap:wrap;gap:5px">${list.map(r=>`<span style="background:#EFE4F8;border:1px solid #d4b8f0;border-radius:7px;padding:3px 10px;font-size:12px;color:var(--dn)">• ${esc(r)}</span>`).join('')}</div>
+      <div style="padding:9px 13px;display:flex;flex-wrap:wrap;gap:5px">${list.map(r=>repChip(s.id,'dance',r,r)).join('')}</div>
     </div>`;
   });
   // 보컬
@@ -1930,7 +1960,7 @@ async function renderAdmRep(c){
         <span style="font-size:10px;color:var(--gy);background:var(--lt);border-radius:10px;padding:2px 7px">${isK?'키즈':'오디션'}</span>
         <span style="margin-left:auto;font-size:11px;color:var(--vc);font-weight:700">${list.length}곡</span>
       </div>
-      <div style="padding:9px 13px;display:flex;flex-wrap:wrap;gap:5px">${list.map(r=>`<span style="background:#D4F0E8;border:1px solid #a0d8c8;border-radius:7px;padding:3px 10px;font-size:12px;color:var(--vc)">• ${esc(r)}</span>`).join('')}</div>
+      <div style="padding:9px 13px;display:flex;flex-wrap:wrap;gap:5px">${list.map(r=>repChip(s.id,'vocal',r,r)).join('')}</div>
     </div>`;
   });
   c.innerHTML=h;
