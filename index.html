@@ -135,7 +135,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 <div id="pg-land" class="page active lnd">
   <div class="ll" style="margin-bottom:4px;color:var(--gold)">✨ JB IDOL ✨</div>
   <div class="ls" style="margin-bottom:28px;color:rgba(255,255,255,0.7)">오디션반 · 키즈오디션반 관리 시스템</div>
-  <div class="rcard" onclick="openLogin()" style="border:2px solid var(--gold)"><div class="ric">🔑</div><div class="rl" style="color:var(--gold)">🔑 아이디로 로그인</div><div class="rs" style="color:rgba(255,255,255,0.7)">학생·학부모·선생님</div></div>
   <div class="rcard" onclick="goTeacher()"><div class="ric">🎹</div><div class="rl" style="color:rgba(255,255,255,0.9)">🎹 선생님</div><div class="rs" style="color:rgba(255,255,255,0.6)">관리 및 피드백 입력</div></div>
   <div class="rcard oc" onclick="goClass('audition')"><div class="ric">🌟</div><div class="rl" style="color:var(--gold)">🌟 오디션반</div><div class="rs" style="color:rgba(255,255,255,0.7)">오디션반 학생 전용</div></div>
   <div class="rcard kc" onclick="goClass('kids')"><div class="ric">✨</div><div class="rl" style="color:#7EC8E3">✨ 키즈오디션반</div><div class="rs" style="color:rgba(255,255,255,0.7)">키즈오디션반 학생 전용</div></div>
@@ -143,7 +142,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 
 <!-- ID LOGIN -->
 <div id="pg-login" class="page"><div class="lnd" style="position:relative;display:flex;min-height:100vh">
-  <div class="ll" style="margin-bottom:18px;color:var(--gold)">🔑 로그인</div>
+  <div class="ll" id="lg-title" style="margin-bottom:18px;color:var(--gold)">로그인</div>
   <div style="width:100%;max-width:340px;background:#fff;border-radius:16px;padding:18px">
     <div class="fr"><label class="fl">아이디</label><input type="text" id="lg-id" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="예: kuj090701"></div>
     <div class="fr"><label class="fl">비밀번호</label><input type="password" id="lg-pw" autocomplete="current-password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()"></div>
@@ -161,6 +160,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
       <button class="sbtn" id="refresh-btn" onclick="refreshData()" style="font-size:16px">🔄</button>
       <button class="sbtn" onclick="showPage('pg-sch')">📅</button>
       <button class="sbtn" onclick="goAdmin()" id="adm-btn" style="display:none">⚙️</button>
+      <button class="sbtn dk" onclick="authLogout()" id="main-logout" style="display:none">로그아웃</button>
     </div>
   </div>
   <div class="page-body"><div class="ct">
@@ -223,9 +223,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 <!-- PROFILE -->
 <div id="pg-prof" class="page">
   <div class="hd">
-    <button class="back" id="prof-back" onclick="profGoBack()">←</button>
+    <button class="back" onclick="profGoBack()">←</button>
     <div><div class="logo" id="prof-hd">-</div><div class="hd-sub">개인 페이지</div></div>
-    <div class="hd-r"><button class="sbtn" onclick="showTT()">📋 시간표</button><button class="sbtn dk" id="prof-logout" onclick="authLogout()" style="display:none">로그아웃</button></div>
+    <div class="hd-r"><button class="sbtn" onclick="showTT()">📋 시간표</button></div>
   </div>
   <div class="tb" id="prof-tabs">
     <button class="tbtn on" onclick="profTab(0)">📋 기본정보</button>
@@ -579,14 +579,15 @@ function showPage(id){
 }
 // 아이디 로그인 (Firebase Auth). 기존 로그인과 함께 동작
 let _authRole=null,_authSid=null;
-function openLogin(){document.getElementById('lg-id').value='';document.getElementById('lg-pw').value='';document.getElementById('lg-err').textContent='';showPage('pg-login');}
+const _loginMode=new URLSearchParams(location.search).has('login');
+function openLogin(target){document.getElementById('lg-title').textContent=target==='teacher'?'🎹 선생님 로그인':target==='kids'?'✨ 키즈오디션반 로그인':'🌟 오디션반 로그인';document.getElementById('lg-id').value='';document.getElementById('lg-pw').value='';document.getElementById('lg-err').textContent='';showPage('pg-login');}
 async function routeAccount(user){
   const snap=await db.collection('idol_accounts').doc(user.uid).get();
   if(!snap.exists)return false;
   const a=snap.data();_authRole=a.role;_authSid=a.sid;
   if(a.role==='student'){
     if(!(DB.students||[]).some(x=>x.id===a.sid))return false;
-    isAdm=false;openProf(a.sid);
+    isAdm=false;const st=DB.students.find(x=>x.id===a.sid);goClass(st.cls==='kids'?'kids':'audition');
   }else{
     isAdm=true;goTeacher();
   }
@@ -611,6 +612,7 @@ async function authLogout(){
   showPage('pg-land');
 }
 function startAuthRestore(){
+  if(!_loginMode)return;
   let first=true;
   firebase.auth().onAuthStateChanged(async u=>{
     if(!first)return;first=false;
@@ -619,6 +621,8 @@ function startAuthRestore(){
 }
 
 function goTeacher(){
+  if(_loginMode&&!_authRole){openLogin('teacher');return;}
+  if(_loginMode&&_authRole==='student'){const st=DB.students.find(x=>x.id===_authSid);if(st)goClass(st.cls==='kids'?'kids':'audition');return;}
   if(isAdm){
     // 이미 로그인됨 - 바로 관리자로
     _curCls='all';
@@ -631,7 +635,7 @@ function goTeacher(){
     document.getElementById('adm-pw-err').textContent='';
   }
 }
-function goClass(cls){_curCls=cls;localStorage.setItem('jbi_cls',cls);document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent=cls==='kids'?'키즈오디션반':'오디션반';document.getElementById('adm-btn').style.display='none';document.getElementById('adm-nav').style.display='none';showPage('pg-main');}
+function goClass(cls){if(_loginMode&&!_authRole){openLogin(cls);return;}if(_authRole==='teacher'||_authRole==='admin'){goTeacher();return;}_curCls=cls;localStorage.setItem('jbi_cls',cls);document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent=cls==='kids'?'키즈오디션반':'오디션반';document.getElementById('adm-btn').style.display='none';document.getElementById('adm-nav').style.display='none';showPage('pg-main');}
 function goAdmin(){if(isAdm){showPage('pg-adm');renderAdm();}else{showPage('pg-admlk');document.getElementById('adm-pw-inp').value='';document.getElementById('adm-pw-err').textContent='';}}
 function chkAdm(){const pw=document.getElementById('adm-pw-inp').value;if(pw===DB.adminPw){isAdm=true;localStorage.setItem('jbi_adm','1');_curCls='all';document.getElementById('adm-btn').style.display='';document.getElementById('adm-nav').style.display='';showPage('pg-adm');renderAdm();}else document.getElementById('adm-pw-err').textContent='비밀번호가 틀렸습니다';}
 function admOut(){isAdm=false;_authRole=null;_authSid=null;localStorage.removeItem('jbi_adm');localStorage.removeItem('jbi_cls');try{firebase.auth().signOut();}catch(e){}showPage('pg-land');}
@@ -681,7 +685,7 @@ function renderTT(s){
 }
 
 // MAIN
-function renderMain(){renderNtc();renderEvs();renderRes();renderMsg();renderStuList();}
+function renderMain(){const lo=document.getElementById('main-logout');if(lo)lo.style.display=_authRole==='student'?'':'none';renderNtc();renderEvs();renderRes();renderMsg();renderStuList();}
 window.renderMain=renderMain;
 
 function renderNtc(){
@@ -734,7 +738,7 @@ function renderMsg(){
 // STUDENT LIST
 function renderStuList(){
   const w=document.getElementById('w-stu');if(!w)return;
-  const all=(DB.students||[]).filter(s=>!s.inactive);
+  const all=(DB.students||[]).filter(s=>!s.inactive&&(_authRole!=='student'||s.id===_authSid));
   const aud=all.filter(s=>s.cls==='audition'||!s.cls);
   const kids=all.filter(s=>s.cls==='kids');
   const isAll=_curCls==='all';
@@ -784,7 +788,7 @@ function mkChips(s,pfx,lbl,cls){
 function toggleCard(id){const el=document.getElementById(id);const btn=document.getElementById('btn-'+id);if(!el)return;const o=el.style.display!=='none';el.style.display=o?'none':'block';if(btn)btn.textContent=o?'▼ 수업':'▲ 닫기';}
 
 // LOCK / PIN
-function openLock(id){curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('lock-nm').textContent=s.name;document.getElementById('lock-av').innerHTML=s.photo?`<img src="${s.photo}">`:`${s.name[0]}`;pinVal='';updPin();document.getElementById('pin-err').textContent='';showPage('pg-lock');}
+function openLock(id){if(_authRole==='student'&&id===_authSid){openProf(id);return;}curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('lock-nm').textContent=s.name;document.getElementById('lock-av').innerHTML=s.photo?`<img src="${s.photo}">`:`${s.name[0]}`;pinVal='';updPin();document.getElementById('pin-err').textContent='';showPage('pg-lock');}
 function pinIn(d){if(pinVal.length>=4)return;pinVal+=d;updPin();if(pinVal.length===4)setTimeout(chkPin,200);}
 function pinBk(){pinVal=pinVal.slice(0,-1);updPin();}
 function pinClr(){pinVal='';updPin();}
@@ -793,7 +797,7 @@ function chkPin(){const s=DB.students.find(x=>x.id===curSid);if(s&&(pinVal===s.p
 
 // PROFILE
 let _pTab=0;
-function openProf(id){_prevPage='pg-main';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;const lo=document.getElementById('prof-logout');if(lo)lo.style.display=_authRole==='student'?'':'none';const bk=document.getElementById('prof-back');if(bk)bk.style.visibility=_authRole==='student'?'hidden':'';document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));showPage('pg-prof');setTimeout(()=>renderPTab(s,0),100);}
+function openProf(id){_prevPage='pg-main';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));showPage('pg-prof');setTimeout(()=>renderPTab(s,0),100);}
 function profTab(i){_pTab=i;const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,j)=>b.classList.toggle('on',i===j));const ct=document.getElementById('prof-ct');if(ct){ct.innerHTML='<div style="padding:20px;text-align:center"><div style="width:24px;height:24px;border:3px solid #f5c6a0;border-top-color:var(--or);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div></div>';}setTimeout(()=>renderPTab(s,i),50);}
 function refreshPTab(tabIdx){
   // curSid로 최신 학생 데이터 다시 찾아서 렌더링
