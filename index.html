@@ -135,10 +135,23 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 <div id="pg-land" class="page active lnd">
   <div class="ll" style="margin-bottom:4px;color:var(--gold)">✨ JB IDOL ✨</div>
   <div class="ls" style="margin-bottom:28px;color:rgba(255,255,255,0.7)">오디션반 · 키즈오디션반 관리 시스템</div>
+  <div class="rcard" onclick="openLogin()" style="border:2px solid var(--gold)"><div class="ric">🔑</div><div class="rl" style="color:var(--gold)">🔑 아이디로 로그인</div><div class="rs" style="color:rgba(255,255,255,0.7)">학생·학부모·선생님</div></div>
   <div class="rcard" onclick="goTeacher()"><div class="ric">🎹</div><div class="rl" style="color:rgba(255,255,255,0.9)">🎹 선생님</div><div class="rs" style="color:rgba(255,255,255,0.6)">관리 및 피드백 입력</div></div>
   <div class="rcard oc" onclick="goClass('audition')"><div class="ric">🌟</div><div class="rl" style="color:var(--gold)">🌟 오디션반</div><div class="rs" style="color:rgba(255,255,255,0.7)">오디션반 학생 전용</div></div>
   <div class="rcard kc" onclick="goClass('kids')"><div class="ric">✨</div><div class="rl" style="color:#7EC8E3">✨ 키즈오디션반</div><div class="rs" style="color:rgba(255,255,255,0.7)">키즈오디션반 학생 전용</div></div>
 </div>
+
+<!-- ID LOGIN -->
+<div id="pg-login" class="page"><div class="lnd" style="position:relative;display:flex;min-height:100vh">
+  <div class="ll" style="margin-bottom:18px;color:var(--gold)">🔑 로그인</div>
+  <div style="width:100%;max-width:340px;background:#fff;border-radius:16px;padding:18px">
+    <div class="fr"><label class="fl">아이디</label><input type="text" id="lg-id" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="예: kuj090701"></div>
+    <div class="fr"><label class="fl">비밀번호</label><input type="password" id="lg-pw" autocomplete="current-password" placeholder="비밀번호" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div id="lg-err" style="color:#c33;font-size:13px;min-height:18px;margin-bottom:8px"></div>
+    <button class="btn btn-or" id="lg-btn" onclick="doLogin()">로그인</button>
+    <button class="btn" style="margin-top:8px;background:none;color:var(--gy)" onclick="showPage('pg-land')">돌아가기</button>
+  </div>
+</div></div>
 
 <!-- MAIN -->
 <div id="pg-main" class="page">
@@ -210,9 +223,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
 <!-- PROFILE -->
 <div id="pg-prof" class="page">
   <div class="hd">
-    <button class="back" onclick="profGoBack()">←</button>
+    <button class="back" id="prof-back" onclick="profGoBack()">←</button>
     <div><div class="logo" id="prof-hd">-</div><div class="hd-sub">개인 페이지</div></div>
-    <div class="hd-r"><button class="sbtn" onclick="showTT()">📋 시간표</button></div>
+    <div class="hd-r"><button class="sbtn" onclick="showTT()">📋 시간표</button><button class="sbtn dk" id="prof-logout" onclick="authLogout()" style="display:none">로그아웃</button></div>
   </div>
   <div class="tb" id="prof-tabs">
     <button class="tbtn on" onclick="profTab(0)">📋 기본정보</button>
@@ -559,11 +572,52 @@ function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   // bnav: 랜딩/잠금/관리자잠금 페이지에서는 숨기기
-  const noNav=['pg-land','pg-lock','pg-admlk'];
+  const noNav=['pg-land','pg-lock','pg-admlk','pg-login'];
   document.querySelectorAll('.bnav').forEach(b=>{const h=noNav.includes(id);b.style.display=h?'none':'flex';b.style.pointerEvents=h?'none':'auto';});
   if(id==='pg-main')renderMain();
   if(id==='pg-sch')renderSch();
 }
+// 아이디 로그인 (Firebase Auth). 기존 로그인과 함께 동작
+let _authRole=null,_authSid=null;
+function openLogin(){document.getElementById('lg-id').value='';document.getElementById('lg-pw').value='';document.getElementById('lg-err').textContent='';showPage('pg-login');}
+async function routeAccount(user){
+  const snap=await db.collection('idol_accounts').doc(user.uid).get();
+  if(!snap.exists)return false;
+  const a=snap.data();_authRole=a.role;_authSid=a.sid;
+  if(a.role==='student'){
+    if(!(DB.students||[]).some(x=>x.id===a.sid))return false;
+    isAdm=false;openProf(a.sid);
+  }else{
+    isAdm=true;goTeacher();
+  }
+  return true;
+}
+async function doLogin(){
+  const id=(document.getElementById('lg-id').value||'').trim().toLowerCase();const pw=document.getElementById('lg-pw').value||'';const er=document.getElementById('lg-err');const btn=document.getElementById('lg-btn');
+  er.textContent='';if(!id||!pw){er.textContent='아이디와 비밀번호를 입력해주세요';return;}
+  btn.disabled=true;
+  try{
+    const c=await firebase.auth().signInWithEmailAndPassword(acctEmail(id),pw);
+    const ok=await routeAccount(c.user);
+    if(!ok){await firebase.auth().signOut();er.textContent='등록되지 않은 계정이에요. 학원에 문의해주세요';}
+  }catch(e){
+    er.textContent=e&&e.code==='auth/too-many-requests'?'여러 번 틀려서 잠시 막혔어요. 잠시 후 다시 해주세요':e&&e.code==='auth/network-request-failed'?'인터넷 연결을 확인해주세요':'아이디 또는 비밀번호가 맞지 않아요';
+  }
+  btn.disabled=false;
+}
+async function authLogout(){
+  _authRole=null;_authSid=null;isAdm=false;localStorage.removeItem('jbi_adm');
+  try{await firebase.auth().signOut();}catch(e){}
+  showPage('pg-land');
+}
+function startAuthRestore(){
+  let first=true;
+  firebase.auth().onAuthStateChanged(async u=>{
+    if(!first)return;first=false;
+    if(u&&document.getElementById('pg-land').classList.contains('active')){try{await routeAccount(u);}catch(e){}}
+  });
+}
+
 function goTeacher(){
   if(isAdm){
     // 이미 로그인됨 - 바로 관리자로
@@ -580,7 +634,7 @@ function goTeacher(){
 function goClass(cls){_curCls=cls;localStorage.setItem('jbi_cls',cls);document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent=cls==='kids'?'키즈오디션반':'오디션반';document.getElementById('adm-btn').style.display='none';document.getElementById('adm-nav').style.display='none';showPage('pg-main');}
 function goAdmin(){if(isAdm){showPage('pg-adm');renderAdm();}else{showPage('pg-admlk');document.getElementById('adm-pw-inp').value='';document.getElementById('adm-pw-err').textContent='';}}
 function chkAdm(){const pw=document.getElementById('adm-pw-inp').value;if(pw===DB.adminPw){isAdm=true;localStorage.setItem('jbi_adm','1');_curCls='all';document.getElementById('adm-btn').style.display='';document.getElementById('adm-nav').style.display='';showPage('pg-adm');renderAdm();}else document.getElementById('adm-pw-err').textContent='비밀번호가 틀렸습니다';}
-function admOut(){isAdm=false;localStorage.removeItem('jbi_adm');localStorage.removeItem('jbi_cls');showPage('pg-land');}
+function admOut(){isAdm=false;_authRole=null;_authSid=null;localStorage.removeItem('jbi_adm');localStorage.removeItem('jbi_cls');try{firebase.auth().signOut();}catch(e){}showPage('pg-land');}
 function profGoBack(){showPage(_prevPage);if(_prevPage==='pg-adm')renderAdm();}
 function showTT(){const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.getElementById('tt-hd').textContent=s.name+' 시간표';renderTT(s);showPage('pg-tt');}
 function renderTT(s){
@@ -739,7 +793,7 @@ function chkPin(){const s=DB.students.find(x=>x.id===curSid);if(s&&(pinVal===s.p
 
 // PROFILE
 let _pTab=0;
-function openProf(id){_prevPage='pg-main';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));showPage('pg-prof');setTimeout(()=>renderPTab(s,0),100);}
+function openProf(id){_prevPage='pg-main';curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;const lo=document.getElementById('prof-logout');if(lo)lo.style.display=_authRole==='student'?'':'none';const bk=document.getElementById('prof-back');if(bk)bk.style.visibility=_authRole==='student'?'hidden':'';document.getElementById('prof-hd').textContent=s.name;_pTab=0;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,i)=>b.classList.toggle('on',i===0));showPage('pg-prof');setTimeout(()=>renderPTab(s,0),100);}
 function profTab(i){_pTab=i;const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.querySelectorAll('#prof-tabs .tbtn').forEach((b,j)=>b.classList.toggle('on',i===j));const ct=document.getElementById('prof-ct');if(ct){ct.innerHTML='<div style="padding:20px;text-align:center"><div style="width:24px;height:24px;border:3px solid #f5c6a0;border-top-color:var(--or);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto"></div></div>';}setTimeout(()=>renderPTab(s,i),50);}
 function refreshPTab(tabIdx){
   // curSid로 최신 학생 데이터 다시 찾아서 렌더링
@@ -2210,7 +2264,7 @@ function sendBroadcast(){const nm=(document.getElementById('bc-nm').value||'').t
 window.addEventListener('load',async()=>{
   await new Promise(r=>setTimeout(r,200));
   document.querySelectorAll('.bnav').forEach(b=>{b.style.display='none';b.style.pointerEvents='none';});
-  await loadAll();startMsgSync();
+  await loadAll();startMsgSync();startAuthRestore();
   // isAdm이면 adm 버튼 표시만 (자동 이동은 안 함 - 랜딩 먼저)
   if(isAdm){
     const ab=document.getElementById('adm-btn');const an=document.getElementById('adm-nav');
