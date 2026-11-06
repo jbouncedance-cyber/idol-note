@@ -1886,7 +1886,7 @@ function renderAdmAudit(c){
 
 // 레파토리 전체 보기
 // 레파토리 완성도 (곡 제목별 연습 중 / 가능, idol_rep_status에 학생별 저장)
-let _repView='song',_repStu=null;
+let _repCls='all',_repStu=null;
 function repKey(t){return String(t||'').trim().toLowerCase().replace(/\s+/g,' ');}
 function repStatusOf(sid,type,title){const d=(DB.repStatus||{})[String(sid)];return d&&d[type]?(d[type][repKey(title)]||''):'';}
 function repChipStyle(st){return st==='가능'?'background:#C6E8C9;border:1.5px solid #5FB36A;color:#1F6B2A':st==='연습 중'?'background:#FFF2CC;border:1.5px solid #E0B84A;color:#7A5A00':'background:#fff;border:1.5px dashed var(--bd);color:var(--gy)';}
@@ -1900,13 +1900,6 @@ async function repCycle(btn){
   btn.disabled=true;
   try{await db.collection('idol_rep_status').doc(id).set(doc);}catch(e){alert('저장 실패: '+e.message);btn.disabled=false;return;}
   DB.repStatus[id]=doc;renderAdmRep(document.getElementById('adm-ct'),true);
-}
-function repViewBar(){const b=(v,l)=>`<button onclick="_repView='${v}';renderAdmRep(document.getElementById('adm-ct'),true)" class="ctbtn ${_repView===v?'oa':''}">${l}</button>`;return `<div class="ctab" style="margin-bottom:10px">${b('song','곡별 완성도')}${b('student','학생별 보기')}</div><div style="font-size:12px;color:var(--gy);margin-bottom:12px">표시를 누를 때마다 <b>미체크 → 연습 중 → 가능</b> 순서로 바뀌어요. 제목이 같아야 한 곡으로 묶여요.</div>`;}
-function repSongSection(stuData,type,lbl,col){
-  const g={};
-  stuData.filter(x=>!x.student.inactive).forEach(({student:s,data})=>{(data[type==='dance'?'danceRep':'vocalRep']||[]).forEach(t=>{const k=repKey(t);if(!k)return;if(!g[k])g[k]={title:String(t).trim(),rows:[]};if(!g[k].rows.some(r=>r.s.id===s.id))g[k].rows.push({s,t});});});
-  const list=Object.values(g).sort((a,b)=>b.rows.length-a.rows.length||a.title.localeCompare(b.title,'ko'));
-  return `<div style="font-size:13px;font-weight:800;color:${col};margin:6px 0 10px">${lbl} ${list.length}곡</div>`+(list.length?list.map(x=>{const ok=x.rows.filter(r=>repStatusOf(r.s.id,type,r.t)==='가능').length;return `<div class="cd" style="margin-bottom:8px"><div style="padding:10px 13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--bd)"><div style="font-weight:800;flex:1;min-width:140px">${esc(x.title)}</div><div style="font-size:12px;color:var(--gy)">가능 <b>${ok}</b> / ${x.rows.length}명</div></div><div style="padding:9px 13px;display:flex;flex-wrap:wrap;gap:6px">${x.rows.sort((a,b)=>String(a.s.name).localeCompare(String(b.s.name),'ko')).map(r=>repChip(r.s.id,type,r.t,r.s.name)).join('')}</div></div>`;}).join(''):'<div class="emp-msg" style="margin-bottom:14px">레파토리가 없어요</div>');
 }
 async function renderAdmRep(c,cached){
   if(!c)return;
@@ -1926,44 +1919,18 @@ async function renderAdmRep(c,cached){
   stuData=results.map(r=>r.value||{student:null,data:{}}).filter(x=>x.student);
   _repStu=stuData;
   }
-  if(admTab_!=='rep'&&!cached)return;
-  if(_repView==='song'){c.innerHTML=repViewBar()+repSongSection(stuData,'dance','💃 댄스 레파토리','var(--dn)')+repSongSection(stuData,'vocal','🎤 보컬 레파토리','var(--vc)');return;}
-  let h=repViewBar();
-  // 댄스
-  h+=`<div style="font-size:13px;font-weight:800;color:var(--dn);margin-bottom:10px;display:flex;align-items:center;gap:8px">💃 댄스 레파토리<div style="flex:1;height:2px;background:#EFE4F8;border-radius:1px"></div></div>`;
-  const hasDance=stuData.some(({data})=>(data.danceRep||[]).length);
-  if(!hasDance){h+='<div class="emp-msg" style="margin-bottom:16px">댄스 레파토리가 없어요</div>';}
-  else stuData.forEach(({student:s,data})=>{
-    const list=data.danceRep||[];if(!list.length)return;
-    const isK=s.cls==='kids';
-    h+=`<div style="background:#fff;border-radius:12px;border:1px solid #E8DEFF;margin-bottom:8px;overflow:hidden">
-      <div style="padding:9px 13px;display:flex;align-items:center;gap:9px;background:rgba(123,79,160,0.05);border-bottom:1px solid #E8DEFF;cursor:pointer" onclick="admOpenProf(${s.id})">
-        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#E8D8FF,var(--ob));border:1.5px solid var(--or2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--or)">${s.name[0]}</div>
-        <div style="font-size:13px;font-weight:800">${esc(s.name)}</div>
-        <span style="font-size:10px;color:var(--gy);background:var(--lt);border-radius:10px;padding:2px 7px">${isK?'키즈':'오디션'}</span>
-        <span style="margin-left:auto;font-size:11px;color:var(--dn);font-weight:700">${list.length}곡</span>
-      </div>
-      <div style="padding:9px 13px;display:flex;flex-wrap:wrap;gap:5px">${list.map(r=>repChip(s.id,'dance',r,r)).join('')}</div>
-    </div>`;
-  });
-  // 보컬
-  h+=`<div style="font-size:13px;font-weight:800;color:var(--vc);margin:16px 0 10px;display:flex;align-items:center;gap:8px">🎤 보컬 레파토리<div style="flex:1;height:2px;background:#D4F0E8;border-radius:1px"></div></div>`;
-  const hasVocal=stuData.some(({data})=>(data.vocalRep||[]).length);
-  if(!hasVocal){h+='<div class="emp-msg">보컬 레파토리가 없어요</div>';}
-  else stuData.forEach(({student:s,data})=>{
-    const list=data.vocalRep||[];if(!list.length)return;
-    const isK=s.cls==='kids';
-    h+=`<div style="background:#fff;border-radius:12px;border:1px solid #E8DEFF;margin-bottom:8px;overflow:hidden">
-      <div style="padding:9px 13px;display:flex;align-items:center;gap:9px;background:rgba(26,107,90,0.05);border-bottom:1px solid #D4F0E8;cursor:pointer" onclick="admOpenProf(${s.id})">
-        <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#D4F0E8,#f0fff8);border:1.5px solid var(--vc);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--vc)">${s.name[0]}</div>
-        <div style="font-size:13px;font-weight:800">${esc(s.name)}</div>
-        <span style="font-size:10px;color:var(--gy);background:var(--lt);border-radius:10px;padding:2px 7px">${isK?'키즈':'오디션'}</span>
-        <span style="margin-left:auto;font-size:11px;color:var(--vc);font-weight:700">${list.length}곡</span>
-      </div>
-      <div style="padding:9px 13px;display:flex;flex-wrap:wrap;gap:5px">${list.map(r=>repChip(s.id,'vocal',r,r)).join('')}</div>
-    </div>`;
-  });
-  c.innerHTML=h;
+  if(admTab_!=='rep')return;
+  const act=stuData.filter(x=>!x.student.inactive&&(_repCls==='all'||(_repCls==='kids')===(x.student.cls==='kids'))).sort((a,b)=>String(a.student.name||'').localeCompare(String(b.student.name||''),'ko'));
+  const fb=(v,l)=>`<button onclick="_repCls='${v}';renderAdmRep(document.getElementById('adm-ct'),true)" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${_repCls===v?'var(--or)':'var(--bd)'};background:${_repCls===v?'var(--ob)':'#fff'};color:${_repCls===v?'var(--or)':'var(--gy)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${l}</button>`;
+  const sec=(s,type,lbl,col,list)=>list.length?`<div style="margin-top:9px"><div style="font-size:11px;font-weight:800;color:${col};margin-bottom:5px">${lbl} ${list.length}곡</div><div style="display:flex;flex-wrap:wrap;gap:6px">${list.map(t=>repChip(s.id,type,t,t)).join('')}</div></div>`:'';
+  c.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px">${fb('all','전체')}${fb('audition','오디션반')}${fb('kids','키즈오디션반')}</div>
+  <div style="font-size:12px;color:var(--gy);margin-bottom:12px">곡을 누를 때마다 <b>미체크 → 연습 중 → 가능</b> 순서로 바뀌어요.</div>
+  ${act.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;align-items:start">${act.map(({student:s,data})=>{
+    const d=data.danceRep||[],v=data.vocalRep||[];const tot=d.length+v.length;
+    const ok=d.filter(t=>repStatusOf(s.id,'dance',t)==='가능').length+v.filter(t=>repStatusOf(s.id,'vocal',t)==='가능').length;
+    const k=s.cls==='kids';
+    return `<div class="cd" style="margin:0"><div style="padding:12px 13px"><div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="admOpenProf(${s.id})"><div style="font-size:15px;font-weight:800">${esc(s.name)}</div><span class="bx ${k?'kk':'or'}">${k?'키즈':'오디션'}</span><div style="margin-left:auto;font-size:12px;color:var(--gy)">가능 <b>${ok}</b> / ${tot}곡</div></div>
+    ${tot?sec(s,'dance','💃 댄스','var(--dn)',d)+sec(s,'vocal','🎤 보컬','var(--vc)',v):'<div style="font-size:12px;color:var(--gy2);margin-top:9px">등록된 레파토리 없음</div>'}</div></div>`;}).join('')}</div>`:'<div class="emp-msg">해당하는 학생이 없어요</div>'}`;
 }
 
 // 피드백 입력
