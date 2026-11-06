@@ -514,8 +514,9 @@ function getWkKey(off){const n=new Date();const d=n.getDay();const m=new Date(n)
 function getWkLbl(off){const n=new Date();const d=n.getDay();const m=new Date(n);m.setDate(n.getDate()-((d+6)%7)+off*7);const s=new Date(m);s.setDate(m.getDate()+6);const f=x=>x.getMonth()+1+'/'+x.getDate();return m.getFullYear()+'년 '+f(m)+'~'+f(s);}
 
 // FIREBASE HELPERS
-async function fbSv(col,id,data){try{await db.collection(col).doc(String(id)).set(data);}catch(e){console.warn(e);}}
-async function fbDl(col,id){try{await db.collection(col).doc(String(id)).delete();}catch(e){}}
+function pubCard(s){const ib=s.inbody&&s.inbody.length?s.inbody[s.inbody.length-1]:null;return {id:s.id,name:s.name||'',cls:s.cls||'audition',inactive:!!s.inactive,photo:s.photo||'',classes:s.classes||{},inbody:ib?[{score:ib.score}]:[]};}
+async function fbSv(col,id,data){try{await db.collection(col).doc(String(id)).set(data);if(col==='idol_students')await db.collection('idol_public').doc(String(id)).set(pubCard(data));}catch(e){console.warn(e);}}
+async function fbDl(col,id){try{await db.collection(col).doc(String(id)).delete();if(col==='idol_students')await db.collection('idol_public').doc(String(id)).delete();}catch(e){}}
 async function fbCfg(){try{await db.collection('idol_config').doc('main').set({adminPw:DB.adminPw,notices:DB.notices||[],events:DB.events||[],danceClasses:DB.danceClasses||[],vocalClasses:DB.vocalClasses||[],etcClasses:DB.etcClasses||[],trainingClasses:DB.trainingClasses||[],teacherMemos:DB.teacherMemos||[],updatedAt:Date.now()});}catch(e){console.warn(e);}}
 
 async function loadAll(){
@@ -533,6 +534,19 @@ async function loadAll(){
       if(d.trainingClasses!==undefined)DB.trainingClasses=normCls(d.trainingClasses);
       if(d.teacherMemos)DB.teacherMemos=d.teacherMemos;
     }else{await fbCfg();}
+    if(_authRole==='student'){
+      const pb=await db.collection('idol_public').get();DB.students=[];pb.forEach(d=>{const x=d.data();if(!x.cls)x.cls='audition';DB.students.push(x);});
+      const own=await db.collection('idol_students').doc(String(_authSid)).get();
+      if(own.exists){const o=own.data();if(!o.cls)o.cls='audition';const i=DB.students.findIndex(x=>x.id===o.id);if(i>=0)DB.students[i]=o;else DB.students.push(o);}
+      const ms0=await db.collection('idol_messages').get();DB.messages=[];ms0.forEach(d=>DB.messages.push(d.data()));DB.messages.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+      try{const rs0=await db.collection('idol_resources').get();DB.resources=[];rs0.forEach(d=>DB.resources.push(d.data()));}catch(e){DB.resources=[];}
+      try{const sc0=await db.collection('idol_schedules').where('sid','==',_authSid).get();DB.schedules=[];sc0.forEach(d=>DB.schedules.push(d.data()));}catch(e){DB.schedules=[];}
+      DB.meta={};try{const m0=await db.collection('idol_student_meta').doc(String(_authSid)).get();if(m0.exists)DB.meta[String(_authSid)]=m0.data();}catch(e){}
+      DB.repStatus={};try{const r0=await db.collection('idol_rep_status').doc(String(_authSid)).get();if(r0.exists)DB.repStatus[String(_authSid)]=r0.data();}catch(e){}
+      DB.grades=null;window.DB=DB;
+      if(document.getElementById('pg-main').classList.contains('active'))renderMain();
+      return;
+    }
     const ss=await db.collection('idol_students').get();
     if(!ss.empty){DB.students=[];ss.forEach(d=>{const stu=d.data();if(!stu.cls)stu.cls='audition';DB.students.push(stu);});}
     else{for(const s of DB.students)await fbSv('idol_students',s.id,s);}
@@ -581,16 +595,15 @@ function showPage(id){
 let _authRole=null,_authSid=null;
 const _loginMode=new URLSearchParams(location.search).has('login');
 function openLogin(target){document.getElementById('lg-title').textContent=target==='teacher'?'🎹 선생님 로그인':target==='kids'?'✨ 키즈오디션반 로그인':'🌟 오디션반 로그인';document.getElementById('lg-id').value='';document.getElementById('lg-pw').value='';document.getElementById('lg-err').textContent='';showPage('pg-login');}
-async function routeAccount(user){
+async function resolveAccount(user){
   const snap=await db.collection('idol_accounts').doc(user.uid).get();
   if(!snap.exists)return false;
-  const a=snap.data();_authRole=a.role;_authSid=a.sid;
-  if(a.role==='student'){
-    if(!(DB.students||[]).some(x=>x.id===a.sid))return false;
-    isAdm=false;const st=DB.students.find(x=>x.id===a.sid);goClass(st.cls==='kids'?'kids':'audition');
-  }else{
-    isAdm=true;goTeacher();
-  }
+  const a=snap.data();_authRole=a.role;_authSid=a.sid;isAdm=a.role!=='student';
+  return true;
+}
+function routeAfterLogin(){
+  if(_authRole==='student'){const st=DB.students.find(x=>x.id===_authSid);if(!st)return false;goClass(st.cls==='kids'?'kids':'audition');}
+  else goTeacher();
   return true;
 }
 async function doLogin(){
@@ -599,25 +612,40 @@ async function doLogin(){
   btn.disabled=true;
   try{
     const c=await firebase.auth().signInWithEmailAndPassword(acctEmail(id),pw);
-    const ok=await routeAccount(c.user);
-    if(!ok){await firebase.auth().signOut();er.textContent='등록되지 않은 계정이에요. 학원에 문의해주세요';}
+    let ok=await resolveAccount(c.user);
+    if(ok){await loadAll();startMsgSync();ok=routeAfterLogin();}
+    if(!ok){_authRole=null;_authSid=null;isAdm=false;await firebase.auth().signOut();er.textContent='등록되지 않은 계정이에요. 학원에 문의해주세요';}
   }catch(e){
     er.textContent=e&&e.code==='auth/too-many-requests'?'여러 번 틀려서 잠시 막혔어요. 잠시 후 다시 해주세요':e&&e.code==='auth/network-request-failed'?'인터넷 연결을 확인해주세요':'아이디 또는 비밀번호가 맞지 않아요';
   }
   btn.disabled=false;
 }
 async function authLogout(){
-  _authRole=null;_authSid=null;isAdm=false;localStorage.removeItem('jbi_adm');
+  _authRole=null;_authSid=null;isAdm=false;localStorage.removeItem('jbi_adm');localStorage.removeItem('jbi_cls');
   try{await firebase.auth().signOut();}catch(e){}
-  showPage('pg-land');
+  if(_loginMode)location.reload();else showPage('pg-land');
 }
-function startAuthRestore(){
-  if(!_loginMode)return;
-  let first=true;
-  firebase.auth().onAuthStateChanged(async u=>{
-    if(!first)return;first=false;
-    if(u&&document.getElementById('pg-land').classList.contains('active')){try{await routeAccount(u);}catch(e){}}
+function authBoot(){
+  return new Promise(res=>{
+    let first=true;
+    firebase.auth().onAuthStateChanged(async u=>{
+      if(!first)return;first=false;isAdm=false;
+      try{
+        if(u&&await resolveAccount(u)){await loadAll();startMsgSync();routeAfterLogin();}
+      }catch(e){console.warn(e);}
+      res();
+    });
   });
+}
+function boardAuthUI(p){
+  if(!_authRole)return;const hide=x=>{const e=document.getElementById(x);if(!e)return;const f=e.closest('.fr');(f||e).style.display='none';};
+  hide(p+'-role');hide(p+'-pw');hide(p+'-au');const sr=document.getElementById(p+'-sr');if(sr)sr.style.display='none';
+  const tr=document.getElementById(p+'-tr');if(tr)tr.style.display=_authRole==='student'?'none':'block';
+}
+function boardAuthor(p){
+  if(_authRole==='student'){const st=DB.students.find(x=>x.id===_authSid);return st?{author:st.name,isT:false}:null;}
+  if(_authRole){const tn=(document.getElementById(p+'-tn').value||'').trim();if(!tn)return {err:'선생님 이름을 입력해주세요'};return {author:tn,isT:true};}
+  return null;
 }
 
 function goTeacher(){
@@ -638,7 +666,7 @@ function goTeacher(){
 function goClass(cls){if(_loginMode&&!_authRole){openLogin(cls);return;}if(_authRole==='teacher'||_authRole==='admin'){goTeacher();return;}_curCls=cls;localStorage.setItem('jbi_cls',cls);document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent=cls==='kids'?'키즈오디션반':'오디션반';document.getElementById('adm-btn').style.display='none';document.getElementById('adm-nav').style.display='none';showPage('pg-main');}
 function goAdmin(){if(isAdm){showPage('pg-adm');renderAdm();}else{showPage('pg-admlk');document.getElementById('adm-pw-inp').value='';document.getElementById('adm-pw-err').textContent='';}}
 function chkAdm(){const pw=document.getElementById('adm-pw-inp').value;if(pw===DB.adminPw){isAdm=true;localStorage.setItem('jbi_adm','1');_curCls='all';document.getElementById('adm-btn').style.display='';document.getElementById('adm-nav').style.display='';showPage('pg-adm');renderAdm();}else document.getElementById('adm-pw-err').textContent='비밀번호가 틀렸습니다';}
-function admOut(){isAdm=false;_authRole=null;_authSid=null;localStorage.removeItem('jbi_adm');localStorage.removeItem('jbi_cls');try{firebase.auth().signOut();}catch(e){}showPage('pg-land');}
+function admOut(){if(_authRole){authLogout();return;}isAdm=false;localStorage.removeItem('jbi_adm');localStorage.removeItem('jbi_cls');showPage('pg-land');}
 function profGoBack(){showPage(_prevPage);if(_prevPage==='pg-adm')renderAdm();}
 function showTT(){const s=DB.students.find(x=>x.id===curSid);if(!s)return;document.getElementById('tt-hd').textContent=s.name+' 시간표';renderTT(s);showPage('pg-tt');}
 function renderTT(s){
@@ -1191,7 +1219,7 @@ async function delAudition(sid,idx){
 async function renderFb(s,c){
   c.innerHTML='<div style="padding:20px;text-align:center;color:var(--gy)">불러오는 중...</div>';
   try{
-    const snap=await db.collection('feedbacks').get();const all=[];snap.forEach(d=>all.push({id:d.id,...d.data()}));
+    const snap=_authRole==='student'?await db.collection('feedbacks').where('name','==',s.name).get():await db.collection('feedbacks').get();const all=[];snap.forEach(d=>all.push({id:d.id,...d.data()}));
     const mine=all.filter(f=>f.name===s.name).sort((a,b)=>(b.ts||0)-(a.ts||0));
     if(!mine.length){c.innerHTML='<div class="emp-msg" style="padding:40px">아직 오디션 피드백이 없어요</div>';return;}
     const groups={};mine.forEach(f=>{const k=(f.date||'')+'|'+(f.agency||'');if(!groups[k])groups[k]=[];groups[k].push(f);});
@@ -1334,13 +1362,15 @@ function handleProfImg(inp){const f=inp.files[0];if(!f)return;const r=new FileRe
 
 // MSG BOARD
 function openMsgModal(){document.getElementById('msg-role').value='s';updMsgUI();const sel=document.getElementById('msg-au');sel.innerHTML=`<option value="">— 선택 —</option>${DB.students.filter(s=>!s.inactive).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}`;document.getElementById('msg-pw').value='';document.getElementById('msg-ct').value='';document.getElementById('msg-er').textContent='';if(document.getElementById('msg-tn'))document.getElementById('msg-tn').value='';openM('ov-msg');}
-function updMsgUI(){const isT=document.getElementById('msg-role').value==='t';document.getElementById('msg-sr').style.display=isT?'none':'block';document.getElementById('msg-tr').style.display=isT?'block':'none';}
-function updRepUI(){const isT=document.getElementById('rep-role').value==='t';document.getElementById('rep-sr').style.display=isT?'none':'block';document.getElementById('rep-tr').style.display=isT?'block':'none';}
+function updMsgUI(){const isT=document.getElementById('msg-role').value==='t';document.getElementById('msg-sr').style.display=isT?'none':'block';document.getElementById('msg-tr').style.display=isT?'block':'none';boardAuthUI('msg');}
+function updRepUI(){const isT=document.getElementById('rep-role').value==='t';document.getElementById('rep-sr').style.display=isT?'none':'block';document.getElementById('rep-tr').style.display=isT?'block':'none';boardAuthUI('rep');}
 function submitMsg(){
   const role=document.getElementById('msg-role').value;const pw=document.getElementById('msg-pw').value;const ct=document.getElementById('msg-ct').value.trim();const er=document.getElementById('msg-er');
   if(!ct){er.textContent='내용을 입력해주세요';return;}
   let author='';let isT=false;
-  if(role==='t'){const tn=(document.getElementById('msg-tn').value||'').trim();if(!tn){er.textContent='선생님 이름을 입력해주세요';return;}if(!pw){er.textContent='비밀번호를 입력해주세요';return;}if(pw!==DB.adminPw){er.textContent='비밀번호가 틀렸습니다';return;}author=tn;isT=true;}
+  const ba=boardAuthor('msg');if(ba&&ba.err){er.textContent=ba.err;return;}
+  if(ba){author=ba.author;isT=ba.isT;}
+  else if(role==='t'){const tn=(document.getElementById('msg-tn').value||'').trim();if(!tn){er.textContent='선생님 이름을 입력해주세요';return;}if(!pw){er.textContent='비밀번호를 입력해주세요';return;}if(pw!==DB.adminPw){er.textContent='비밀번호가 틀렸습니다';return;}author=tn;isT=true;}
   else{const sid=document.getElementById('msg-au').value;if(!sid){er.textContent='이름을 선택해주세요';return;}if(!pw){er.textContent='비밀번호를 입력해주세요';return;}const s=DB.students.find(x=>x.id==sid);if(!s||s.pw!==pw){er.textContent='비밀번호가 틀렸습니다';return;}author=s.name;}
   const m={id:'msg'+Date.now(),author,isT,content:ct,time:nowT(),replies:[]};DB.messages.push(m);db.collection('idol_messages').doc(String(m.id)).set(m).catch(e=>console.warn(e));closeM('ov-msg');renderMsg();
 }
@@ -1359,7 +1389,9 @@ function submitReply(){
   const role=document.getElementById('rep-role').value;const pw=document.getElementById('rep-pw').value;const ct=document.getElementById('rep-ct').value.trim();const er=document.getElementById('rep-er');
   if(!ct){er.textContent='내용을 입력해주세요';return;}
   let author='';let isT=false;
-  if(role==='t'){const tn=(document.getElementById('rep-tn').value||'').trim();if(!tn){er.textContent='선생님 이름을 입력해주세요';return;}if(pw!==DB.adminPw){er.textContent='비밀번호가 틀렸습니다';return;}author=tn;isT=true;}
+  const ba=boardAuthor('rep');if(ba&&ba.err){er.textContent=ba.err;return;}
+  if(ba){author=ba.author;isT=ba.isT;}
+  else if(role==='t'){const tn=(document.getElementById('rep-tn').value||'').trim();if(!tn){er.textContent='선생님 이름을 입력해주세요';return;}if(pw!==DB.adminPw){er.textContent='비밀번호가 틀렸습니다';return;}author=tn;isT=true;}
   else{const sid=document.getElementById('rep-au').value;if(!sid){er.textContent='이름을 선택해주세요';return;}const s=DB.students.find(x=>x.id==sid);if(!s||s.pw!==pw){er.textContent='비밀번호가 틀렸습니다';return;}author=s.name;}
   const m=(DB.messages||[]).find(x=>x.id===_curMsgId);if(!m)return;if(!m.replies)m.replies=[];m.replies.push({id:'r'+Date.now(),author,isT,content:ct,time:nowT()});db.collection('idol_messages').doc(String(m.id)).set(m).catch(e=>console.warn(e));closeM('ov-reply');renderMsg();setTimeout(()=>openMsgDet(_curMsgId),100);
 }
@@ -1373,11 +1405,13 @@ function openResDet(id){_resDetId=id;const r=(DB.resources||[]).find(x=>x.id===i
     ${cmts.map(c=>`<div style="padding:8px 10px;background:var(--lt);border-radius:8px;margin-bottom:6px"><div style="font-size:11px;font-weight:800;color:${c.isT?'var(--or)':'var(--bk)'};margin-bottom:3px">${c.isT?'👑 ':''}${esc(c.author)} · ${c.time}</div><div style="font-size:13px;line-height:1.5">${esc(c.content)}</div></div>`).join('')}`;
   const sel=document.getElementById('rsc-au');sel.innerHTML=`<option value="">— 선택 —</option>${DB.students.filter(s=>!s.inactive).map(s=>`<option value="${s.id}">${esc(s.name)}</option>`).join('')}`;document.getElementById('rsc-pw').value='';document.getElementById('rsc-inp').value='';openM('ov-res-det');
 }
-function updResUI(){const isT=document.getElementById('rsc-role').value==='t';document.getElementById('rsc-tr').style.display=isT?'block':'none';document.getElementById('rsc-au').style.display=isT?'none':'';}
+function updResUI(){const isT=document.getElementById('rsc-role').value==='t';document.getElementById('rsc-tr').style.display=isT?'block':'none';document.getElementById('rsc-au').style.display=isT?'none':'';boardAuthUI('rsc');}
 function submitResComment(){
   const role=document.getElementById('rsc-role').value;const pw=document.getElementById('rsc-pw').value;const ct=document.getElementById('rsc-inp').value.trim();if(!ct){alert('댓글을 입력해주세요');return;}
   let author='';let isT=false;
-  if(role==='t'){const tn=(document.getElementById('rsc-tn').value||'').trim();if(!tn){alert('선생님 이름을 입력해주세요');return;}if(pw!==DB.adminPw){alert('비밀번호가 틀렸습니다');return;}author=tn;isT=true;}
+  const ba=boardAuthor('rsc');if(ba&&ba.err){alert(ba.err);return;}
+  if(ba){author=ba.author;isT=ba.isT;}
+  else if(role==='t'){const tn=(document.getElementById('rsc-tn').value||'').trim();if(!tn){alert('선생님 이름을 입력해주세요');return;}if(pw!==DB.adminPw){alert('비밀번호가 틀렸습니다');return;}author=tn;isT=true;}
   else{const sid=document.getElementById('rsc-au').value;if(!sid){alert('이름을 선택해주세요');return;}const s=DB.students.find(x=>x.id==sid);if(!s||s.pw!==pw){alert('비밀번호가 틀렸습니다');return;}author=s.name;}
   const r=(DB.resources||[]).find(x=>x.id===_resDetId);if(!r)return;if(!r.comments)r.comments=[];r.comments.push({id:'rc'+Date.now(),author,isT,content:ct,time:nowT()});fbSv('idol_resources',r.id,r);openResDet(r.id);document.getElementById('rsc-inp').value='';toast('✅ 댓글 등록됨');
 }
@@ -1785,16 +1819,25 @@ function acctDraw(msg){
   const staff=(role,lbl,def)=>{const a=has(role);return a?`<div style="font-size:13px;padding:6px 0"><b>${lbl}</b> 아이디 <b>${esc(a.loginId)}</b> <span class="bx gr">만듦</span></div>`:`<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:6px 0"><b style="font-size:13px;width:52px">${lbl}</b><input id="ac-${role}-id" value="${def}" placeholder="아이디" style="flex:1;min-width:90px;padding:7px;border:1px solid var(--bd);border-radius:8px;font-family:inherit"><input id="ac-${role}-pw" type="password" autocomplete="new-password" placeholder="비밀번호 6자 이상" style="flex:1;min-width:120px;padding:7px;border:1px solid var(--bd);border-radius:8px;font-family:inherit"><button class="edt-btn" onclick="acctStaff('${role}')">만들기</button></div>`;};
   w.innerHTML=`<div style="padding:12px 2px 2px">
     ${msg?`<div style="background:var(--goldb);border-radius:8px;padding:8px 10px;font-size:12px;margin-bottom:10px">${esc(msg)}</div>`:''}
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--lt);border-radius:9px;padding:9px;margin-bottom:12px"><div style="flex:1;min-width:180px;font-size:12px">잠금 전환 준비: 학생 카드 공개 정보와 계정의 이름을 맞춰요.</div><button class="edt-btn" onclick="acctSync(this)">🔄 맞추기</button></div>
     <div style="font-weight:800;font-size:13px;margin-bottom:4px">선생님·관리자 계정</div>${staff('teacher','선생님','teacher')}${staff('admin','관리자','admin')}
     <div style="display:flex;align-items:center;gap:8px;margin:12px 0 8px;flex-wrap:wrap"><div style="font-weight:800;font-size:13px">학생 계정</div><span style="font-size:12px;color:var(--gy)">만듦 ${don} · 만들 예정 ${todo} · 생년월일 필요 ${nob}</span>${todo?`<button id="acct-go" class="edt-btn" style="margin-left:auto" onclick="acctBulk(this)">학생 계정 ${todo}개 만들기</button>`:''}</div>
     <div style="max-height:360px;overflow:auto;border:1px solid var(--bd);border-radius:9px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--lt);position:sticky;top:0"><th style="padding:7px;text-align:left">이름</th><th style="text-align:left">아이디</th><th style="text-align:left">비밀번호</th><th style="text-align:left">상태</th></tr></thead><tbody>${plan.map(x=>`<tr style="border-top:1px solid var(--bd)"><td style="padding:7px;font-weight:700">${esc(x.s.name)}</td><td>${esc(x.id)||'-'}</td><td>${esc(x.pw)||'-'}</td><td>${x.state==='done'?'<span class="bx gr">만듦</span>':x.state==='todo'?(_acctIds[x.s.id]?`<span class="bx gy" title="${esc(_acctIds[x.s.id])}">실패</span>`:'<span class="bx gy">대기</span>'):'<span class="bx gy">생년월일 필요</span>'}</td></tr>`).join('')}</tbody></table></div>
   </div>`;
 }
+async function acctSync(btn){
+  btn.disabled=true;let n=0;
+  try{
+    for(const s of (DB.students||[])){await db.collection('idol_public').doc(String(s.id)).set(pubCard(s));n++;btn.textContent='맞추는 중 '+n;}
+    for(const [uid,a] of Object.entries(_acctMap||{})){if(a.role!=='student')continue;const st=(DB.students||[]).find(x=>x.id===a.sid);if(st&&a.name!==st.name){a.name=st.name;await db.collection('idol_accounts').doc(uid).set(a);}}
+    acctDraw('학생 '+n+'명의 공개 카드와 계정 이름을 맞췄어요.');
+  }catch(e){alert('실패: '+e.message);btn.disabled=false;btn.textContent='🔄 맞추기';}
+}
 async function acctCreate(loginId,pw,role,sid){
   const a=acctAuth();const email=acctEmail(loginId);let cred;
   try{cred=await a.createUserWithEmailAndPassword(email,pw);}
   catch(e){if(e.code==='auth/email-already-in-use'){cred=await a.signInWithEmailAndPassword(email,pw);}else throw e;}
-  const uid=cred.user.uid;const rec={uid,role,loginId};if(sid!==undefined)rec.sid=sid;
+  const uid=cred.user.uid;const rec={uid,role,loginId};if(sid!==undefined){rec.sid=sid;const st0=(DB.students||[]).find(x=>x.id===sid);if(st0)rec.name=st0.name;}
   await db.collection('idol_accounts').doc(uid).set(rec);
   await a.signOut();_acctMap[uid]=rec;return rec;
 }
@@ -1945,7 +1988,7 @@ function openStuM(sid){
 function saveStudent(){
   const nm=document.getElementById('ns-nm').value.trim();if(!nm){alert('이름을 입력해주세요');return;}
   const cls=document.getElementById('ns-cls').value;const birth=document.getElementById('ns-birth').value;const height=document.getElementById('ns-ht').value;const pw=document.getElementById('ns-pw').value||'0000';
-  if(_editStuId){const s=DB.students.find(x=>x.id===_editStuId);if(!s)return;s.name=nm;s.cls=cls;s.birth=birth;s.height=height;s.pw=pw;fbSv('idol_students',s.id,s);toast('✅ '+nm+' 수정됨');}
+  if(_editStuId){const s=DB.students.find(x=>x.id===_editStuId);if(!s)return;const nmCh=s.name!==nm;s.name=nm;s.cls=cls;s.birth=birth;s.height=height;s.pw=pw;fbSv('idol_students',s.id,s);if(nmCh&&_authRole){db.collection('idol_accounts').where('sid','==',s.id).get().then(q=>q.forEach(d=>db.collection('idol_accounts').doc(d.id).set({...d.data(),name:nm}))).catch(e=>console.warn(e));}toast('✅ '+nm+' 수정됨');}
   else{const id=Date.now();const s={id,name:nm,cls,birth,height,pw,photo:'',classes:{},inbody:[],monthlyGoals:[],weeklies:[],goals:{idol:''},teacherMessages:[]};DB.students.push(s);fbSv('idol_students',s.id,s);toast('✅ '+nm+' 추가됨');}
   closeM('ov-stu');renderAdmCt();renderStuList();
 }
@@ -2268,7 +2311,8 @@ function sendBroadcast(){const nm=(document.getElementById('bc-nm').value||'').t
 window.addEventListener('load',async()=>{
   await new Promise(r=>setTimeout(r,200));
   document.querySelectorAll('.bnav').forEach(b=>{b.style.display='none';b.style.pointerEvents='none';});
-  await loadAll();startMsgSync();startAuthRestore();
+  if(_loginMode){await authBoot();}
+  else{await loadAll();startMsgSync();}
   // isAdm이면 adm 버튼 표시만 (자동 이동은 안 함 - 랜딩 먼저)
   if(isAdm){
     const ab=document.getElementById('adm-btn');const an=document.getElementById('adm-nav');

@@ -1,0 +1,62 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function acct() { return get(/databases/$(database)/documents/idol_accounts/$(request.auth.uid)).data; }
+    function isStaff() { return signedIn() && acct().role in ['teacher', 'admin']; }
+    function isAdmin() { return signedIn() && acct().role == 'admin'; }
+    function isStudent() { return signedIn() && acct().role == 'student'; }
+    function isOwn(sid) { return isStudent() && string(acct().sid) == string(sid); }
+
+    match /idol_accounts/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isStaff());
+      allow write: if isAdmin();
+    }
+    match /idol_config/main {
+      allow read: if signedIn();
+      allow write: if isStaff();
+    }
+    match /idol_config/staff {
+      allow read, write: if isStaff();
+    }
+    match /idol_public/{sid} {
+      allow read: if signedIn();
+      allow write: if isStaff() || isOwn(sid);
+    }
+    match /idol_students/{sid} {
+      allow read, update: if isStaff() || isOwn(sid);
+      allow create, delete: if isStaff();
+    }
+    match /idol_messages/{id} {
+      allow read, create, update: if signedIn();
+      allow delete: if isStaff();
+    }
+    match /idol_resources/{id} {
+      allow read, update: if signedIn();
+      allow create, delete: if isStaff();
+    }
+    match /idol_schedules/{id} {
+      allow read: if isStaff() || (isStudent() && string(resource.data.sid) == string(acct().sid));
+      allow write: if isStaff();
+    }
+    match /idol_student_meta/{sid} {
+      allow read: if isStaff() || isOwn(sid);
+      allow write: if isStaff();
+    }
+    match /idol_rep_status/{sid} {
+      allow read: if isStaff() || isOwn(sid);
+      allow write: if isStaff();
+    }
+    match /idol_student_grades/{sid} {
+      allow read, write: if isStaff();
+    }
+    match /feedbacks/{id} {
+      allow read: if isStaff() || (isStudent() && resource.data.name == acct().name);
+      allow write: if isStaff();
+    }
+    match /studentData/{key} {
+      allow read, write: if isStaff() || (isStudent() && (
+        key == 'audition:' + acct().name || key == 'kids:' + acct().name || key == acct().name));
+    }
+  }
+}
