@@ -738,7 +738,7 @@ function renderMsg(){
 // STUDENT LIST
 function renderStuList(){
   const w=document.getElementById('w-stu');if(!w)return;
-  const all=(DB.students||[]).filter(s=>!s.inactive&&(_authRole!=='student'||s.id===_authSid));
+  const all=(DB.students||[]).filter(s=>!s.inactive);
   const aud=all.filter(s=>s.cls==='audition'||!s.cls);
   const kids=all.filter(s=>s.cls==='kids');
   const isAll=_curCls==='all';
@@ -788,7 +788,7 @@ function mkChips(s,pfx,lbl,cls){
 function toggleCard(id){const el=document.getElementById(id);const btn=document.getElementById('btn-'+id);if(!el)return;const o=el.style.display!=='none';el.style.display=o?'none':'block';if(btn)btn.textContent=o?'▼ 수업':'▲ 닫기';}
 
 // LOCK / PIN
-function openLock(id){if(_authRole==='student'&&id===_authSid){openProf(id);return;}curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('lock-nm').textContent=s.name;document.getElementById('lock-av').innerHTML=s.photo?`<img src="${s.photo}">`:`${s.name[0]}`;pinVal='';updPin();document.getElementById('pin-err').textContent='';showPage('pg-lock');}
+function openLock(id){if(_authRole==='student'){if(id===_authSid)openProf(id);else toast('본인 페이지만 볼 수 있어요');return;}curSid=id;const s=DB.students.find(x=>x.id===id);if(!s)return;document.getElementById('lock-nm').textContent=s.name;document.getElementById('lock-av').innerHTML=s.photo?`<img src="${s.photo}">`:`${s.name[0]}`;pinVal='';updPin();document.getElementById('pin-err').textContent='';showPage('pg-lock');}
 function pinIn(d){if(pinVal.length>=4)return;pinVal+=d;updPin();if(pinVal.length===4)setTimeout(chkPin,200);}
 function pinBk(){pinVal=pinVal.slice(0,-1);updPin();}
 function pinClr(){pinVal='';updPin();}
