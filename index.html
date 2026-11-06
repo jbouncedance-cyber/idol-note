@@ -1889,13 +1889,14 @@ function renderAdmAudit(c){
 let _repCls='all',_repStu=null;
 function repKey(t){return String(t||'').trim().toLowerCase().replace(/\s+/g,' ');}
 function repStatusOf(sid,type,title){const d=(DB.repStatus||{})[String(sid)];return d&&d[type]?(d[type][repKey(title)]||''):'';}
-function repChipStyle(st){return st==='가능'?'background:#C6E8C9;border:1.5px solid #5FB36A;color:#1F6B2A':st==='연습 중'?'background:#FFF2CC;border:1.5px solid #E0B84A;color:#7A5A00':'background:#fff;border:1.5px dashed var(--bd);color:var(--gy)';}
-function repChip(sid,type,title,label){const st=repStatusOf(sid,type,title);return `<button data-sid="${sid}" data-type="${type}" data-title="${esc(title)}" onclick="event.stopPropagation();repCycle(this)" title="누를 때마다 미체크 → 연습 중 → 가능" style="${repChipStyle(st)};border-radius:7px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${esc(label)}${st?' · '+st:' · 미체크'}</button>`;}
+const REP_OK='오디션 사용 가능';
+function repChipStyle(st){return st===REP_OK?'background:#C6E8C9;border:1.5px solid #5FB36A;color:#1F6B2A':st==='연습 중'?'background:#FFF2CC;border:1.5px solid #E0B84A;color:#7A5A00':'background:#fff;border:1.5px dashed var(--bd);color:var(--gy)';}
+function repChip(sid,type,title,label){const st=repStatusOf(sid,type,title);return `<button data-sid="${sid}" data-type="${type}" data-title="${esc(title)}" onclick="event.stopPropagation();repCycle(this)" title="누를 때마다 미체크 → 연습 중 → 오디션 사용 가능" style="${repChipStyle(st)};border-radius:7px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${esc(label)}${st?' · '+st:' · 미체크'}</button>`;}
 async function repCycle(btn){
   const sid=Number(btn.dataset.sid)||btn.dataset.sid,type=btn.dataset.type,title=btn.dataset.title;
   if(!DB.repStatus)DB.repStatus={};const id=String(sid);
   const doc=JSON.parse(JSON.stringify(DB.repStatus[id]||{sid,dance:{},vocal:{}}));if(!doc[type])doc[type]={};
-  const k=repKey(title);const cur=doc[type][k]||'';const nx=cur===''?'연습 중':cur==='연습 중'?'가능':'';
+  const k=repKey(title);const cur=doc[type][k]||'';const nx=cur===''?'연습 중':cur==='연습 중'?REP_OK:'';
   if(nx)doc[type][k]=nx;else delete doc[type][k];
   btn.disabled=true;
   try{await db.collection('idol_rep_status').doc(id).set(doc);}catch(e){alert('저장 실패: '+e.message);btn.disabled=false;return;}
@@ -1924,12 +1925,12 @@ async function renderAdmRep(c,cached){
   const fb=(v,l)=>`<button onclick="_repCls='${v}';renderAdmRep(document.getElementById('adm-ct'),true)" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${_repCls===v?'var(--or)':'var(--bd)'};background:${_repCls===v?'var(--ob)':'#fff'};color:${_repCls===v?'var(--or)':'var(--gy)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${l}</button>`;
   const sec=(s,type,lbl,col,list)=>list.length?`<div style="margin-top:9px"><div style="font-size:11px;font-weight:800;color:${col};margin-bottom:5px">${lbl} ${list.length}곡</div><div style="display:flex;flex-wrap:wrap;gap:6px">${list.map(t=>repChip(s.id,type,t,t)).join('')}</div></div>`:'';
   c.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px">${fb('all','전체')}${fb('audition','오디션반')}${fb('kids','키즈오디션반')}</div>
-  <div style="font-size:12px;color:var(--gy);margin-bottom:12px">곡을 누를 때마다 <b>미체크 → 연습 중 → 가능</b> 순서로 바뀌어요.</div>
+  <div style="font-size:12px;color:var(--gy);margin-bottom:12px">곡을 누를 때마다 <b>미체크 → 연습 중 → 오디션 사용 가능</b> 순서로 바뀌어요.</div>
   ${act.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;align-items:start">${act.map(({student:s,data})=>{
     const d=data.danceRep||[],v=data.vocalRep||[];const tot=d.length+v.length;
-    const ok=d.filter(t=>repStatusOf(s.id,'dance',t)==='가능').length+v.filter(t=>repStatusOf(s.id,'vocal',t)==='가능').length;
+    const ok=d.filter(t=>repStatusOf(s.id,'dance',t)===REP_OK).length+v.filter(t=>repStatusOf(s.id,'vocal',t)===REP_OK).length;
     const k=s.cls==='kids';
-    return `<div class="cd" style="margin:0"><div style="padding:12px 13px"><div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="admOpenProf(${s.id})"><div style="font-size:15px;font-weight:800">${esc(s.name)}</div><span class="bx ${k?'kk':'or'}">${k?'키즈':'오디션'}</span><div style="margin-left:auto;font-size:12px;color:var(--gy)">가능 <b>${ok}</b> / ${tot}곡</div></div>
+    return `<div class="cd" style="margin:0"><div style="padding:12px 13px"><div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="admOpenProf(${s.id})"><div style="font-size:15px;font-weight:800">${esc(s.name)}</div><span class="bx ${k?'kk':'or'}">${k?'키즈':'오디션'}</span><div style="margin-left:auto;font-size:12px;color:var(--gy)">오디션 사용 가능 <b>${ok}</b> / ${tot}곡</div></div>
     ${tot?sec(s,'dance','💃 댄스','var(--dn)',d)+sec(s,'vocal','🎤 보컬','var(--vc)',v):'<div style="font-size:12px;color:var(--gy2);margin-top:9px">등록된 레파토리 없음</div>'}</div></div>`;}).join('')}</div>`:'<div class="emp-msg">해당하는 학생이 없어요</div>'}`;
 }
 
