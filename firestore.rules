@@ -1,4 +1,5 @@
 rules_version = '2';
+// JB IDOL Note 보안 규칙: Firebase 콘솔 > Firestore Database > 규칙 탭에 그대로 붙여넣고 [게시]
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
@@ -12,12 +13,9 @@ service cloud.firestore {
       allow read: if signedIn() && (request.auth.uid == uid || isStaff());
       allow write: if isAdmin();
     }
-    match /idol_config/main {
-      allow read: if signedIn();
+    match /idol_config/{doc} {
+      allow read: if isStaff() || (signedIn() && doc == 'main');
       allow write: if isStaff();
-    }
-    match /idol_config/staff {
-      allow read, write: if isStaff();
     }
     match /idol_public/{sid} {
       allow read: if signedIn();
@@ -36,7 +34,7 @@ service cloud.firestore {
       allow create, delete: if isStaff();
     }
     match /idol_schedules/{id} {
-      allow read: if isStaff() || (isStudent() && string(resource.data.sid) == string(acct().sid));
+      allow read: if isStaff() || (isStudent() && resource.data.sid == acct().sid);
       allow write: if isStaff();
     }
     match /idol_student_meta/{sid} {
