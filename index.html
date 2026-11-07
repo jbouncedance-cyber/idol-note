@@ -831,7 +831,7 @@ function renderPTab(s,tab){
     // prof-ct 못 찾으면 100ms 후 재시도
     setTimeout(()=>renderPTab(s,tab),100);return;
   }
-  if(tab===0)ct.innerHTML=renderPMain(s);
+  if(tab===0){ct.innerHTML=renderPMain(s);fillPStatusRep(s);}
   else if(tab===1)ct.innerHTML=renderAuditionRecord(s);
   else if(tab===2)renderFb(s,ct);
   else if(tab===3)renderRep(s,'dance',ct);
@@ -860,7 +860,7 @@ function renderPMain(s){
     ${(()=>{const m=metaOf(s.id);const t=[m.homeroom?'담임 '+esc(m.homeroom):'',m.vocal?'보컬 '+esc(m.vocal):'',m.position?'포지션 '+esc(m.position):''].filter(Boolean).join(' · ');return t?`<div style="font-size:12px;color:var(--gy);margin-top:8px">${t}</div>`:'';})()}
   </div></div>
 
-  ${pScheduleCard(s)}
+  ${pStatusCard(s)}
   <div class="cd"><div class="cd-h"><div class="cd-t">🏆 지망 1순위 기획사</div></div><div class="cd-b">
     <div style="background:linear-gradient(135deg,rgba(107,63,160,0.08),rgba(201,162,39,0.05));border:1px solid #E8DEFF;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--gy)">
       ⭐ 목표하는 기획사와 이유, 목표 시기 등을 자유롭게 적어보세요
@@ -1708,6 +1708,39 @@ function schDateTxt(d){return String(d||'').slice(5).replace('-','/');}
 function pScheduleCard(s){
   const up=schUpcoming(s.id);if(!up.length)return '';
   return `<div class="cd"><div class="cd-h"><div class="cd-t">📅 예정 일정</div></div><div class="cd-b">${up.map(x=>`<div style="padding:5px 0;font-size:13px;line-height:1.5"><b>${esc(schDateTxt(x.date))}</b> ${esc(x.kind)}${x.memo?` <span style="color:var(--gy)">· ${esc(x.memo)}</span>`:''}</div>`).join('')}</div></div>`;
+}
+// 개인 페이지 상단: 촬영 일정·최근 촬영·준비 중인 레퍼토리 한눈에 보기
+function schDday(d){const a=new Date(today()+'T00:00:00'),b=new Date(d+'T00:00:00');const n=Math.round((b-a)/86400000);return n===0?'D-DAY':n>0?'D-'+n:'D+'+(-n);}
+function pStatusCard(s){
+  const up=schUpcoming(s.id);const st=shootStatus(s);
+  const sec=t=>`<div style="font-size:12px;font-weight:800;color:var(--gy);margin:12px 0 6px">${t}</div>`;
+  const upHtml=up.length?up.map(x=>{const dd=schDday(x.date);const near=dd==='D-DAY'||(/^D-\d+$/.test(dd)&&parseInt(dd.slice(2))<=7);
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--bd);border-radius:9px;margin-bottom:6px;background:#fff">
+      <span style="font-size:11px;font-weight:900;padding:3px 7px;border-radius:6px;white-space:nowrap;min-width:46px;text-align:center;box-sizing:border-box;${near?'background:var(--or);color:#fff':'background:var(--ob);color:var(--or)'}">${dd}</span>
+      <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:800">${esc(schDateTxt(x.date))} <span class="bx ${String(x.kind).startsWith('오디션')?'or':String(x.kind).includes('보컬')&&!String(x.kind).includes('댄스')?'vc':'dn'}" style="margin-left:2px">${esc(x.kind)}</span></div>${x.memo?`<div style="font-size:12px;color:var(--gy);margin-top:2px">${esc(x.memo)}</div>`:''}</div></div>`;}).join('')
+    :'<div style="font-size:13px;color:var(--gy);padding:4px 2px">아직 잡힌 일정이 없어요</div>';
+  const last=(l,o)=>`<div style="flex:1;background:var(--lt);border-radius:9px;padding:9px 10px;min-width:0"><div style="font-size:11px;color:var(--gy);font-weight:700">${l} 최근 촬영</div><div style="font-size:14px;font-weight:900;margin-top:2px">${o.last?esc(o.last.slice(2).replace(/-/g,'.')):'기록 없음'}</div>${o.need?`<div style="font-size:11px;color:#C2410C;font-weight:800;margin-top:3px">촬영할 때가 됐어요</div>`:''}</div>`;
+  return `<div class="cd"><div class="cd-h"><div class="cd-t">🎯 나의 준비 현황</div></div><div class="cd-b" style="padding-top:0">
+    ${sec('📸 다가오는 촬영·오디션')}${upHtml}
+    <div style="display:flex;gap:8px;margin-top:8px">${last('💃 댄스',st.dance)}${last('🎤 보컬',st.vocal)}</div>
+    ${sec('🎵 준비 중인 레퍼토리')}<div id="pst-rep-${s.id}" style="font-size:13px;color:var(--gy)">불러오는 중...</div>
+  </div></div>`;
+}
+async function fillPStatusRep(s){
+  let data={};
+  for(const key of [s.cls+':'+s.name,'audition:'+s.name,'kids:'+s.name,s.name]){
+    try{const snap=await db.collection('studentData').doc(key).get();if(snap.exists){data=snap.data();break;}}catch(e){}
+  }
+  const el=document.getElementById('pst-rep-'+s.id);if(!el)return;
+  const rank=x=>x==='연습 중'?0:x===REP_OK?1:2;
+  const items=[...(data.danceRep||[]).map(t=>({t,type:'dance'})),...(data.vocalRep||[]).map(t=>({t,type:'vocal'}))].map(r=>({...r,st:repStatusOf(s.id,r.type,r.t)})).sort((a,b)=>rank(a.st)-rank(b.st));
+  if(!items.length){el.innerHTML='아직 등록된 레퍼토리가 없어요. 댄스·보컬 레파토리 탭에서 추가할 수 있어요';return;}
+  const cnt=v=>items.filter(x=>x.st===v).length;
+  el.innerHTML=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${cnt(REP_OK)?`<span style="${repChipStyle(REP_OK)};border-radius:20px;padding:2px 9px;font-size:11px;font-weight:800">${REP_OK} ${cnt(REP_OK)}곡</span>`:''}${cnt('연습 중')?`<span style="${repChipStyle('연습 중')};border-radius:20px;padding:2px 9px;font-size:11px;font-weight:800">연습 중 ${cnt('연습 중')}곡</span>`:''}</div>`+
+    items.map(r=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;margin-bottom:5px;background:${r.type==='dance'?'#F7F1FC':'#EEF9F5'}">
+      <span class="bx ${r.type==='dance'?'dn':'vc'}">${r.type==='dance'?'댄스':'보컬'}</span>
+      <div style="flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--bk);overflow:hidden;text-overflow:ellipsis">${esc(r.t)}</div>
+      <span style="${repChipStyle(r.st)};border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;white-space:nowrap">${r.st||'미체크'}</span></div>`).join('');
 }
 function renderAdmDash(c){
   if(!c)return;
