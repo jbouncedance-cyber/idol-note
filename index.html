@@ -842,6 +842,14 @@ function renderPTab(s,tab){
 
 // 개인 페이지 기본 정보 표: 생년월일·학년, 키·몸무게, 담당 선생님, 희망 포지션
 function schoolGrade(b){const m=/^(\d{4})-(\d{2})/.exec(b||'');if(!m)return '';const n=new Date();const sy=n.getMonth()<2?n.getFullYear()-1:n.getFullYear();const g=sy-Number(m[1])-6;if(g<1)return '';if(g<=6)return '초'+g;if(g<=9)return '중'+(g-6);if(g<=12)return '고'+(g-9);return '';}
+// 담당 선생님: 학생이 듣는 오디션반 트레이닝 수업과 1:1 보컬 수업의 선생님 (수업 배정에서 자동). 수업이 없으면 담당·등급 창에서 고른 선생님
+function tchName(t){t=String(t||'').trim();return !t||/(선생님|쌤)$/.test(t)?t:t+' 선생님';}
+function autoTeachers(s){
+  const pick=(pfx,arr,re)=>{const cs=Object.keys(s.classes||{}).filter(k=>k[0]===pfx&&s.classes[k]).map(k=>(arr||[]).find(x=>x.id===s.classes[k])).filter(Boolean);const pref=cs.filter(c=>re.test(c.name||''));return [...new Set((pref.length?pref:cs).map(c=>tchName(c.teacher)).filter(Boolean))];};
+  const m=metaOf(s.id);let train=pick('t',DB.trainingClasses,/오디션/),vocal=pick('v',DB.vocalClasses,/1\s*[:대]\s*1|개인/);
+  if(!train.length&&m.homeroom)train=[m.homeroom];if(!vocal.length&&m.vocal)vocal=[m.vocal];
+  return {train,vocal};
+}
 function wishPos(s){return (s&&s.wishPosition)||metaOf(s&&s.id).position||'';}
 function canEditWish(s){return _authRole==='student'?s.id===_authSid:!!_authRole;}
 function wishCell(s){const v=wishPos(s);const b=canEditWish(s)?`<button onclick="editWish(${s.id})" style="margin-left:6px;background:none;border:1px solid var(--bd);color:var(--or);border-radius:7px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">${v?'수정':'✏️ 적기'}</button>`:'';
@@ -856,7 +864,7 @@ function pInfoTable(s){
   const wib=(s.inbody||[]).filter(x=>x&&x.weight).slice(-1)[0];
   const g=schoolGrade(s.birth);
   const body=[s.height?esc(s.height)+' cm':'',wib?esc(wib.weight)+' kg':''].filter(Boolean).join(' / ');
-  const tch=[m.homeroom?'담임 '+esc(m.homeroom):'',m.vocal?'보컬 '+esc(m.vocal):''].filter(Boolean).join(' / ');
+  const at=autoTeachers(s);const tch=[at.train.length?'트레이닝 '+esc(at.train.join(', ')):'',at.vocal.length?'1:1 보컬 '+esc(at.vocal.join(', ')):''].filter(Boolean).join(' / ');
   const rows=[['생년월일 / 학년',s.birth?esc(s.birth)+(g?' / '+g:''):''],['키 / 몸무게',body?body+(wib&&wib.date?` <span style="color:var(--gy);font-weight:500;font-size:11px">(${esc(wib.date)} 측정)</span>`:''):''],['담당 선생님',tch],['희망 포지션',wishCell(s)]];
   return `<div style="margin-top:14px;border-top:1px solid var(--bd);text-align:left">${rows.map(([l,v])=>`<div style="display:flex;gap:10px;padding:9px 2px;border-bottom:1px solid var(--bd);font-size:13px;line-height:1.45"><div style="width:96px;flex-shrink:0;color:var(--gy);font-weight:700">${l}</div><div style="flex:1;font-weight:700;color:var(--bk);min-width:0;word-break:keep-all">${v||na}</div></div>`).join('')}</div>`;
 }
@@ -1934,7 +1942,7 @@ async function renderAdmChart(c){
     ${fBtn('all','전체',act.length)}${fBtn('audition','오디션반',act.filter(s=>!isKid(s)).length)}${fBtn('kids','키즈오디션반',act.filter(isKid).length)}
     <input id="chart-q" type="text" value="${esc(_chartQ)}" placeholder="이름 검색" oninput="_chartQ=this.value;renderAdmChartList()" style="flex:1;min-width:120px;padding:7px 11px;border:1px solid var(--bd);border-radius:9px;font-size:13px;font-family:inherit">
   </div>
-  <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px">${[['all','담임 전체'],...HOMEROOM_TEACHERS.map(t=>[t,t.replace(' 선생님','')]),['none','담임 미배정']].map(([v,l])=>`<button onclick="_chartTeacher='${v}';renderAdmCt()" style="padding:5px 12px;border-radius:20px;border:1.5px solid ${_chartTeacher===v?'var(--or)':'var(--bd)'};background:${_chartTeacher===v?'var(--ob)':'#fff'};color:${_chartTeacher===v?'var(--or)':'var(--gy)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${l}</button>`).join('')}</div>
+  <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px">${[['all','트레이닝 전체'],...HOMEROOM_TEACHERS.map(t=>[t,t.replace(' 선생님','')]),['none','트레이닝 미배정']].map(([v,l])=>`<button onclick="_chartTeacher='${v}';renderAdmCt()" style="padding:5px 12px;border-radius:20px;border:1.5px solid ${_chartTeacher===v?'var(--or)':'var(--bd)'};background:${_chartTeacher===v?'var(--ob)':'#fff'};color:${_chartTeacher===v?'var(--or)':'var(--gy)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${l}</button>`).join('')}</div>
   <div id="chart-list"></div>`;
   c.innerHTML=h;
   renderAdmChartList();
@@ -1942,7 +1950,7 @@ async function renderAdmChart(c){
 function renderAdmChartList(){
   const w=document.getElementById('chart-list');if(!w)return;
   const isKid=s=>s.cls==='kids';const q=_chartQ.trim();
-  const list=(DB.students||[]).filter(s=>!s.inactive&&(_chartCls==='all'||(_chartCls==='kids')===isKid(s))&&(!q||String(s.name||'').includes(q))&&(_chartTeacher==='all'||(_chartTeacher==='none'?!metaOf(s.id).homeroom:metaOf(s.id).homeroom===_chartTeacher))).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko'));
+  const list=(DB.students||[]).filter(s=>!s.inactive&&(_chartCls==='all'||(_chartCls==='kids')===isKid(s))&&(!q||String(s.name||'').includes(q))&&(_chartTeacher==='all'||(_chartTeacher==='none'?!autoTeachers(s).train.length:autoTeachers(s).train.some(t=>t.replace(/\s/g,'')===_chartTeacher.replace(/\s/g,''))))).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko'));
   if(!list.length){w.innerHTML='<div class="emp-msg">해당하는 학생이 없어요</div>';return;}
   w.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${list.map(s=>{
     const k=isKid(s);const age=chartAge(s.birth);const ib=s.inbody&&s.inbody.length?s.inbody[s.inbody.length-1]:null;
@@ -1955,7 +1963,7 @@ function renderAdmChartList(){
           <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;align-items:center"><span class="bx ${k?'kk':'or'}">${k?'키즈오디션반':'오디션반'}</span>${gradeBadge('댄스',gradeOf(s.id).dance)}${gradeBadge('보컬',gradeOf(s.id).vocal)}${gradeBadge('랩',gradeOf(s.id).rap)}</div></div>
         <button onclick="event.stopPropagation();openMeta(${s.id})" class="edt-btn" style="font-size:11px;padding:3px 7px;flex-shrink:0">담당·등급</button>
       </div>
-      <div style="font-size:12px;margin-top:8px">담임 <b>${esc(metaOf(s.id).homeroom||'미배정')}</b> · 보컬 <b>${esc(metaOf(s.id).vocal||'미배정')}</b>${wishPos(s)?` · 희망 포지션 <b>${esc(wishPos(s))}</b>`:''}</div>
+      <div style="font-size:12px;margin-top:8px">트레이닝 <b>${esc(autoTeachers(s).train.join(', ')||'미배정')}</b> · 1:1 보컬 <b>${esc(autoTeachers(s).vocal.join(', ')||'미배정')}</b>${wishPos(s)?` · 희망 포지션 <b>${esc(wishPos(s))}</b>`:''}</div>
       <div style="font-size:12px;color:var(--gy);margin-top:8px">${[age!==null?'만 '+age+'세':'',s.height?esc(s.height)+'cm':'',ib&&ib.weight?esc(ib.weight)+'kg':'',auds?'오디션 기록 '+auds+'건':''].filter(Boolean).join(' · ')||'기본정보 미입력'}</div>
       ${blocks||'<div style="font-size:12px;color:var(--gy2);margin-top:9px">배정된 수업 없음</div>'}
       ${(()=>{const up=schUpcoming(s.id);return up.length?`<div style="margin-top:9px"><div style="font-size:11px;font-weight:800;color:var(--or);margin-bottom:3px">📅 예정 일정</div>${up.map(x=>`<div style="font-size:12px;line-height:1.55"><b>${esc(schDateTxt(x.date))}</b> ${esc(x.kind)}${x.memo?' · '+esc(x.memo):''}</div>`).join('')}</div>`:'';})()}
