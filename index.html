@@ -840,6 +840,17 @@ function renderPTab(s,tab){
   const pg=document.getElementById('pg-prof');if(pg)pg.scrollTop=0;
 }
 
+// 개인 페이지 기본 정보 표: 생년월일·학년, 키·몸무게, 담당 선생님, 희망 포지션
+function schoolGrade(b){const m=/^(\d{4})-(\d{2})/.exec(b||'');if(!m)return '';const n=new Date();const sy=n.getMonth()<2?n.getFullYear()-1:n.getFullYear();const g=sy-Number(m[1])-6;if(g<1)return '';if(g<=6)return '초'+g;if(g<=9)return '중'+(g-6);if(g<=12)return '고'+(g-9);return '';}
+function pInfoTable(s){
+  const m=metaOf(s.id);const na='<span style="color:var(--gy2);font-weight:500">미입력</span>';
+  const wib=(s.inbody||[]).filter(x=>x&&x.weight).slice(-1)[0];
+  const g=schoolGrade(s.birth);
+  const body=[s.height?esc(s.height)+' cm':'',wib?esc(wib.weight)+' kg':''].filter(Boolean).join(' / ');
+  const tch=[m.homeroom?'담임 '+esc(m.homeroom):'',m.vocal?'보컬 '+esc(m.vocal):''].filter(Boolean).join(' / ');
+  const rows=[['생년월일 / 학년',s.birth?esc(s.birth)+(g?' / '+g:''):''],['키 / 몸무게',body?body+(wib&&wib.date?` <span style="color:var(--gy);font-weight:500;font-size:11px">(${esc(wib.date)} 측정)</span>`:''):''],['담당 선생님',tch],['희망 포지션',m.position?esc(m.position):'']];
+  return `<div style="margin-top:14px;border-top:1px solid var(--bd);text-align:left">${rows.map(([l,v])=>`<div style="display:flex;gap:10px;padding:9px 2px;border-bottom:1px solid var(--bd);font-size:13px;line-height:1.45"><div style="width:96px;flex-shrink:0;color:var(--gy);font-weight:700">${l}</div><div style="flex:1;font-weight:700;color:var(--bk);min-width:0;word-break:keep-all">${v||na}</div></div>`).join('')}</div>`;
+}
 function renderPMain(s){
   const isK=s.cls==='kids';const lastIb=s.inbody&&s.inbody.length?s.inbody[s.inbody.length-1]:null;
   const cm=ym();const mn=new Date();const cmLbl=mn.getFullYear()+'년 '+(mn.getMonth()+1)+'월';
@@ -852,12 +863,11 @@ function renderPMain(s){
       ${s.photo?`<img src="${s.photo}">`:`<span>${s.name[0]}</span>`}<div class="cam">📷</div>
     </div>
     <div style="font-size:21px;font-weight:900">${esc(s.name)}</div>
-    <div style="font-size:12px;color:var(--gy);margin-top:3px">${s.birth||''}${s.height?' · '+s.height+'cm':''}</div>
     <div style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap;margin-top:8px">
       <span class="bx ${isK?'kk':'or'}">${isK?'키즈오디션반':'오디션반'}</span>
       ${lastIb?`<span class="bx gr">📊 인바디 ${lastIb.score}점</span>`:''}
     </div>
-    ${(()=>{const m=metaOf(s.id);const t=[m.homeroom?'담임 '+esc(m.homeroom):'',m.vocal?'보컬 '+esc(m.vocal):'',m.position?'포지션 '+esc(m.position):''].filter(Boolean).join(' · ');return t?`<div style="font-size:12px;color:var(--gy);margin-top:8px">${t}</div>`:'';})()}
+    ${pInfoTable(s)}
   </div></div>
 
   ${pStatusCard(s)}
@@ -1670,7 +1680,7 @@ async function openMeta(id){
   det.innerHTML=`<div class="md"><div class="mh"><div class="mt">${esc(st.name)} 담당·등급</div><button class="xb" onclick="closeM('ov-meta')">✕</button></div><div class="mb">
     <div class="fr"><label class="fl">담임 선생님</label>${sel('mt-home',['',...HOMEROOM_TEACHERS],m.homeroom)}</div>
     <div class="fr"><label class="fl">보컬 담당 선생님</label><input type="text" id="mt-vocal" list="mt-vocal-list" placeholder="선택 또는 직접 입력" value="${esc(m.vocal||'')}"><datalist id="mt-vocal-list">${VOCAL_TEACHERS.map(v=>`<option value="${esc(v)}">`).join('')}</datalist></div>
-    <div class="fr"><label class="fl">주 포지션</label><input type="text" id="mt-pos" placeholder="예: 댄스, 보컬·댄스" value="${esc(m.position||'')}"></div>
+    <div class="fr"><label class="fl">희망 포지션</label><input type="text" id="mt-pos" placeholder="예: 댄스·랩, 메인보컬" value="${esc(m.position||'')}"></div>
     <label class="fl">등급 (선생님 화면에만 표시)</label>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px"><div><label class="fl">댄스</label>${sel('mt-gd',GRADES,g.dance)}</div><div><label class="fl">보컬</label>${sel('mt-gv',GRADES,g.vocal)}</div><div><label class="fl">랩</label>${sel('mt-gr',GRADES,g.rap)}</div></div>
   </div><div class="mf"><button class="btn btn-or" onclick="saveMeta(${id})">저장하기</button></div></div>`;
@@ -1937,7 +1947,7 @@ function renderAdmChartList(){
           <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;align-items:center"><span class="bx ${k?'kk':'or'}">${k?'키즈오디션반':'오디션반'}</span>${gradeBadge('댄스',gradeOf(s.id).dance)}${gradeBadge('보컬',gradeOf(s.id).vocal)}${gradeBadge('랩',gradeOf(s.id).rap)}</div></div>
         <button onclick="event.stopPropagation();openMeta(${s.id})" class="edt-btn" style="font-size:11px;padding:3px 7px;flex-shrink:0">담당·등급</button>
       </div>
-      <div style="font-size:12px;margin-top:8px">담임 <b>${esc(metaOf(s.id).homeroom||'미배정')}</b> · 보컬 <b>${esc(metaOf(s.id).vocal||'미배정')}</b>${metaOf(s.id).position?` · 포지션 <b>${esc(metaOf(s.id).position)}</b>`:''}</div>
+      <div style="font-size:12px;margin-top:8px">담임 <b>${esc(metaOf(s.id).homeroom||'미배정')}</b> · 보컬 <b>${esc(metaOf(s.id).vocal||'미배정')}</b>${metaOf(s.id).position?` · 희망 포지션 <b>${esc(metaOf(s.id).position)}</b>`:''}</div>
       <div style="font-size:12px;color:var(--gy);margin-top:8px">${[age!==null?'만 '+age+'세':'',s.height?esc(s.height)+'cm':'',ib&&ib.weight?esc(ib.weight)+'kg':'',auds?'오디션 기록 '+auds+'건':''].filter(Boolean).join(' · ')||'기본정보 미입력'}</div>
       ${blocks||'<div style="font-size:12px;color:var(--gy2);margin-top:9px">배정된 수업 없음</div>'}
       ${(()=>{const up=schUpcoming(s.id);return up.length?`<div style="margin-top:9px"><div style="font-size:11px;font-weight:800;color:var(--or);margin-bottom:3px">📅 예정 일정</div>${up.map(x=>`<div style="font-size:12px;line-height:1.55"><b>${esc(schDateTxt(x.date))}</b> ${esc(x.kind)}${x.memo?' · '+esc(x.memo):''}</div>`).join('')}</div>`:'';})()}
