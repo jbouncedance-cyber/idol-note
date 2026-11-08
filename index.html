@@ -1741,8 +1741,8 @@ function shootStatus(s){
   const t=today();const list=schOf(s.id);
   const calc=(kind)=>{const hit=list.filter(x=>x.kind===kind||x.kind==='댄스+보컬촬영');
     const past=hit.filter(x=>x.date<=t).map(x=>x.date).sort();const last=past.length?past[past.length-1]:'';
-    const planned=hit.some(x=>x.date>t);
-    return {last,need:!planned&&(!last||schAddMonths(last,SHOOT_MONTHS)<=t)};};
+    const fut=hit.filter(x=>x.date>t).map(x=>x.date).sort();const planned=fut.length>0;
+    return {last,next:fut[0]||'',need:!planned&&(!last||schAddMonths(last,SHOOT_MONTHS)<=t)};};
   return {dance:calc('댄스촬영'),vocal:calc('보컬촬영')};
 }
 function schDateTxt(d){return String(d||'').slice(5).replace('-','/');}
@@ -1789,7 +1789,7 @@ async function fillPStatusRep(s){
 const TASK_KINDS=['프로필사진','릴스','자기소개영상','챌린지','새 기획','기타'];
 const TASK_ST={todo:'준비 중',ready:'준비 완료',scheduled:'촬영 예정',done:'촬영 완료'};
 const TASK_GROUPS=[['all','전체'],['aud','오디션반 · 김함비쌤'],['kh','키즈 · 김함비쌤(목)'],['ks','키즈 · Stia쌤']];
-let _taskEditId=null,_taskT='all',_taskDone=false;
+let _taskEditId=null,_taskT='all',_taskDone=false,_shootF='all';
 function taskOf(sid){return (DB.tasks||[]).filter(x=>x.sid===sid);}
 function taskLate(x){return x.status==='todo'&&x.due&&x.due<today();}
 function taskSort(a,b){const r=x=>x.status==='ready'?0:x.status==='scheduled'?1:taskLate(x)?2:x.status==='todo'?3:4;const k=x=>x.status==='scheduled'?(x.shootDate||'9999'):(x.due||'9999');return r(a)-r(b)||String(k(a)).localeCompare(String(k(b)));}
@@ -1831,7 +1831,38 @@ function dashTaskCard(act){
     ${open.length?open.map(x=>taskRow(x,'d',true)).join(''):'<div class="emp-msg">진행 중인 과제가 없어요</div>'}
     <div style="padding:9px 13px;border-top:1px solid var(--bd);font-size:12px;color:var(--gy);cursor:pointer" onclick="_taskDone=!_taskDone;renderAdmCt()">촬영 완료 ${done.length}건 ${_taskDone?'접기 ▲':'펼치기 ▼'}</div>${_taskDone?done.slice(0,50).map(x=>taskRow(x,'d',true)).join(''):''}</div>`;
 }
-function taskRefresh(ctx){if(ctx==='p'){const s=DB.students.find(x=>x.id===curSid);if(s)renderPTab(s,0);}else renderAdmCt();}
+function taskRefresh(ctx){const tv=document.getElementById('ov-tview');if(tv)tv.classList.remove('on');if(ctx==='p'){const s=DB.students.find(x=>x.id===curSid);if(s)renderPTab(s,0);}else renderAdmCt();}
+// 현황판 촬영 관리: 오피셜(댄스·보컬 2개월) 촬영과 콘텐츠 과제를 학생별 한 줄로 합쳐서 보여줌
+function dashShootCard(act){
+  const since=schAddDays(today(),-30);
+  const rows=act.filter(s=>taskInGroup(s,_taskT)).map(s=>{const st=shootStatus(s);const ts=taskOf(s.id);const open=ts.filter(x=>x.status!=='done').sort(taskSort);
+    const f={need:st.dance.need||st.vocal.need,ready:open.some(x=>x.status==='ready'),sched:open.some(x=>x.status==='scheduled'),late:open.some(taskLate),none:!ts.some(x=>x.status!=='done'||String(x.doneAt||'')>=since)};
+    return {s,st,open,doneN:ts.filter(x=>x.status==='done').length,f,pri:(f.ready?0:f.late?1:f.need?2:f.none?3:f.sched?4:5)};});
+  const n=k=>rows.filter(r=>r.f[k]).length;
+  const list=rows.filter(r=>_shootF==='all'||r.f[_shootF]).sort((a,b)=>a.pri-b.pri||String(a.s.name).localeCompare(String(b.s.name),'ko'));
+  const chip=(v,l)=>`<button onclick="_taskT='${v}';renderAdmCt()" style="border:1px solid ${_taskT===v?'var(--or)':'var(--bd)'};background:${_taskT===v?'var(--or)':'#fff'};color:${_taskT===v?'#fff':'var(--bk)'};border-radius:20px;padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${l}</button>`;
+  const flt=(k,l,c)=>`<div onclick="_shootF=_shootF==='${k}'?'all':'${k}';renderAdmCt()" style="cursor:pointer;flex:1;min-width:62px;text-align:center;border-radius:9px;padding:7px 2px;${_shootF===k?`background:${c};color:#fff`:'background:var(--lt)'}"><div style="font-size:10.5px;font-weight:700;${_shootF===k?'':'color:var(--gy)'}">${l}</div><div style="font-size:18px;font-weight:900;${_shootF===k?'':'color:'+c}">${n(k)}</div></div>`;
+  const off=(l,o)=>o.need?`<span style="background:#FFEDD5;color:#C2410C;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:800;white-space:nowrap">${l} 촬영 필요</span>`:`<span style="font-size:11px;color:var(--gy);white-space:nowrap">${l} ${o.last?esc(o.last.slice(5).replace('-','/')):'-'}${o.next?' → '+esc(o.next.slice(5).replace('-','/')):''}</span>`;
+  const tchip=x=>{const late=taskLate(x);const c=late?'#FEE2E2;color:#B91C1C':x.status==='ready'?'#DCFCE7;color:#15803D':x.status==='scheduled'?'#DBEAFE;color:#1D4ED8':'var(--lt);color:var(--bk)';
+    return `<span onclick="event.stopPropagation();openTaskView('${esc(x.id)}')" style="cursor:pointer;background:${c};border-radius:7px;padding:3px 8px;font-size:11.5px;font-weight:700;white-space:nowrap">${esc(x.kind)} · ${late?'기한 지남':x.status==='scheduled'&&x.shootDate?esc(schDateTxt(x.shootDate))+' 촬영':TASK_ST[x.status]}</span>`;};
+  return `<div class="cd"><div class="cd-h"><div class="cd-t">🎬 촬영 관리</div><button class="sbtn or" onclick="openTask(null)">+ 과제 내주기</button></div>
+  <div style="padding:0 13px 10px"><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px">${TASK_GROUPS.map(([v,l])=>chip(v,l)).join('')}</div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap">${flt('ready','날짜 잡기','#16A34A')}${flt('late','기한 지남','#DC2626')}${flt('need','오피셜 필요','#EA580C')}${flt('none','과제 없음','#9333EA')}${flt('sched','촬영 예정','#2563EB')}</div>
+    <div style="font-size:11px;color:var(--gy);margin-top:6px">날짜 잡기 = 과제 검사 통과 · 오피셜 = 댄스·보컬 ${SHOOT_MONTHS}개월 정기 촬영 · 과제 없음 = 최근 30일 · 과제를 누르면 검사·날짜 잡기를 할 수 있어요${_shootF!=='all'?' · 숫자를 다시 누르면 전체 보기':''}</div></div>
+  ${list.length?list.map(({s,st,open,doneN,f})=>`<div style="padding:10px 13px;border-top:1px solid var(--bd)">
+    <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><div style="font-weight:800;cursor:pointer" onclick="admOpenProf(${s.id})">${esc(s.name)}</div><span class="bx ${s.cls==='kids'?'kk':'or'}">${s.cls==='kids'?'키즈':'오디션'}</span>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-left:auto">${off('💃 댄스',st.dance)}${off('🎤 보컬',st.vocal)}</div></div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:7px">${open.map(tchip).join('')}${f.none?'<span style="font-size:11.5px;color:#9333EA;font-weight:700">최근 30일 과제 없음</span>':''}${doneN?`<span style="font-size:11px;color:var(--gy)">완료 ${doneN}</span>`:''}
+      <span onclick="openTask(null,${s.id})" style="cursor:pointer;border:1px dashed var(--bd);color:var(--or);border-radius:7px;padding:2px 8px;font-size:11.5px;font-weight:800">+ 과제</span></div></div>`).join(''):'<div class="emp-msg">해당하는 학생이 없어요</div>'}
+  </div>`;
+}
+function openTaskView(id){
+  const x=(DB.tasks||[]).find(t=>t.id===id);if(!x)return;
+  let det=document.getElementById('ov-tview');
+  if(!det){det=document.createElement('div');det.id='ov-tview';det.className='ov';det.onclick=function(e){if(e.target===this)closeM('ov-tview');};document.body.appendChild(det);}
+  det.innerHTML=`<div class="md"><div class="mh"><div class="mt">🎬 촬영 과제</div><button class="xb" onclick="closeM('ov-tview')">✕</button></div><div class="mb" style="padding:0 0 8px">${taskRow(x,'d',true).replace('border-top:1px solid var(--bd)','border-top:0')}${x.createdAt?`<div style="font-size:11px;color:var(--gy);padding:0 12px">과제 낸 날 ${esc(String(x.createdAt).slice(0,10))}</div>`:''}</div></div>`;
+  det.classList.add('on');
+}
 function openTask(id,sid){
   _taskEditId=id;const r=id?(DB.tasks||[]).find(x=>x.id===id)||{}:{sid};
   let det=document.getElementById('ov-task');
@@ -1954,8 +1985,7 @@ function renderAdmDash(c){
   c.innerHTML=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">${tile('재원 학생',act.length)}${tile('앞으로 '+SCH_DAYS+'일 일정',up.length)}${tile('촬영 필요',need.length)}</div>
   <button class="btn btn-or" onclick="openSch(null)" style="margin-bottom:12px">+ 일정 추가</button>
   <div class="cd"><div class="cd-h"><div class="cd-t">앞으로 ${SCH_DAYS}일 일정</div></div>${up.length?up.map(row).join(''):'<div class="emp-msg">예정된 일정이 없어요</div>'}</div>
-  <div class="cd"><div class="cd-h"><div class="cd-t">촬영 필요 (${SHOOT_MONTHS}개월 기준)</div></div>${need.length?need.map(({s,st})=>`<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:9px 13px;border-top:1px solid var(--bd);cursor:pointer" onclick="admOpenProf(${s.id})"><div style="font-weight:800;min-width:56px">${esc(s.name)}</div><span class="bx ${s.cls==='kids'?'kk':'or'}">${s.cls==='kids'?'키즈':'오디션'}</span>${st.dance.need?'<span class="bx dn">댄스 필요</span>':''}${st.vocal.need?'<span class="bx vc">보컬 필요</span>':''}<div style="margin-left:auto;font-size:12px;color:var(--gy)">마지막 댄스 ${esc(st.dance.last||'없음')} · 보컬 ${esc(st.vocal.last||'없음')}</div></div>`).join(''):'<div class="emp-msg">촬영이 필요한 학생이 없어요</div>'}</div>
-  ${dashTaskCard(act)}
+  ${dashShootCard(act)}
   <div class="cd"><div class="cd-h" style="cursor:pointer" onclick="_dashPast=!_dashPast;renderAdmCt()"><div class="cd-t">지난 일정 ${past.length}건</div><div style="font-size:12px;color:var(--gy)">${_dashPast?'접기 ▲':'펼치기 ▼'}</div></div>${_dashPast?(past.length?past.map(row).join(''):'<div class="emp-msg">지난 일정이 없어요</div>'):''}</div>`;
 }
 function openSch(id){
