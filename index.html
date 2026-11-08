@@ -17,6 +17,7 @@ JB_IDOL_수정본_index.txt
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#C2621A">
 <title>JB IDOL Note</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -272,6 +273,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
     <button class="tbtn" onclick="admTab(this,'chart')">📊 학생 현황</button>
     <button class="tbtn" onclick="admTab(this,'audit')">📝 오디션기록</button>
     <button class="tbtn" onclick="admTab(this,'hist')">🏆 오디션 히스토리</button>
+    <button class="tbtn" onclick="admTab(this,'board')">🪪 이미지보드</button>
     <button class="tbtn" onclick="admTab(this,'rep')">🎵 레파토리</button>
     <button class="tbtn" onclick="admTab(this,'fb')">피드백입력</button>
     <button class="tbtn" onclick="admTab(this,'fbl')">피드백목록</button>
@@ -898,6 +900,7 @@ function renderPMain(s){
   </div></div>
 
   ${pStatusCard(s)}
+  <div class="cd"><div class="cd-h"><div class="cd-t">🪪 나의 캐스트 카드</div><button class="sbtn or" onclick="openCast(${s.id})">${_authRole==='student'?'✏️ 내 정보 채우기':'✏️ 카드 꾸미기'}</button></div><div class="cd-b" style="background:#F4F1EC;border-radius:0 0 14px 14px">${castCard(s)}</div></div>
   <div class="cd"><div class="cd-h"><div class="cd-t">🏆 지망 1순위 기획사</div></div><div class="cd-b">
     <div style="background:linear-gradient(135deg,rgba(107,63,160,0.08),rgba(201,162,39,0.05));border:1px solid #E8DEFF;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:12px;color:var(--gy)">
       ⭐ 목표하는 기획사와 이유, 목표 시기 등을 자유롭게 적어보세요
@@ -1675,6 +1678,7 @@ function renderAdmCt(){
   else if(admTab_==='chart')renderAdmChart(c);
   else if(admTab_==='audit')renderAdmAudit(c);
   else if(admTab_==='hist')renderAdmHist(c);
+  else if(admTab_==='board')renderAdmBoard(c);
   else if(admTab_==='rep')renderAdmRep(c);
   else if(admTab_==='fb')renderAdmFbInput(c);
   else if(admTab_==='fbl')renderAdmFbList(c);
@@ -1714,7 +1718,7 @@ async function openMeta(id){
 }
 async function saveMeta(id){
   const v=x=>(document.getElementById(x).value||'').trim();
-  const meta={sid:id,homeroom:v('mt-home'),vocal:v('mt-vocal'),position:metaOf(id).position||''};
+  const meta={...metaOf(id),sid:id,homeroom:v('mt-home'),vocal:v('mt-vocal'),position:metaOf(id).position||''};
   const grade={sid:id,dance:v('mt-gd'),vocal:v('mt-gv'),rap:v('mt-gr')};
   try{
     await db.collection('idol_student_meta').doc(String(id)).set(meta);
@@ -1873,6 +1877,59 @@ async function dlTask(id,ctx){
   if(!confirm('이 과제를 삭제할까요?'))return;
   try{await db.collection('idol_tasks').doc(id).delete();}catch(e){alert('삭제 실패: '+e.message);return;}
   DB.tasks=(DB.tasks||[]).filter(x=>x.id!==id);toast('✅ 삭제됨');taskRefresh(ctx);
+}
+// 이미지보드(캐스트 카드): 기본 정보는 학생이 채우고(idol_students.cast), 손글씨 메모·하이라이트는 선생님이 적음(idol_student_meta.cast)
+let _boardCls='all';
+function castOf(s){const c=s.cast||{};const m=metaOf(s.id).cast||{};return {enName:c.enName||'',nationality:c.nationality||'',languages:c.languages||'',experience:c.experience||'',specialty:c.specialty||'',tag:m.tag||'',notes:Array.isArray(m.notes)?m.notes:[]};}
+function castCard(s,board){
+  const c=castOf(s);const wib=(s.inbody||[]).filter(x=>x&&x.weight).slice(-1)[0];const by=/^(\d{4})/.exec(s.birth||'');
+  const hw=[s.height?esc(s.height)+'cm':'',wib?esc(wib.weight)+'kg':''].filter(Boolean).join(' / ');
+  const pen="font-family:'Nanum Pen Script',cursive;line-height:1.05";
+  const row=(ko,en,v)=>`<div style="display:flex;border-top:1px solid #E7E2DA;padding:4px 0;font-size:10.5px;line-height:1.35"><div style="width:58px;flex-shrink:0;color:#6B6B6B"><div style="font-weight:700">${ko}</div><div style="font-size:9px;color:#9A9A9A">${en}</div></div><div style="flex:1;color:#222;font-weight:600;white-space:pre-line;word-break:keep-all">${v?esc(v):'<span style="color:#C9C3BA">—</span>'}</div></div>`;
+  const n=c.notes;const note=(t,st,col)=>t?`<div style="position:absolute;${st};${pen};font-size:22px;color:${col};pointer-events:none;text-shadow:0 0 2px #fff;white-space:pre-line">${esc(t)}</div>`:'';
+  return `<div style="position:relative;background:#fff;border-radius:3px;box-shadow:0 6px 18px rgba(60,40,20,.13),0 1px 3px rgba(0,0,0,.08);padding:16px 14px ${n[1]||n[2]?'38px':'14px'};${board?'cursor:pointer;':''}overflow:hidden" ${board?`onclick="openCast(${s.id})"`:''}>
+    <div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%) rotate(-2deg);width:74px;height:20px;background:rgba(236,222,190,.75);box-shadow:0 1px 2px rgba(0,0,0,.06)"></div>
+    <div style="display:flex;gap:12px;align-items:stretch">
+      <div style="flex:1.45;min-width:0;padding-top:6px">
+        <div style="font-size:10px;font-weight:800;color:#333;letter-spacing:.2px">Trainee Cast</div>
+        <div style="display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin:4px 0 2px"><div style="font-size:23px;font-weight:900;color:#1E2A5A;letter-spacing:-.3px">${esc(c.enName||s.name)}</div><div style="font-size:10px;color:#777">${c.enName?esc(s.name)+' ':''}${by?by[1]:''}</div>${c.tag?`<span style="${pen};font-size:19px;color:#C81E5B;background:linear-gradient(transparent 45%,#FFF27A 45%);padding:0 3px">${esc(c.tag)}</span>`:''}</div>
+        <div style="margin-top:6px">${row('국적','Nationality',c.nationality)}${row('사용언어','Languages',c.languages)}${row('키 / 체중','Height / Weight',hw)}${row('경력','Experience',c.experience)}${row('특기','Specialty',c.specialty)}</div>
+      </div>
+      <div style="flex:1;min-width:0;position:relative;${n[0]?'padding-top:24px':''}"><div style="width:100%;aspect-ratio:3/4;background:#EEE9E2;border-radius:2px;overflow:hidden;display:flex;align-items:center;justify-content:center">${s.photo?`<img src="${esc(s.photo)}" style="width:100%;height:100%;object-fit:cover">`:`<div style="color:#B5AEA4;font-size:11px;text-align:center">사진은 개인 페이지<br>프로필에서 등록</div>`}</div></div>
+    </div>
+    ${note(n[0],'top:12px;right:12px;transform:rotate(-4deg);max-width:48%;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis','#E11D48')}${note(n[1],'bottom:8px;right:12px;transform:rotate(-3deg);max-width:52%;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis','#1D4ED8')}${note(n[2],'bottom:6px;left:14px;transform:rotate(2deg);max-width:44%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis','#7C3AED')}
+  </div>`;
+}
+function renderAdmBoard(c){
+  const act=(DB.students||[]).filter(s=>!s.inactive&&(_boardCls==='all'||(_boardCls==='kids')===(s.cls==='kids'))).sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko'));
+  const chip=(v,l)=>`<button onclick="_boardCls='${v}';renderAdmCt()" style="border:1px solid ${_boardCls===v?'var(--or)':'var(--bd)'};background:${_boardCls===v?'var(--or)':'#fff'};color:${_boardCls===v?'#fff':'var(--bk)'};border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${l}</button>`;
+  const rot=[-1.2,.8,-.5,1.3,-.9,.4];
+  c.innerHTML=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">${chip('all','전체')}${chip('aud','오디션반')}${chip('kids','키즈오디션반')}</div>
+  <div style="font-size:12px;color:var(--gy);margin-bottom:12px">카드를 누르면 손글씨 메모와 하이라이트를 적을 수 있어요. 국적·언어·경력·특기는 학생이 개인 페이지에서 채워요.</div>
+  <div style="background:#F4F1EC;border-radius:14px;padding:22px 14px;display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:26px 20px">${act.map((s,i)=>`<div style="transform:rotate(${rot[i%rot.length]}deg)">${castCard(s,true)}</div>`).join('')||'<div class="emp-msg">학생이 없어요</div>'}</div>`;
+}
+function openCast(id){
+  const st=(DB.students||[]).find(x=>x.id===id);if(!st)return;const c=castOf(st);const staffV=_authRole&&_authRole!=='student';
+  let det=document.getElementById('ov-cast');
+  if(!det){det=document.createElement('div');det.id='ov-cast';det.className='ov';det.onclick=function(e){if(e.target===this)closeM('ov-cast');};document.body.appendChild(det);}
+  const inp=(k,l,ph,v)=>`<div class="fr"><label class="fl">${l}</label><input type="text" id="cs-${k}" maxlength="60" placeholder="${ph}" value="${esc(v)}"></div>`;
+  const ta=(k,l,ph,v)=>`<div class="fr"><label class="fl">${l}</label><textarea id="cs-${k}" rows="2" placeholder="${ph}" style="width:100%;box-sizing:border-box">${esc(v)}</textarea></div>`;
+  det.innerHTML=`<div class="md"><div class="mh"><div class="mt">🪪 ${esc(st.name)} 캐스트 카드</div><button class="xb" onclick="closeM('ov-cast')">✕</button></div><div class="mb">
+    ${inp('en','영문 이름','예: Uijin',c.enName)}${inp('nat','국적','예: 한국 / Korea',c.nationality)}${inp('lang','사용언어','예: 한국어, 영어',c.languages)}
+    ${ta('exp','경력','예: 2025 OO엔터 2차 합격\n2026 OO 댄스대회 입상',c.experience)}${ta('spe','특기','예: 아크로바틱, 피아노, 일본어',c.specialty)}
+    ${staffV?`<div style="border-top:1px dashed var(--bd);margin:14px 0 10px;padding-top:12px;font-size:12px;font-weight:800;color:var(--or)">✍️ 선생님 손글씨 (학생 카드에도 보여요)</div>
+    ${inp('tag','이름 옆 하이라이트','예: 핵심 비주얼',c.tag)}${inp('n0','메모 1 (빨강·위)','예: 무대에서 나오는 아우라',c.notes[0]||'')}${inp('n1','메모 2 (파랑·사진 아래)','예: 팀의 보컬 첫인상',c.notes[1]||'')}${inp('n2','메모 3 (보라·왼쪽 아래)','예: 넉살 좋은 막내',c.notes[2]||'')}`:''}
+  </div><div class="mf"><button class="btn btn-or" onclick="saveCast(${id})">저장하기</button></div></div>`;
+  det.classList.add('on');
+}
+async function saveCast(id){
+  const st=(DB.students||[]).find(x=>x.id===id);if(!st)return;const v=k=>{const e=document.getElementById('cs-'+k);return e?(e.value||'').trim():'';};
+  st.cast={enName:v('en'),nationality:v('nat'),languages:v('lang'),experience:v('exp'),specialty:v('spe')};
+  try{await fbSv('idol_students',st.id,st);
+    if(_authRole&&_authRole!=='student'){const meta={...metaOf(id),sid:id,cast:{tag:v('tag'),notes:[v('n0'),v('n1'),v('n2')]}};await db.collection('idol_student_meta').doc(String(id)).set(meta);if(!DB.meta)DB.meta={};DB.meta[String(id)]=meta;}
+  }catch(e){alert('저장 실패: '+e.message);return;}
+  closeM('ov-cast');toast('✅ 캐스트 카드 저장됨');
+  if(document.getElementById('pg-prof').classList.contains('active'))renderPTab(st,0);else renderAdmCt();
 }
 function renderAdmDash(c){
   if(!c)return;
