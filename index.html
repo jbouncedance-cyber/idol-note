@@ -534,6 +534,7 @@ async function loadAll(){
       const ms0=await db.collection('idol_messages').get();DB.messages=[];ms0.forEach(d=>DB.messages.push(d.data()));DB.messages.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
       try{const rs0=await db.collection('idol_resources').get();DB.resources=[];rs0.forEach(d=>DB.resources.push(d.data()));}catch(e){DB.resources=[];}
       try{const sc0=await db.collection('idol_schedules').where('sid','==',_authSid).get();DB.schedules=[];sc0.forEach(d=>DB.schedules.push(d.data()));}catch(e){DB.schedules=[];}
+      try{const tk0=await db.collection('idol_tasks').where('sid','==',_authSid).get();DB.tasks=[];tk0.forEach(d=>DB.tasks.push(d.data()));}catch(e){DB.tasks=[];}
       DB.meta={};try{const m0=await db.collection('idol_student_meta').doc(String(_authSid)).get();if(m0.exists)DB.meta[String(_authSid)]=m0.data();}catch(e){}
       DB.repStatus={};try{const r0=await db.collection('idol_rep_status').doc(String(_authSid)).get();if(r0.exists)DB.repStatus[String(_authSid)]=r0.data();}catch(e){}
       DB.grades=null;window.DB=DB;
@@ -548,6 +549,7 @@ async function loadAll(){
     DB.messages.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
     try{const rs=await db.collection('idol_resources').get();DB.resources=[];rs.forEach(d=>DB.resources.push(d.data()));}catch(e){DB.resources=[];}
     try{const sc=await db.collection('idol_schedules').get();DB.schedules=[];sc.forEach(d=>DB.schedules.push(d.data()));}catch(e){DB.schedules=[];}
+    try{const tk=await db.collection('idol_tasks').get();DB.tasks=[];tk.forEach(d=>DB.tasks.push(d.data()));}catch(e){DB.tasks=[];}
     try{const mt=await db.collection('idol_student_meta').get();DB.meta={};mt.forEach(d=>{DB.meta[d.id]=d.data();});}catch(e){DB.meta={};}
     DB.grades=null;
     try{const rs2=await db.collection('idol_rep_status').get();DB.repStatus={};rs2.forEach(d=>{DB.repStatus[d.id]=d.data();});}catch(e){DB.repStatus={};}
@@ -1757,6 +1759,7 @@ function pStatusCard(s){
   return `<div class="cd"><div class="cd-h"><div class="cd-t">🎯 나의 준비 현황</div></div><div class="cd-b" style="padding-top:0">
     ${sec('📸 다가오는 촬영·오디션')}${upHtml}
     <div style="display:flex;gap:8px;margin-top:8px">${last('💃 댄스',st.dance)}${last('🎤 보컬',st.vocal)}</div>
+    ${sec('🎬 콘텐츠 촬영 과제')}${pTaskList(s)}
     ${sec('🎵 준비 중인 레퍼토리')}<div id="pst-rep-${s.id}" style="font-size:13px;color:var(--gy)">불러오는 중...</div>
   </div></div>`;
 }
@@ -1776,6 +1779,101 @@ async function fillPStatusRep(s){
       <div style="flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--bk);overflow:hidden;text-overflow:ellipsis">${esc(r.t)}</div>
       <span style="${repChipStyle(r.st)};border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;white-space:nowrap">${r.st||'미체크'}</span></div>`).join('');
 }
+// 콘텐츠 촬영 과제: 담임이 학생별로 과제를 주고(촬영 전) → 학생이 찍었어요(확인 대기) → 선생님 확인(완료). idol_tasks에 건별 저장
+const TASK_KINDS=['프로필사진','릴스','자기소개영상','챌린지','새 기획','기타'];
+const TASK_ST={todo:'촬영 전',shot:'확인 대기',done:'확인 완료'};
+let _taskEditId=null,_taskT='all',_taskDone=false;
+function taskOf(sid){return (DB.tasks||[]).filter(x=>x.sid===sid);}
+function taskLate(x){return x.status==='todo'&&x.due&&x.due<today();}
+function taskSort(a,b){const r=x=>x.status==='shot'?0:taskLate(x)?1:x.status==='todo'?2:3;return r(a)-r(b)||String(a.due||'9999').localeCompare(String(b.due||'9999'));}
+function taskStBadge(x){const late=taskLate(x);const st=late?'기한 지남':TASK_ST[x.status]||'촬영 전';const c=late?'background:#FEE2E2;color:#B91C1C':x.status==='shot'?'background:#FEF3C7;color:#B45309':x.status==='done'?'background:#DCFCE7;color:#15803D':'background:var(--lt);color:var(--gy)';return `<span style="${c};border-radius:6px;padding:2px 7px;font-size:11px;font-weight:800;white-space:nowrap">${st}</span>`;}
+function taskBtns(x,ctx){const b=(l,f,st)=>`<button onclick="event.stopPropagation();${f}" style="border:1px solid var(--bd);background:#fff;border-radius:7px;padding:3px 8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;${st||''}">${l}</button>`;
+  if(_authRole==='student'){return x.status==='todo'?b('📸 찍었어요',`openTaskShot('${esc(x.id)}')`,'color:#fff;background:var(--or);border-color:var(--or)'):x.status==='shot'?b('취소',`setTaskSt('${esc(x.id)}','todo','${ctx}')`):'';}
+  return (x.status==='shot'?b('✅ 확인',`setTaskSt('${esc(x.id)}','done','${ctx}')`,'color:#fff;background:#16A34A;border-color:#16A34A')+b('다시 찍기',`setTaskSt('${esc(x.id)}','todo','${ctx}')`):x.status==='done'?b('되돌리기',`setTaskSt('${esc(x.id)}','shot','${ctx}')`):'')+b('수정',`openTask('${esc(x.id)}')`)+b('삭제',`dlTask('${esc(x.id)}','${ctx}')`,'color:#DC2626');}
+function taskRow(x,ctx,showName){const s=(DB.students||[]).find(y=>y.id===x.sid);
+  return `<div style="padding:9px 12px;border-top:1px solid var(--bd)"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+    ${showName?`<div style="font-weight:800;min-width:50px;cursor:pointer" onclick="admOpenProf(${Number(x.sid)||0})">${esc(s?s.name:'(삭제된 학생)')}</div>`:''}
+    <span class="bx kk">${esc(x.kind)}</span><div style="flex:1;min-width:90px;font-size:13px;font-weight:700">${esc(x.title||'')}</div>
+    ${x.due&&x.status!=='done'?`<span style="font-size:11px;color:var(--gy);white-space:nowrap">~${esc(schDateTxt(x.due))} ${schDday(x.due)}</span>`:''}${taskStBadge(x)}</div>
+    ${x.guide?`<div style="font-size:12px;color:var(--gy);margin-top:4px;line-height:1.5">📝 ${esc(x.guide)}</div>`:''}
+    ${x.link||x.studentNote?`<div style="font-size:12px;margin-top:4px;line-height:1.5">${x.link?`🔗 <a href="${esc(/^https?:\/\//.test(x.link)?x.link:'https://'+x.link)}" target="_blank" rel="noopener" style="color:var(--or)">촬영본 보기</a> `:''}${x.studentNote?`💬 ${esc(x.studentNote)}`:''}</div>`:''}
+    ${x.redo&&x.status==='todo'?`<div style="font-size:12px;color:#B91C1C;margin-top:4px">↩︎ 다시 찍어주세요${x.redoNote?': '+esc(x.redoNote):''}</div>`:''}
+    <div style="display:flex;gap:5px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap">${taskBtns(x,ctx)}</div></div>`;}
+function pTaskList(s){const all=taskOf(s.id).slice().sort(taskSort);const open=all.filter(x=>x.status!=='done');const done=all.filter(x=>x.status==='done').sort((a,b)=>String(b.doneAt||'').localeCompare(String(a.doneAt||''))).slice(0,3);
+  const add=_authRole&&_authRole!=='student'?`<button class="sbtn or" onclick="openTask(null,${s.id})" style="margin-bottom:6px">+ 과제 주기</button>`:'';
+  return `${add}<div style="border:1px solid var(--bd);border-radius:9px;overflow:hidden;background:#fff">${open.length?open.map(x=>taskRow(x,'p',false)).join('').replace('border-top:1px solid var(--bd)','border-top:0'):'<div style="font-size:13px;color:var(--gy);padding:10px 12px">지금 받은 촬영 과제가 없어요</div>'}</div>
+    ${done.length?`<div style="font-size:12px;color:var(--gy);margin-top:6px">최근 완료: ${done.map(x=>esc(x.kind)+' · '+esc(x.title||'')).join(' / ')}</div>`:''}`;}
+function dashTaskCard(act){
+  const inT=s=>_taskT==='all'||autoTeachers(s).train.some(t=>t.replace(/\s/g,'').replace(/(선생님|쌤)$/,'')===_taskT.replace(/\s/g,'').replace(/(선생님|쌤)$/,''));
+  const ids=new Set(act.filter(inT).map(s=>s.id));const ts=(DB.tasks||[]).filter(x=>ids.has(x.sid));
+  const open=ts.filter(x=>x.status!=='done').sort(taskSort);const done=ts.filter(x=>x.status==='done').sort((a,b)=>String(b.doneAt||'').localeCompare(String(a.doneAt||'')));
+  const since=schAddDays(today(),-30);const none=act.filter(inT).filter(s=>!taskOf(s.id).some(x=>x.status!=='done'||String(x.doneAt||'')>=since)).sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko'));
+  const chip=(v,l)=>`<button onclick="_taskT='${v}';renderAdmCt()" style="border:1px solid ${_taskT===v?'var(--or)':'var(--bd)'};background:${_taskT===v?'var(--or)':'#fff'};color:${_taskT===v?'#fff':'var(--bk)'};border-radius:20px;padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${l}</button>`;
+  const cnt=(l,v,c)=>`<div style="flex:1;text-align:center;background:var(--lt);border-radius:9px;padding:8px 4px"><div style="font-size:11px;color:var(--gy);font-weight:700">${l}</div><div style="font-size:19px;font-weight:900;color:${c||'var(--bk)'}">${v}</div></div>`;
+  return `<div class="cd"><div class="cd-h"><div class="cd-t">🎬 콘텐츠 촬영 과제</div><button class="sbtn or" onclick="openTask(null)">+ 과제 주기</button></div>
+    <div style="padding:0 13px 10px"><div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px">${chip('all','전체')}${HOMEROOM_TEACHERS.map(t=>chip(t,t.replace(' 선생님','')+'쌤 반')).join('')}</div>
+    <div style="display:flex;gap:6px">${cnt('확인 대기',open.filter(x=>x.status==='shot').length,'#B45309')}${cnt('기한 지남',open.filter(taskLate).length,'#B91C1C')}${cnt('촬영 전',open.filter(x=>x.status==='todo').length)}${cnt('이번 달 완료',done.filter(x=>String(x.doneAt||'').slice(0,7)===today().slice(0,7)).length,'#15803D')}</div>
+    ${none.length?`<div style="font-size:12px;margin-top:9px;line-height:1.9"><b style="color:#B91C1C">최근 30일 과제 없음</b> ${none.map(s=>`<span onclick="openTask(null,${s.id})" style="cursor:pointer;display:inline-block;background:#FEF2F2;color:#B91C1C;border-radius:6px;padding:0 7px;margin:0 3px 3px 0;font-weight:700">${esc(s.name)} +</span>`).join('')}</div>`:''}</div>
+    ${open.length?open.map(x=>taskRow(x,'d',true)).join(''):'<div class="emp-msg">진행 중인 과제가 없어요</div>'}
+    <div style="padding:9px 13px;border-top:1px solid var(--bd);font-size:12px;color:var(--gy);cursor:pointer" onclick="_taskDone=!_taskDone;renderAdmCt()">완료한 과제 ${done.length}건 ${_taskDone?'접기 ▲':'펼치기 ▼'}</div>${_taskDone?done.slice(0,50).map(x=>taskRow(x,'d',true)).join(''):''}</div>`;
+}
+function taskRefresh(ctx){if(ctx==='p'){const s=DB.students.find(x=>x.id===curSid);if(s)renderPTab(s,0);}else renderAdmCt();}
+function openTask(id,sid){
+  _taskEditId=id;const r=id?(DB.tasks||[]).find(x=>x.id===id)||{}:{sid};
+  let det=document.getElementById('ov-task');
+  if(!det){det=document.createElement('div');det.id='ov-task';det.className='ov';det.onclick=function(e){if(e.target===this)closeM('ov-task');};document.body.appendChild(det);}
+  const stu=(DB.students||[]).filter(s=>!s.inactive||s.id===r.sid).slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko'));
+  const grp=(l,f)=>{const g=stu.filter(f);return g.length?`<div style="font-size:11px;font-weight:800;color:var(--gy);margin:6px 0 4px">${l} <span onclick="document.querySelectorAll('.tk-cb-${l==='키즈오디션반'?'k':'a'}').forEach(c=>c.checked=true)" style="color:var(--or);cursor:pointer;margin-left:4px">전체 선택</span></div><div style="display:flex;flex-wrap:wrap;gap:6px">${g.map(s=>`<label style="font-size:13px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;border:1px solid var(--bd);border-radius:8px;padding:5px 9px;background:#fff;white-space:nowrap"><input type="checkbox" class="tk-cb tk-cb-${s.cls==='kids'?'k':'a'}" value="${s.id}" ${s.id===r.sid?'checked':''} style="width:16px;height:16px;margin:0;padding:0;flex:none;accent-color:var(--or);-webkit-appearance:checkbox;appearance:auto;border:0">${esc(s.name)}</label>`).join('')}</div>`:'';};
+  det.innerHTML=`<div class="md"><div class="mh"><div class="mt">🎬 촬영 과제 ${id?'수정':'주기'}</div><button class="xb" onclick="closeM('ov-task')">✕</button></div><div class="mb">
+    <div class="fr"><label class="fl">학생${id?'':' (여러 명 선택 가능)'}</label>${id?`<div style="font-weight:800">${esc((stu.find(x=>x.id===r.sid)||{}).name||'')}</div>`:grp('오디션반',x=>x.cls!=='kids')+grp('키즈오디션반',x=>x.cls==='kids')}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" class="fr"><div><label class="fl">종류</label><select id="tk-kind">${TASK_KINDS.map(v=>`<option ${r.kind===v?'selected':''}>${v}</option>`).join('')}</select></div>
+    <div><label class="fl">기한</label><input type="date" id="tk-due" value="${esc(r.due||schAddDays(today(),7))}"></div></div>
+    <div class="fr"><label class="fl">무엇을 찍을지</label><input type="text" id="tk-title" maxlength="60" placeholder="예: 정면 프로필 3컷, OO 챌린지" value="${esc(r.title||'')}"></div>
+    <div class="fr" style="margin-bottom:0"><label class="fl">가이드 (선택)</label><textarea id="tk-guide" rows="3" placeholder="예: 흰 티, 자연광, 세로 15초 이내" style="width:100%;box-sizing:border-box">${esc(r.guide||'')}</textarea></div>
+  </div><div class="mf"><button class="btn btn-or" onclick="saveTask()">${id?'저장하기':'과제 주기'}</button></div></div>`;
+  det.classList.add('on');
+}
+async function saveTask(){
+  const v=k=>(document.getElementById(k).value||'').trim();const title=v('tk-title');if(!title){alert('무엇을 찍을지 적어주세요');return;}
+  const base={kind:v('tk-kind'),due:v('tk-due'),title,guide:v('tk-guide')};let recs=[];
+  if(_taskEditId){const r=(DB.tasks||[]).find(x=>x.id===_taskEditId);if(!r)return;recs=[{...r,...base}];}
+  else{const ids=[...document.querySelectorAll('.tk-cb:checked')].map(c=>Number(c.value));if(!ids.length){alert('학생을 선택해주세요');return;}
+    const t0=Date.now();recs=ids.map((sid,i)=>({id:'tk'+t0+'_'+i,sid,...base,status:'todo',link:'',studentNote:'',createdAt:new Date().toISOString(),by:_authRole||''}));}
+  try{await Promise.all(recs.map(r=>db.collection('idol_tasks').doc(r.id).set(r)));}catch(e){alert('저장 실패: '+e.message);return;}
+  DB.tasks=DB.tasks||[];recs.forEach(r=>{const i=DB.tasks.findIndex(x=>x.id===r.id);if(i>=0)DB.tasks[i]=r;else DB.tasks.push(r);});
+  closeM('ov-task');toast(_taskEditId?'✅ 저장됨':`✅ ${recs.length}명에게 과제를 줬어요`);taskRefresh(document.getElementById('pg-prof')&&document.getElementById('pg-prof').classList.contains('active')?'p':'d');
+}
+async function setTaskSt(id,st,ctx){
+  const r=(DB.tasks||[]).find(x=>x.id===id);if(!r)return;let patch={status:st};
+  if(_authRole==='student')patch=st==='todo'?{status:'todo',link:'',studentNote:'',shotAt:''}:patch;
+  else if(st==='done')patch={status:'done',doneAt:new Date().toISOString(),redo:false,redoNote:''};
+  else if(st==='todo'){const n=prompt('다시 찍을 이유를 짧게 적어주세요 (학생에게 보여요)','');if(n===null)return;patch={status:'todo',redo:true,redoNote:n.trim(),doneAt:''};}
+  else if(st==='shot')patch={status:'shot',doneAt:''};
+  try{await db.collection('idol_tasks').doc(id).update(patch);}catch(e){alert('저장 실패: '+e.message);return;}
+  Object.assign(r,patch);toast('✅ '+(TASK_ST[st]||'저장됨'));taskRefresh(ctx);
+}
+function openTaskShot(id){
+  const r=(DB.tasks||[]).find(x=>x.id===id);if(!r)return;
+  let det=document.getElementById('ov-tshot');
+  if(!det){det=document.createElement('div');det.id='ov-tshot';det.className='ov';det.onclick=function(e){if(e.target===this)closeM('ov-tshot');};document.body.appendChild(det);}
+  det.innerHTML=`<div class="md"><div class="mh"><div class="mt">📸 ${esc(r.kind)} 찍었어요</div><button class="xb" onclick="closeM('ov-tshot')">✕</button></div><div class="mb">
+    <div style="font-size:13px;font-weight:700;margin-bottom:12px">${esc(r.title||'')}</div>
+    <div class="fr"><label class="fl">촬영본 링크 (선택)</label><input type="text" id="ts-link" placeholder="인스타·구글드라이브·유튜브 링크"></div>
+    <div class="fr" style="margin-bottom:0"><label class="fl">선생님께 한마디 (선택)</label><input type="text" id="ts-note" maxlength="80" placeholder="예: 3컷 중 2번째가 제일 좋아요"></div>
+  </div><div class="mf"><button class="btn btn-or" onclick="saveTaskShot('${esc(id)}')">선생님께 확인 요청</button></div></div>`;
+  det.classList.add('on');
+}
+async function saveTaskShot(id){
+  const r=(DB.tasks||[]).find(x=>x.id===id);if(!r)return;
+  const patch={status:'shot',link:(document.getElementById('ts-link').value||'').trim(),studentNote:(document.getElementById('ts-note').value||'').trim(),shotAt:new Date().toISOString()};
+  try{await db.collection('idol_tasks').doc(id).update(patch);}catch(e){alert('저장 실패: '+e.message);return;}
+  Object.assign(r,patch);closeM('ov-tshot');toast('✅ 선생님께 확인 요청했어요');taskRefresh('p');
+}
+async function dlTask(id,ctx){
+  if(!confirm('이 과제를 삭제할까요?'))return;
+  try{await db.collection('idol_tasks').doc(id).delete();}catch(e){alert('삭제 실패: '+e.message);return;}
+  DB.tasks=(DB.tasks||[]).filter(x=>x.id!==id);toast('✅ 삭제됨');taskRefresh(ctx);
+}
 function renderAdmDash(c){
   if(!c)return;
   const t=today();const until=schAddDays(t,SCH_DAYS);
@@ -1791,6 +1889,7 @@ function renderAdmDash(c){
   <button class="btn btn-or" onclick="openSch(null)" style="margin-bottom:12px">+ 일정 추가</button>
   <div class="cd"><div class="cd-h"><div class="cd-t">앞으로 ${SCH_DAYS}일 일정</div></div>${up.length?up.map(row).join(''):'<div class="emp-msg">예정된 일정이 없어요</div>'}</div>
   <div class="cd"><div class="cd-h"><div class="cd-t">촬영 필요 (${SHOOT_MONTHS}개월 기준)</div></div>${need.length?need.map(({s,st})=>`<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:9px 13px;border-top:1px solid var(--bd);cursor:pointer" onclick="admOpenProf(${s.id})"><div style="font-weight:800;min-width:56px">${esc(s.name)}</div><span class="bx ${s.cls==='kids'?'kk':'or'}">${s.cls==='kids'?'키즈':'오디션'}</span>${st.dance.need?'<span class="bx dn">댄스 필요</span>':''}${st.vocal.need?'<span class="bx vc">보컬 필요</span>':''}<div style="margin-left:auto;font-size:12px;color:var(--gy)">마지막 댄스 ${esc(st.dance.last||'없음')} · 보컬 ${esc(st.vocal.last||'없음')}</div></div>`).join(''):'<div class="emp-msg">촬영이 필요한 학생이 없어요</div>'}</div>
+  ${dashTaskCard(act)}
   <div class="cd"><div class="cd-h" style="cursor:pointer" onclick="_dashPast=!_dashPast;renderAdmCt()"><div class="cd-t">지난 일정 ${past.length}건</div><div style="font-size:12px;color:var(--gy)">${_dashPast?'접기 ▲':'펼치기 ▼'}</div></div>${_dashPast?(past.length?past.map(row).join(''):'<div class="emp-msg">지난 일정이 없어요</div>'):''}</div>`;
 }
 function openSch(id){
@@ -1919,7 +2018,7 @@ async function admBackup(btn){
   if(btn){btn.disabled=true;btn.textContent='백업 중...';}
   try{
     const out={backupAt:new Date().toISOString()};
-    for(const col of ['idol_config','idol_public','idol_students','idol_messages','idol_resources','idol_schedules','idol_student_meta','idol_student_grades','idol_rep_status','idol_accounts','feedbacks','studentData']){
+    for(const col of ['idol_config','idol_public','idol_students','idol_messages','idol_resources','idol_schedules','idol_tasks','idol_student_meta','idol_student_grades','idol_rep_status','idol_accounts','feedbacks','studentData']){
       const snap=await db.collection(col).get();out[col]={};snap.forEach(d=>{out[col][d.id]=d.data();});
     }
     const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(out,null,1)],{type:'application/json'}));

@@ -37,6 +37,13 @@ service cloud.firestore {
       allow read: if isStaff() || (isStudent() && resource.data.sid == acct().sid);
       allow write: if isStaff();
     }
+    match /idol_tasks/{id} {
+      allow read: if isStaff() || (isStudent() && resource.data.sid == acct().sid);
+      allow create, delete: if isStaff();
+      allow update: if isStaff() || (isStudent() && resource.data.sid == acct().sid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'link', 'studentNote', 'shotAt'])
+        && request.resource.data.status in ['todo', 'shot']);
+    }
     match /idol_student_meta/{sid} {
       allow read: if isStaff() || isOwn(sid);
       allow write: if isStaff();
