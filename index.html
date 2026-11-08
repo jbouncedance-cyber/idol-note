@@ -1678,7 +1678,7 @@ function renderAdmCt(){
   else if(admTab_==='chart')renderAdmChart(c);
   else if(admTab_==='audit')renderAdmAudit(c);
   else if(admTab_==='hist')renderAdmHist(c);
-  else if(admTab_==='board')renderAdmBoard(c);
+  else if(admTab_==='board')renderAdmCastBoard(c);
   else if(admTab_==='rep')renderAdmRep(c);
   else if(admTab_==='fb')renderAdmFbInput(c);
   else if(admTab_==='fbl')renderAdmFbList(c);
@@ -1940,7 +1940,7 @@ function castCard(s,board){
     ${note(n[0],'top:12px;right:12px;transform:rotate(-4deg);max-width:48%;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis','#E11D48')}${note(n[1],'bottom:8px;right:12px;transform:rotate(-3deg);max-width:52%;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis','#1D4ED8')}${note(n[2],'bottom:6px;left:14px;transform:rotate(2deg);max-width:44%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis','#7C3AED')}
   </div>`;
 }
-function renderAdmBoard(c){
+function renderAdmCastBoard(c){
   const act=(DB.students||[]).filter(s=>!s.inactive&&(_boardCls==='all'||(_boardCls==='kids')===(s.cls==='kids'))).sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko'));
   const chip=(v,l)=>`<button onclick="_boardCls='${v}';renderAdmCt()" style="border:1px solid ${_boardCls===v?'var(--or)':'var(--bd)'};background:${_boardCls===v?'var(--or)':'#fff'};color:${_boardCls===v?'#fff':'var(--bk)'};border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${l}</button>`;
   const rot=[-1.2,.8,-.5,1.3,-.9,.4];
