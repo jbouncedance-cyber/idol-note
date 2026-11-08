@@ -501,7 +501,7 @@ function getWkKey(off){const n=new Date();const d=n.getDay();const m=new Date(n)
 function getWkLbl(off){const n=new Date();const d=n.getDay();const m=new Date(n);m.setDate(n.getDate()-((d+6)%7)+off*7);const s=new Date(m);s.setDate(m.getDate()+6);const f=x=>x.getMonth()+1+'/'+x.getDate();return m.getFullYear()+'년 '+f(m)+'~'+f(s);}
 
 // FIREBASE HELPERS
-function pubCard(s){const ib=s.inbody&&s.inbody.length?s.inbody[s.inbody.length-1]:null;return {id:s.id,name:s.name||'',cls:s.cls||'audition',inactive:!!s.inactive,photo:s.photo||'',classes:s.classes||{},inbody:ib?[{score:ib.score}]:[]};}
+function pubCard(s){const ib=s.inbody&&s.inbody.length?s.inbody[s.inbody.length-1]:null;return {id:s.id,name:s.name||'',cls:s.cls||'audition',inactive:!!s.inactive,onLeave:!!s.onLeave,photo:s.photo||'',classes:s.classes||{},inbody:ib?[{score:ib.score}]:[]};}
 async function fbSv(col,id,data){try{await db.collection(col).doc(String(id)).set(data);if(col==='idol_students')await db.collection('idol_public').doc(String(id)).set(pubCard(data));}catch(e){console.warn(e);}}
 async function fbDl(col,id){try{await db.collection(col).doc(String(id)).delete();if(col==='idol_students')await db.collection('idol_public').doc(String(id)).delete();}catch(e){}}
 async function fbCfg(){try{await db.collection('idol_config').doc('main').set({notices:DB.notices||[],events:DB.events||[],danceClasses:DB.danceClasses||[],vocalClasses:DB.vocalClasses||[],etcClasses:DB.etcClasses||[],trainingClasses:DB.trainingClasses||[],updatedAt:Date.now()});}catch(e){console.warn(e);}}
@@ -775,7 +775,7 @@ function renderStuList(){
 }
 function mkCards(list,lbl){
   if(!list.length)return `<div class="emp-msg">${lbl} 학생이 없어요</div>`;
-  return list.slice().sort((a,b)=>a.name.localeCompare(b.name,'ko')).map((s,i)=>{
+  return list.slice().sort((a,b)=>stuRank(a)-stuRank(b)||a.name.localeCompare(b.name,'ko')).map((s,i)=>{
     const isK=s.cls==='kids';const lastIb=s.inbody&&s.inbody.length?s.inbody[s.inbody.length-1]:null;
     const dC=Object.keys(s.classes||{}).filter(k=>k[0]==='d'&&s.classes[k]).length;
     const vC=Object.keys(s.classes||{}).filter(k=>k[0]==='v'&&s.classes[k]).length;
@@ -786,7 +786,7 @@ function mkCards(list,lbl){
       <div style="font-size:12px;color:var(--gy2);min-width:19px;font-weight:700;text-align:center">${i+1}</div>
       <div class="av${isK?' kav':''}" onclick="openLock(${s.id})" style="cursor:pointer">${s.photo?`<img src="${s.photo}">`:`${s.name[0]}`}</div>
       <div style="flex:1;min-width:0;cursor:pointer" onclick="openLock(${s.id})">
-        <div style="font-size:16px;font-weight:800">${esc(s.name)}</div>
+        <div style="font-size:16px;font-weight:800;${isLeave(s)?'color:var(--gy)':''}">${esc(s.name)}${isLeave(s)?leaveBadge(s):''}</div>
         <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;align-items:center">
           ${lastIb?`<span class="bx gr">📊 ${lastIb.score}점</span>`:''}
           ${dC?`<span class="bx dn">💃 ${dC}</span>`:''}${vC?`<span class="bx vc">🎤 ${vC}</span>`:''}
@@ -1974,7 +1974,7 @@ async function saveCast(id){
 function renderAdmDash(c){
   if(!c)return;
   const t=today();const until=schAddDays(t,SCH_DAYS);
-  const act=(DB.students||[]).filter(s=>!s.inactive);
+  const act=(DB.students||[]).filter(s=>!s.inactive&&!s.onLeave);
   const nm=id=>{const s=(DB.students||[]).find(x=>x.id===id);return s?s.name:'(삭제된 학생)';};
   const all=[...(DB.schedules||[]),...taskShoots(null)];
   const up=all.filter(x=>x.date>=t&&x.date<=until).sort((a,b)=>a.date.localeCompare(b.date));
@@ -2181,9 +2181,9 @@ function renderAdmStu(c){
   let h=`<button class="btn btn-or" onclick="openStuM(null)" style="margin-bottom:14px">+ 학생 추가</button>`;
   ['오디션반','키즈오디션반'].forEach((lbl,li)=>{
     const list=li===0?aud:kids;
-    const actN=list.filter(s=>!s.inactive).length;const inaN=list.length-actN;
-    h+=`<div style="font-size:11px;font-weight:800;color:var(--gy);margin:12px 0 7px">${lbl} · 재원 ${actN}명${inaN?` <span style="color:#92400e">· 퇴원 ${inaN}명</span>`:''}</div>`;
-    list.sort((a,b)=>((a.inactive?1:0)-(b.inactive?1:0))||a.name.localeCompare(b.name,'ko')).forEach((s,idx)=>{
+    const inaN=list.filter(s=>s.inactive).length;const lvN=list.filter(isLeave).length;const actN=list.length-inaN-lvN;
+    h+=`<div style="font-size:11px;font-weight:800;color:var(--gy);margin:12px 0 7px">${lbl} · 재원 ${actN}명${lvN?` <span style="color:#B45309">· 휴원 ${lvN}명</span>`:''}${inaN?` <span style="color:#92400e">· 퇴원 ${inaN}명</span>`:''}</div>`;
+    list.sort((a,b)=>stuRank(a)-stuRank(b)||a.name.localeCompare(b.name,'ko')).forEach((s,idx)=>{
       const isK=li===1;
       const dC=Object.keys(s.classes||{}).filter(k=>k[0]==='d'&&s.classes[k]);
       const vC=Object.keys(s.classes||{}).filter(k=>k[0]==='v'&&s.classes[k]);
@@ -2196,7 +2196,7 @@ function renderAdmStu(c){
         <div style="padding:10px 12px;display:flex;align-items:center;gap:10px">
           <div class="av${isK?' kav':''}" style="width:36px;height:36px;font-size:14px;cursor:pointer;flex-shrink:0" onclick="admOpenProf(${s.id})">${s.photo?`<img src="${s.photo}">`:`${s.name[0]}`}</div>
           <div style="flex:1;min-width:0;cursor:pointer" onclick="admOpenProf(${s.id})">
-            <div style="font-size:15px;font-weight:800;${s.inactive?'color:var(--gy);text-decoration:line-through':''}">${s.inactive?'[퇴원] ':''}${esc(s.name)}</div>
+            <div style="font-size:15px;font-weight:800;${s.inactive?'color:var(--gy);text-decoration:line-through':isLeave(s)?'color:var(--gy)':''}">${s.inactive?'[퇴원] ':''}${esc(s.name)}${isLeave(s)?leaveBadge(s):''}</div>
             <div style="display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;align-items:center">
               ${lastIb?`<span class="bx gr" style="font-size:10px;padding:1px 6px">📊 ${lastIb.score}점</span>`:''}
               ${dC.length?`<span class="bx dn" style="font-size:10px;padding:1px 6px">💃 ${dC.length}</span>`:''}
@@ -2209,7 +2209,7 @@ function renderAdmStu(c){
             ${tot?`<button onclick="toggleAdmCard('${cid}')" id="abtn-${cid}" style="background:none;border:1px solid var(--bd);border-radius:7px;padding:3px 8px;font-size:11px;color:var(--gy);cursor:pointer;font-family:inherit">▼</button>`:''}
             <button onclick="openTMsg(${s.id})" class="edt-btn" style="font-size:11px;padding:3px 7px">💌</button>
             <button onclick="openStuM(${s.id})" class="edt-btn" style="font-size:11px;padding:3px 7px">수정</button>
-            <button onclick="toggleInact(${s.id})" style="background:${s.inactive?'#fef3c7':'#f1f5f9'};border:1px solid ${s.inactive?'#fde68a':'#cbd5e1'};color:${s.inactive?'#92400e':'#64748b'};border-radius:7px;padding:3px 7px;font-size:11px;cursor:pointer;font-family:inherit">${s.inactive?'🔓 복귀':'🔒 퇴원'}</button>
+            <select onchange="setStuStatus(${s.id},this.value)" title="재원 상태" style="width:auto;-webkit-appearance:menulist;appearance:auto;border:1px solid ${s.inactive?'#fde68a':isLeave(s)?'#FCD34D':'#cbd5e1'};background:${s.inactive?'#fef3c7':isLeave(s)?'#FFFBEB':'#f1f5f9'};color:${s.inactive?'#92400e':isLeave(s)?'#B45309':'#64748b'};border-radius:7px;padding:3px 5px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">${[['act','재원'],['leave','휴원'],['out','퇴원']].map(([v,l])=>`<option value="${v}" ${stuStatus(s)===v?'selected':''}>${l}</option>`).join('')}</select>
             <button onclick="dlStu(${s.id})" class="del-btn" style="font-size:11px;padding:3px 7px">삭제</button>
           </div>
         </div>
@@ -2240,6 +2240,20 @@ function saveStudent(){
   if(_editStuId){const s=DB.students.find(x=>x.id===_editStuId);if(!s)return;const nmCh=s.name!==nm;s.name=nm;s.cls=cls;s.birth=birth;s.height=height;s.pw=pw;fbSv('idol_students',s.id,s);if(nmCh&&_authRole){db.collection('idol_accounts').where('sid','==',s.id).get().then(q=>q.forEach(d=>db.collection('idol_accounts').doc(d.id).set({...d.data(),name:nm}))).catch(e=>console.warn(e));}toast('✅ '+nm+' 수정됨');}
   else{const id=Date.now();const s={id,name:nm,cls,birth,height,pw,photo:'',classes:{},inbody:[],monthlyGoals:[],weeklies:[],goals:{idol:''},teacherMessages:[]};DB.students.push(s);fbSv('idol_students',s.id,s);toast('✅ '+nm+' 추가됨');}
   closeM('ov-stu');renderAdmCt();renderStuList();
+}
+// 재원 상태: 재원(기본) / 휴원(onLeave, 명단에 남고 로그인 가능, 촬영·과제 알림에서 제외) / 퇴원(inactive, 명단에서 숨김, 기록 보존)
+function isLeave(s){return !!(s&&s.onLeave&&!s.inactive);}
+function stuStatus(s){return s.inactive?'out':s.onLeave?'leave':'act';}
+function stuRank(s){return s.inactive?2:s.onLeave?1:0;}
+function leaveBadge(s){return ` <span style="font-size:10.5px;font-weight:800;color:#B45309;background:#FEF3C7;border-radius:5px;padding:1px 6px;vertical-align:middle;text-decoration:none">휴원${s.leaveSince?' '+esc(String(s.leaveSince).slice(5).replace('-','/'))+'~':''}</span>`;}
+function setStuStatus(id,v){
+  const s=DB.students.find(x=>x.id===id);if(!s)return;const cur=stuStatus(s);if(v===cur)return;
+  const msg={act:s.name+' 학생을 재원(복귀)으로 바꿀까요?',leave:s.name+' 학생을 휴원 처리할까요?\n\n명단과 로그인은 그대로 두고, 촬영 필요·과제 알림에서만 빠져요.',out:s.name+' 학생을 퇴원 처리할까요?\n\n명단에서는 숨겨지지만 기록(피드백·인바디·목표·주간일지 등)은 그대로 보존됩니다.\n언제든 재원으로 되돌릴 수 있어요.'}[v];
+  if(!confirm(msg)){renderAdmCt();return;}
+  if(v==='act'){s.inactive=false;s.onLeave=false;s.leaveSince='';}
+  else if(v==='leave'){s.inactive=false;s.onLeave=true;s.leaveSince=today();}
+  else{s.inactive=true;s.onLeave=false;s.leaveSince='';}
+  fbSv('idol_students',s.id,s);toast('✅ '+s.name+' '+({act:'재원',leave:'휴원',out:'퇴원'}[v])+' 처리됨');renderAdmCt();renderStuList();
 }
 function toggleInact(id){
   const s=DB.students.find(x=>x.id===id);if(!s)return;
