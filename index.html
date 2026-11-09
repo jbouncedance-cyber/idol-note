@@ -166,6 +166,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
   </div>
   <div id="pv-banner" style="display:none;background:#FEF3C7;color:#92400E;font-size:12.5px;font-weight:700;padding:8px 14px;text-align:center">👀 관리자 계정으로 학생 화면을 보는 중이에요 · 학생 카드를 누르면 누구 페이지든 열려요 · <span onclick="goTeacher()" style="text-decoration:underline;cursor:pointer">관리자 화면으로</span></div>
   <div class="page-body"><div class="ct">
+    <div id="stu-hero"></div>
     <a href="audition.html" style="display:flex;align-items:center;gap:12px;text-decoration:none;background:linear-gradient(135deg,#6B3FA0,#8B3FA0);color:#fff;border-radius:16px;padding:16px 18px;margin-bottom:14px;box-shadow:0 6px 18px rgba(107,63,160,.3)"><span style="font-size:26px">📢</span><span style="flex:1"><span style="display:block;font-size:16px;font-weight:800">오늘의 오디션 소식</span><span style="display:block;font-size:12.5px;opacity:.9;margin-top:2px">매일 업데이트되는 오디션·대회·업계 소식 보기 ✨</span></span><span style="font-size:22px">›</span></a><div id="w-ntc"></div><div id="w-ev"></div><div id="w-res"></div><div id="w-msg"></div><div id="w-stu"></div>
   </div></div>
   <div class="bnav">
@@ -358,6 +359,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
   <div class="mh"><div class="mt">인바디 입력</div><button class="xb" onclick="closeM('ov-ib')">✕</button></div>
   <div class="mb">
     <div class="fr"><label class="fl">측정일</label><input type="date" id="ib-dt"></div>
+    <div class="fr"><label class="fl">키 (cm)</label><input type="number" id="ib-ht" step="0.1" placeholder="예: 165.5"></div>
     <div class="fr"><label class="fl">인바디 점수</label><input type="number" id="ib-sc"></div>
     <div class="fr"><label class="fl">체중 (kg)</label><input type="number" id="ib-wt" step="0.1"></div>
     <div class="fr"><label class="fl">골격근량 (kg)</label><input type="number" id="ib-ms" step="0.1"></div>
@@ -709,7 +711,7 @@ function renderTT(s){
 }
 
 // MAIN
-function renderMain(){const lo=document.getElementById('main-logout');if(lo)lo.style.display=_authRole==='student'?'':'none';const pv=document.getElementById('pv-banner');if(pv)pv.style.display=_authRole==='teacher'||_authRole==='admin'?'':'none';renderNtc();renderEvs();renderRes();renderMsg();renderStuList();}
+function renderMain(){renderStuHero();const lo=document.getElementById('main-logout');if(lo)lo.style.display=_authRole==='student'?'':'none';const pv=document.getElementById('pv-banner');if(pv)pv.style.display=_authRole==='teacher'||_authRole==='admin'?'':'none';renderNtc();renderEvs();renderRes();renderMsg();renderStuList();}
 window.renderMain=renderMain;
 
 function renderNtc(){
@@ -723,6 +725,36 @@ function renderNtc(){
 }
 function viewNtc(i){const n=(DB.notices||[])[i];if(!n)return;document.getElementById('ntc-ttl').textContent=n.title;document.getElementById('ntc-txt').textContent=n.content||'';openM('ov-notice');}
 
+// 학생 메인 상단 현황 카드 (입시반 스타일): 포지션·학년, 다가오는 촬영/오디션·행사 D-day, 목표·주간 체크·인바디, 안 적은 것
+function ddayTxt(d){const n=Math.round((new Date(d+'T00:00:00')-new Date(today()+'T00:00:00'))/864e5);return n===0?'D-DAY':n>0?'D-'+n:'D+'+(-n);}
+function renderStuHero(){
+  const w=document.getElementById('stu-hero');if(!w)return;
+  if(_authRole!=='student'){w.innerHTML='';return;}
+  const s=(DB.students||[]).find(x=>x.id===_authSid);if(!s){w.innerHTML='';return;}
+  const mo=+ym().slice(5);const g=(s.monthlyGoals||[]).find(x=>x.month===ym());const hasGoal=!!(g&&String(g.goal||'').trim());
+  const wk=(s.weeklies||[]).find(x=>x.weekKey===getWkKey(0));const wkItems=wk&&wk.items?wk.items:[];const wkAvg=wkItems.length?Math.round(wkItems.reduce((t,i)=>t+(Number(i.achievement)||0),0)/wkItems.length):0;
+  const ibs=(s.inbody||[]).filter(x=>x&&x.date).slice().sort((a,b)=>a.date.localeCompare(b.date));const ibLast=ibs[ibs.length-1];const ibThis=ibs.some(x=>x.date.slice(0,7)===ym());
+  const pos=wishPos(s);const gr=schoolGrade(s.birth);
+  const ups=[...schUpcoming(s.id),...taskShoots(s.id).filter(x=>x.date>=today())].sort((a,b)=>a.date.localeCompare(b.date));
+  const ev=(DB.events||[]).filter(e=>e.date>=today()).sort((a,b)=>a.date.localeCompare(b.date))[0];
+  const miss=[];if(!wk||!wkItems.length)miss.push('이번 주 체크리스트');if(!hasGoal)miss.push(mo+'월 목표');if(!ibThis)miss.push(mo+'월 인바디');if(!pos)miss.push('희망 포지션');
+  const tile=(v,l)=>`<div style="flex:1;min-width:0;background:rgba(255,255,255,.12);border-radius:14px;padding:12px 12px 10px"><div style="font-size:20px;font-weight:900;color:#fff;line-height:1.1">${v}</div><div style="font-size:11.5px;color:rgba(255,255,255,.8);margin-top:5px">${l}</div></div>`;
+  const first=ups[0];
+  w.innerHTML=`<div style="background:linear-gradient(135deg,#2B1B47 0%,#5B2A86 55%,#9B3FA0 100%);border-radius:20px;padding:18px 16px 16px;color:#fff;margin-bottom:12px;box-shadow:0 10px 26px rgba(70,30,110,.25);overflow:hidden">
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div onclick="openLock(${s.id})" style="width:58px;height:58px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2.5px solid rgba(255,255,255,.55);background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;cursor:pointer">${s.photo?`<img src="${esc(s.photo)}" style="width:100%;height:100%;object-fit:cover">`:esc(String(s.name||'?')[0])}</div>
+      <div style="flex:1;min-width:0"><div style="font-size:20px;font-weight:900">${esc(s.name)}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.82);margin-top:3px">${pos?esc(pos):'희망 포지션 미입력'} · ${s.cls==='kids'?'키즈오디션반':'오디션반'}${gr?' · '+gr:''}</div></div>
+      ${first?`<div style="text-align:right;flex-shrink:0;max-width:44%"><div style="font-size:11px;color:rgba(255,255,255,.8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(first.kind)}</div><div style="font-size:26px;font-weight:900;color:#FFD54A;line-height:1.1">${ddayTxt(first.date)}</div></div>`:''}
+    </div>
+    ${ups.length||ev?`<div style="margin-top:12px;border-top:1px solid rgba(255,255,255,.18);padding-top:9px;display:flex;flex-direction:column;gap:4px">${ups.slice(0,3).map(x=>`<div style="display:flex;gap:8px;font-size:12.5px;align-items:center"><span style="font-weight:900;color:#FFD54A;min-width:46px">${ddayTxt(x.date)}</span><span style="color:rgba(255,255,255,.75);min-width:38px">${esc(schDateTxt(x.date))}</span><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📸 ${esc(x.kind)}${x.memo?' · '+esc(x.memo):''}</span></div>`).join('')}${ev?`<div style="display:flex;gap:8px;font-size:12.5px;align-items:center"><span style="font-weight:900;color:#fff;min-width:46px">${ddayTxt(ev.date)}</span><span style="color:rgba(255,255,255,.75);min-width:38px">${esc(schDateTxt(ev.date))}</span><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">🎉 ${esc(ev.name||'')}</span></div>`:''}</div>`:''}
+    <div style="display:flex;gap:8px;margin-top:12px">${tile(hasGoal?'✔︎':'—',mo+'월 목표')}${tile(wkItems.length?wkAvg+'%':'—','이번 주 체크')}${tile(ibLast&&ibLast.score?esc(ibLast.score)+'점':'—','인바디')}</div>
+  </div>
+  ${miss.length?`<div style="background:#FFF7ED;border:2px solid #FDBA74;border-radius:18px;padding:14px 14px 13px;margin-bottom:14px">
+    <div style="font-size:15px;font-weight:900;color:#C2410C;margin-bottom:9px">⚠️ 아직 안 적은 게 있어요</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px">${miss.map(m=>`<span style="border:1.5px solid #FDBA74;background:#fff;color:#9A3412;border-radius:20px;padding:4px 11px;font-size:12.5px;font-weight:800">${m}</span>`).join('')}</div>
+    <button onclick="openLock(${s.id})" style="width:100%;border:0;border-radius:12px;background:var(--or);color:#fff;font-size:14.5px;font-weight:900;padding:12px;cursor:pointer;font-family:inherit">내 페이지에서 적으러 가기 →</button></div>`:''}`;
+}
 function renderEvs(){
   const w=document.getElementById('w-ev');if(!w)return;
   const now=new Date();const evs=(DB.events||[]).filter(e=>e.date>=today()).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,3);
@@ -1383,11 +1415,12 @@ function renderIbTab(s){
 }
 async function dlIb(sid,idx){const s=DB.students.find(x=>x.id===sid);if(!s||!confirm('삭제할까요?'))return;s.inbody.splice(idx,1);await fbSv('idol_students',s.id,s);toast('✅ 삭제됨');setTimeout(()=>refreshPTab(0),100);}
 function prevIb(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{_ibBase64=e.target.result;const p=document.getElementById('ib-prev');p.src=e.target.result;p.style.display='block';};r.readAsDataURL(f);}
-function openIbM(sid){_ibSid=sid;_ibBase64=null;document.getElementById('ib-dt').value=today();['ib-sc','ib-wt','ib-ms','ib-ft'].forEach(id=>{document.getElementById(id).value='';});document.getElementById('ib-img').value='';document.getElementById('ib-prev').style.display='none';openM('ov-ib');}
+function openIbM(sid){_ibSid=sid;_ibBase64=null;document.getElementById('ib-dt').value=today();['ib-ht','ib-sc','ib-wt','ib-ms','ib-ft'].forEach(id=>{document.getElementById(id).value='';});{const s0=DB.students.find(x=>x.id===sid);const h=document.getElementById('ib-ht');if(h)h.placeholder=s0&&s0.height?'지난 키 '+s0.height+'cm':'예: 165.5';}document.getElementById('ib-img').value='';document.getElementById('ib-prev').style.display='none';openM('ov-ib');}
 async function saveIb(){
   const s=DB.students.find(x=>x.id===_ibSid);if(!s)return;const dt=document.getElementById('ib-dt').value;if(!dt){alert('날짜를 입력해주세요');return;}
   let imgUrl='';if(_ibBase64){try{const ref=st.ref('idol_inbody/'+_ibSid+'/'+Date.now()+'.jpg');await ref.putString(_ibBase64,'data_url');imgUrl=await ref.getDownloadURL();}catch(e){console.warn('사진 업로드 실패:',e);}}
-  const ib={date:dt,score:document.getElementById('ib-sc').value,weight:document.getElementById('ib-wt').value,muscle:document.getElementById('ib-ms').value,fat:document.getElementById('ib-ft').value,imgUrl,ts:Date.now()};
+  const ht=(document.getElementById('ib-ht').value||'').trim();if(ht)s.height=ht;
+  const ib={date:dt,height:ht,score:document.getElementById('ib-sc').value,weight:document.getElementById('ib-wt').value,muscle:document.getElementById('ib-ms').value,fat:document.getElementById('ib-ft').value,imgUrl,ts:Date.now()};
   if(!s.inbody)s.inbody=[];s.inbody.push(ib);await fbSv('idol_students',s.id,s);closeM('ov-ib');toast('✅ 인바디 저장됨');setTimeout(()=>refreshPTab(0),100);
 }
 function handleProfImg(inp){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=async e=>{const s=DB.students.find(x=>x.id===curSid);if(!s)return;try{const ref=st.ref('idol_profiles/'+curSid+'.jpg');await ref.putString(e.target.result,'data_url');s.photo=await ref.getDownloadURL();}catch(err){s.photo=e.target.result;}await fbSv('idol_students',s.id,s);renderPTab(s,0);toast('✅ 사진 저장됨');};r.readAsDataURL(f);}
