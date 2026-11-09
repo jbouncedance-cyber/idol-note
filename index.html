@@ -648,7 +648,7 @@ function boardAuthor(p){
   return null;
 }
 
-function goTeacher(){
+function goTeacher(){_viewAs=null;
   if(_loginMode&&!_authRole){openLogin('teacher');return;}
   if(_loginMode&&_authRole==='student'){const st=DB.students.find(x=>x.id===_authSid);if(st)goClass(st.cls==='kids'?'kids':'audition');return;}
   if(isAdm){
@@ -661,7 +661,9 @@ function goTeacher(){
     openLogin('teacher');
   }
 }
-function goClass(cls){if(_loginMode&&!_authRole){openLogin(cls);return;}const stf=_authRole==='teacher'||_authRole==='admin';_curCls=cls;localStorage.setItem('jbi_cls',cls);document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent=(cls==='kids'?'키즈오디션반':'오디션반')+(stf?' · 학생 화면 미리보기':'');document.getElementById('adm-btn').style.display=stf?'':'none';document.getElementById('adm-nav').style.display=stf?'':'none';showPage('pg-main');renderMain();}
+let _viewAs=null;
+function viewAsStudent(id){const s=(DB.students||[]).find(x=>x.id===id);if(!s)return;_viewAs=id;goClass(s.cls==='kids'?'kids':'audition',true);window.scrollTo(0,0);}
+function goClass(cls,keepView){if(_loginMode&&!_authRole){openLogin(cls);return;}const stf=_authRole==='teacher'||_authRole==='admin';if(!keepView)_viewAs=null;_curCls=cls;localStorage.setItem('jbi_cls',cls);document.getElementById('main-logo').textContent='JB IDOL';document.getElementById('main-sub').textContent=(cls==='kids'?'키즈오디션반':'오디션반')+(stf?' · 학생 화면':'');document.getElementById('adm-btn').style.display=stf?'':'none';document.getElementById('adm-nav').style.display=stf?'':'none';showPage('pg-main');renderMain();}
 function goAdmin(){if(isAdm){showPage('pg-adm');renderAdm();}else openLogin('teacher');}
 function chkAdm(){openLogin('teacher');}
 function admOut(){if(_authRole){authLogout();return;}isAdm=false;localStorage.removeItem('jbi_adm');localStorage.removeItem('jbi_cls');showPage('pg-land');}
@@ -711,7 +713,7 @@ function renderTT(s){
 }
 
 // MAIN
-function renderMain(){renderStuHero();const lo=document.getElementById('main-logout');if(lo)lo.style.display=_authRole==='student'?'':'none';const pv=document.getElementById('pv-banner');if(pv)pv.style.display=_authRole==='teacher'||_authRole==='admin'?'':'none';renderNtc();renderEvs();renderRes();renderMsg();renderStuList();}
+function renderMain(){renderStuHero();const lo=document.getElementById('main-logout');if(lo)lo.style.display=_authRole==='student'?'':'none';renderPvBanner();renderNtc();renderEvs();renderRes();renderMsg();renderStuList();}
 window.renderMain=renderMain;
 
 function renderNtc(){
@@ -727,10 +729,17 @@ function viewNtc(i){const n=(DB.notices||[])[i];if(!n)return;document.getElement
 
 // 학생 메인 상단 현황 카드 (입시반 스타일): 포지션·학년, 다가오는 촬영/오디션·행사 D-day, 목표·주간 체크·인바디, 안 적은 것
 function ddayTxt(d){const n=Math.round((new Date(d+'T00:00:00')-new Date(today()+'T00:00:00'))/864e5);return n===0?'D-DAY':n>0?'D-'+n:'D+'+(-n);}
+function renderPvBanner(){
+  const pv=document.getElementById('pv-banner');if(!pv)return;const stf=_authRole==='teacher'||_authRole==='admin';pv.style.display=stf?'':'none';if(!stf)return;
+  const v=_viewAs!=null?(DB.students||[]).find(x=>x.id===_viewAs):null;
+  const opts=(DB.students||[]).filter(x=>!x.inactive&&(x.cls==='kids'?'kids':'audition')===(_curCls==='kids'?'kids':'audition')).sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko'));
+  pv.innerHTML=v?`<div style="display:flex;align-items:center;gap:10px;justify-content:space-between"><span>👀 <b>${esc(v.name)}</b> 학생 화면으로 보는 중</span><button onclick="_viewAs=null;goTeacher()" style="border:0;background:var(--or);color:#fff;border-radius:9px;padding:6px 13px;font-weight:900;font-family:inherit;cursor:pointer;white-space:nowrap">나가기</button></div>`
+   :`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center"><span>👀 관리자로 학생 화면을 보는 중 · 학생을 고르면 그 학생 눈으로 볼 수 있어요</span><select onchange="if(this.value)viewAsStudent(Number(this.value))" style="width:auto;padding:4px 8px;font-size:12.5px;border-radius:8px;font-family:inherit;-webkit-appearance:menulist;appearance:auto"><option value="">학생 선택</option>${opts.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select><span onclick="goTeacher()" style="text-decoration:underline;cursor:pointer">관리자 화면으로</span></div>`;
+}
 function renderStuHero(){
   const w=document.getElementById('stu-hero');if(!w)return;
-  if(_authRole!=='student'){w.innerHTML='';return;}
-  const s=(DB.students||[]).find(x=>x.id===_authSid);if(!s){w.innerHTML='';return;}
+  const vid=_authRole==='student'?_authSid:_viewAs;if(vid==null){w.innerHTML='';return;}
+  const s=(DB.students||[]).find(x=>x.id===vid);if(!s){w.innerHTML='';return;}
   const mo=+ym().slice(5);const g=(s.monthlyGoals||[]).find(x=>x.month===ym());const hasGoal=!!(g&&String(g.goal||'').trim());
   const wk=(s.weeklies||[]).find(x=>x.weekKey===getWkKey(0));const wkItems=wk&&wk.items?wk.items:[];const wkAvg=wkItems.length?Math.round(wkItems.reduce((t,i)=>t+(Number(i.achievement)||0),0)/wkItems.length):0;
   const ibs=(s.inbody||[]).filter(x=>x&&x.date).slice().sort((a,b)=>a.date.localeCompare(b.date));const ibLast=ibs[ibs.length-1];const ibThis=ibs.some(x=>x.date.slice(0,7)===ym());
@@ -2359,6 +2368,7 @@ function renderAdmStu(c){
           </div>
           <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">
             ${tot?`<button onclick="toggleAdmCard('${cid}')" id="abtn-${cid}" style="background:none;border:1px solid var(--bd);border-radius:7px;padding:3px 8px;font-size:11px;color:var(--gy);cursor:pointer;font-family:inherit">▼</button>`:''}
+            <button onclick="viewAsStudent(${s.id})" class="edt-btn" title="이 학생 화면으로 보기" style="font-size:11px;padding:3px 7px">👀</button>
             <button onclick="openTMsg(${s.id})" class="edt-btn" style="font-size:11px;padding:3px 7px">💌</button>
             <button onclick="openStuM(${s.id})" class="edt-btn" style="font-size:11px;padding:3px 7px">수정</button>
             <select onchange="setStuStatus(${s.id},this.value)" title="재원 상태" style="width:auto;-webkit-appearance:menulist;appearance:auto;border:1px solid ${s.inactive?'#fde68a':isLeave(s)?'#FCD34D':'#cbd5e1'};background:${s.inactive?'#fef3c7':isLeave(s)?'#FFFBEB':'#f1f5f9'};color:${s.inactive?'#92400e':isLeave(s)?'#B45309':'#64748b'};border-radius:7px;padding:3px 5px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">${[['act','재원'],['leave','휴원'],['out','퇴원']].map(([v,l])=>`<option value="${v}" ${stuStatus(s)===v?'selected':''}>${l}</option>`).join('')}</select>
