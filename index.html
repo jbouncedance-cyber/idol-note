@@ -1755,7 +1755,8 @@ let _offT='dance';
 const V11_RE=/1\s*[:대]\s*1|개인/;
 // 단체보컬수업 두 반: 보컬디자인(김선령쌤) / 단체보컬(김선우쌤). 키즈는 단체보컬을 듣지 않음
 function vocalGroupOf(s,c){const n=c.name||'';if(V11_RE.test(n))return '';if(/디자인/.test(n))return 'vd';return s.cls==='kids'?'':'vg';}
-function stuVocal(s){return Object.keys(s.classes||{}).filter(k=>k[0]==='v'&&s.classes[k]).map(k=>(DB.vocalClasses||[]).find(x=>x.id===s.classes[k])).filter(Boolean);}
+// 보컬 관련 수업: 보컬 수업 칸 + 트레이닝 칸에 등록된 보컬 수업(예: 오디션반 보컬디자인수업, 오디션반 단체보컬)
+function stuVocal(s){const c=s.classes||{};const v=Object.keys(c).filter(k=>k[0]==='v'&&c[k]).map(k=>(DB.vocalClasses||[]).find(x=>x.id===c[k]));const t=Object.keys(c).filter(k=>k[0]==='t'&&c[k]).map(k=>(DB.trainingClasses||[]).find(x=>x.id===c[k])).filter(x=>x&&/보컬/.test(x.name||''));return [...v,...t].filter(Boolean);}
 function trackApplies(s,tr){if(tr==='dance')return true;const v=stuVocal(s);return tr==='v11'?v.some(c=>V11_RE.test(c.name||'')):v.some(c=>vocalGroupOf(s,c));}
 function trackStatus(s,tr){
   const t=today();const hit=schOf(s.id).filter(x=>OFF_KINDS[tr].includes(x.kind));
