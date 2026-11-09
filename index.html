@@ -1729,7 +1729,7 @@ async function saveMeta(id){
 }
 
 // 현황판: 촬영·오디션 일정과 의무 촬영 (일정은 idol_schedules에 건별 저장)
-const SCH_KINDS=['댄스촬영','보컬수업촬영','1:1보컬촬영','프로필촬영','오디션2차','오디션최종'];
+const SCH_KINDS=['댄스촬영','단체보컬촬영','1:1보컬촬영','프로필촬영','오디션2차','오디션최종'];
 const SCH_DAYS=60,SHOOT_MONTHS=2;
 let _schEditId=null,_dashPast=false;
 function schAddDays(d,n){const x=new Date(d+'T00:00:00');x.setDate(x.getDate()+n);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');}
@@ -1745,10 +1745,11 @@ function shootStatus(s){
     return {last,next:fut[0]||'',need:!planned&&(!last||schAddMonths(last,SHOOT_MONTHS)<=t)};};
   return {dance:calc('댄스촬영'),vocal:calc('보컬촬영')};
 }
-// 오피셜 촬영 (2~3개월마다): 댄스(트레이닝 반), 보컬 수업(보컬디자인·보컬단체), 1:1 보컬(개인 보컬 선생님이 트레이닝·녹음 후 촬영)
+// 오피셜 촬영 (2~3개월마다): 댄스(트레이닝 반), 단체보컬수업(보컬디자인·보컬단체), 댄스기본기(배찬열쌤, 정비중), 1:1 보컬(개인 보컬 선생님이 트레이닝·녹음 후 촬영)
 // 마지막 촬영 후 2개월 = 촬영 시기(노랑), 3개월 또는 기록 없음 = 촬영 필요(빨강), 예정 있음 = 파랑
-const OFF_TRACKS=[['dance','댄스','댄스촬영'],['vclass','보컬 수업','보컬수업촬영'],['v11','1:1 보컬','1:1보컬촬영']];
-const OFF_KINDS={dance:['댄스촬영','댄스+보컬촬영'],vclass:['보컬수업촬영','보컬촬영','댄스+보컬촬영'],v11:['1:1보컬촬영','보컬촬영','댄스+보컬촬영']};
+const OFF_TRACKS=[['dance','댄스','댄스촬영'],['vclass','단체보컬수업','단체보컬촬영'],['v11','1:1 보컬','1:1보컬촬영']];
+const OFF_PAUSED=[['basic','댄스기본기','배찬열쌤 댄스기본기수업']]; // 일시 중단: 탭만 두고 누르면 (정비중)
+const OFF_KINDS={dance:['댄스촬영','댄스+보컬촬영'],vclass:['단체보컬촬영','보컬수업촬영','보컬촬영','댄스+보컬촬영'],v11:['1:1보컬촬영','보컬촬영','댄스+보컬촬영']};
 let _offT='dance';
 const V11_RE=/1\s*[:대]\s*1|개인/;
 function stuVocal(s){return Object.keys(s.classes||{}).filter(k=>k[0]==='v'&&s.classes[k]).map(k=>(DB.vocalClasses||[]).find(x=>x.id===s.classes[k])).filter(Boolean);}
@@ -1773,6 +1774,10 @@ function dashOffCard(act){
   const sub=act.filter(s=>taskInGroup(s,_taskT));
   const cntNeed=tr=>sub.filter(s=>{const x=trackStatus(s,tr);return x.applies&&x.level==='need';}).length;
   const tab=([tr,l])=>{const n=cntNeed(tr);return `<button onclick="_offT='${tr}';renderAdmCt()" style="flex:1;border:0;border-bottom:3px solid ${_offT===tr?'var(--or)':'transparent'};background:none;padding:9px 4px;font-size:13px;font-weight:800;color:${_offT===tr?'var(--or)':'var(--gy)'};cursor:pointer;font-family:inherit">${l}${n?` <span style="background:#DC2626;color:#fff;border-radius:10px;padding:0 6px;font-size:11px">${n}</span>`:''}</button>`;};
+  const paused=OFF_PAUSED.find(x=>x[0]===_offT);
+  if(paused)return `<div class="cd"><div class="cd-h"><div class="cd-t">📹 오피셜 촬영 <span style="font-size:12px;color:var(--gy);font-weight:600">2~3개월마다</span></div></div>
+    <div style="display:flex;border-bottom:1px solid var(--bd);margin:0 0 10px">${OFF_TRACKS.map(tab).join('')}${OFF_PAUSED.map(([k,l])=>`<button onclick="_offT='${k}';renderAdmCt()" style="flex:1;border:0;border-bottom:3px solid ${_offT===k?'var(--gy)':'transparent'};background:none;padding:9px 4px;font-size:13px;font-weight:800;color:var(--gy2);cursor:pointer;font-family:inherit">${l}</button>`).join('')}</div>
+    <div style="text-align:center;padding:22px 13px 26px"><div style="font-size:15px;font-weight:800;color:var(--gy)">(정비중)</div><div style="font-size:12px;color:var(--gy2);margin-top:5px">${esc(paused[2])}은 잠시 쉬고 있어요</div></div></div>`;
   const groups=offGroups(sub,_offT).filter(g=>g.members.length);const kind=OFF_TRACKS.find(x=>x[0]===_offT)[2];
   const card=g=>{const ms=g.members.slice().map(s=>({s,x:trackStatus(s,_offT)})).sort((a,b)=>({need:0,soon:1,planned:2,ok:3}[a.x.level]-{need:0,soon:1,planned:2,ok:3}[b.x.level])||String(a.s.name).localeCompare(String(b.s.name),'ko'));
     const ids=g.members.map(s=>s.id).join(',');
@@ -1781,8 +1786,8 @@ function dashOffCard(act){
       <button class="sbtn or" onclick="openOffShoot('${_offT}',[${ids}],'${esc(g.label).replace(/'/g,'')}')">+ 촬영 잡기·기록</button></div>
       <div style="display:flex;flex-wrap:wrap;gap:5px">${ms.map(({s,x})=>`<span onclick="openOffShoot('${_offT}',[${s.id}],'${esc(g.label).replace(/'/g,'')}')" style="cursor:pointer;background:${OFF_COL[x.level][0]};color:${OFF_COL[x.level][1]};border-radius:7px;padding:4px 8px;font-size:12px;font-weight:700;white-space:nowrap"><b style="color:var(--bk)">${esc(s.name)}</b> ${offTxt(x)}</span>`).join('')}</div></div>`;};
   return `<div class="cd"><div class="cd-h"><div class="cd-t">📹 오피셜 촬영 <span style="font-size:12px;color:var(--gy);font-weight:600">2~3개월마다</span></div></div>
-    <div style="display:flex;border-bottom:1px solid var(--bd);margin:0 0 10px">${OFF_TRACKS.map(tab).join('')}</div>
-    <div style="font-size:11px;color:var(--gy);padding:0 13px 9px;line-height:1.6">${_offT==='dance'?'트레이닝 수업에서 개인 또는 단체로 촬영':_offT==='vclass'?'보컬디자인·보컬단체 수업에서 촬영':'개인 보컬 선생님이 트레이닝·녹음 후 촬영'} · <span style="color:#15803D">초록</span> 최근 촬영 · <span style="color:#B45309">노랑</span> 2개월 지남 · <span style="color:#B91C1C">빨강</span> 3개월 지남/기록 없음 · <span style="color:#1D4ED8">파랑</span> 예정<br>이름을 누르면 그 학생만, <b>+ 촬영 잡기·기록</b>은 반 전체를 한 번에 잡아요. 지난 날짜를 넣으면 이미 찍은 기록이 돼요.</div>
+    <div style="display:flex;border-bottom:1px solid var(--bd);margin:0 0 10px">${OFF_TRACKS.map(tab).join('')}${OFF_PAUSED.map(([k,l])=>`<button onclick="_offT='${k}';renderAdmCt()" style="flex:1;border:0;border-bottom:3px solid ${_offT===k?'var(--gy)':'transparent'};background:none;padding:9px 4px;font-size:13px;font-weight:800;color:var(--gy2);cursor:pointer;font-family:inherit">${l}</button>`).join('')}</div>
+    <div style="font-size:11px;color:var(--gy);padding:0 13px 9px;line-height:1.6">${_offT==='dance'?'트레이닝 수업에서 개인 또는 단체로 촬영':_offT==='vclass'?'단체보컬수업(보컬디자인·보컬단체)에서 촬영':'개인 보컬 선생님이 트레이닝·녹음 후 촬영'} · <span style="color:#15803D">초록</span> 최근 촬영 · <span style="color:#B45309">노랑</span> 2개월 지남 · <span style="color:#B91C1C">빨강</span> 3개월 지남/기록 없음 · <span style="color:#1D4ED8">파랑</span> 예정<br>이름을 누르면 그 학생만, <b>+ 촬영 잡기·기록</b>은 반 전체를 한 번에 잡아요. 지난 날짜를 넣으면 이미 찍은 기록이 돼요.</div>
     ${groups.length?groups.map(card).join(''):`<div class="emp-msg">${_offT==='dance'?'학생이 없어요':'이 수업을 듣는 학생이 없어요. 학생 개인 페이지의 보컬 수업 배정을 확인해 주세요'}</div>`}
   </div>`;
 }
