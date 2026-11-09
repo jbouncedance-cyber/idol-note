@@ -2439,16 +2439,48 @@ function repKey(t){return String(t||'').trim().toLowerCase().replace(/\s+/g,' ')
 function repStatusOf(sid,type,title){const d=(DB.repStatus||{})[String(sid)];return d&&d[type]?(d[type][repKey(title)]||''):'';}
 const REP_OK='오디션 사용 가능';
 function repChipStyle(st){return st===REP_OK?'background:#C6E8C9;border:1.5px solid #5FB36A;color:#1F6B2A':st==='연습 중'?'background:#FFF2CC;border:1.5px solid #E0B84A;color:#7A5A00':'background:#fff;border:1.5px dashed var(--bd);color:var(--gy)';}
-function repChip(sid,type,title,label){const st=repStatusOf(sid,type,title);return `<button data-sid="${sid}" data-type="${type}" data-title="${esc(title)}" onclick="event.stopPropagation();repCycle(this)" title="누를 때마다 미체크 → 연습 중 → 오디션 사용 가능" style="${repChipStyle(st)};border-radius:7px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${esc(label)}${st?' · '+st:' · 미체크'}</button>`;}
-async function repCycle(btn){
+function repChip(sid,type,title,label){const st=repStatusOf(sid,type,title);return `<button data-sid="${sid}" data-type="${type}" data-title="${esc(title)}" onclick="event.stopPropagation();repPick(this)" title="눌러서 완성도 선택" style="${repChipStyle(st)};border-radius:7px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${esc(label)}${st?' · '+st:' · 미체크'}</button>`;}
+// 완성도 바꾸기: 곡을 누르면 선택 창 → 고른 뒤 저장, 저장 후 몇 초 동안 되돌리기 가능
+function repStuName(sid){const s=(DB.students||[]).find(x=>String(x.id)===String(sid));return s?s.name:'';}
+function repPick(btn){
   const sid=Number(btn.dataset.sid)||btn.dataset.sid,type=btn.dataset.type,title=btn.dataset.title;
+  const cur=repStatusOf(sid,type,title);
+  const old=document.getElementById('rep-pick');if(old)old.remove();
+  const ov=document.createElement('div');ov.id='rep-pick';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(20,10,30,.45);z-index:9998;display:flex;align-items:flex-end;justify-content:center';
+  ov.onclick=e=>{if(e.target===ov)ov.remove();};
+  const opt=(v,l)=>`<button data-v="${v}" style="${repChipStyle(v)};display:flex;justify-content:space-between;align-items:center;width:100%;border-radius:12px;padding:14px 16px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:8px;${cur===v?'box-shadow:0 0 0 3px rgba(107,63,160,.35)':''}">${l}<span style="font-size:12px">${cur===v?'지금 상태':''}</span></button>`;
+  ov.innerHTML=`<div style="background:#fff;width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:18px 16px calc(16px + env(safe-area-inset-bottom))">
+    <div style="font-size:12px;color:var(--gy);font-weight:700">${esc(repStuName(sid))} · ${type==='vocal'?'보컬':'댄스'}</div>
+    <div style="font-size:17px;font-weight:900;margin:3px 0 14px;word-break:break-all">${esc(title)}</div>
+    ${opt('','미체크')}${opt('연습 중','연습 중')}${opt(REP_OK,REP_OK)}
+    <button data-cancel="1" style="width:100%;border:none;background:#f1eef4;border-radius:12px;padding:13px;font-size:14px;font-weight:800;color:var(--gy);cursor:pointer;font-family:inherit">취소</button></div>`;
+  ov.querySelectorAll('button[data-v]').forEach(b=>b.onclick=async()=>{
+    const v=b.dataset.v;ov.remove();
+    if(v===cur)return;
+    const ok=await repSet(sid,type,title,v);
+    if(ok)repUndoBar(sid,type,title,cur,v);
+  });
+  ov.querySelector('button[data-cancel]').onclick=()=>ov.remove();
+  document.body.appendChild(ov);
+}
+async function repSet(sid,type,title,v){
   if(!DB.repStatus)DB.repStatus={};const id=String(sid);
   const doc=JSON.parse(JSON.stringify(DB.repStatus[id]||{sid,dance:{},vocal:{}}));if(!doc[type])doc[type]={};
-  const k=repKey(title);const cur=doc[type][k]||'';const nx=cur===''?'연습 중':cur==='연습 중'?REP_OK:'';
-  if(nx)doc[type][k]=nx;else delete doc[type][k];
-  btn.disabled=true;
-  try{await db.collection('idol_rep_status').doc(id).set(doc);}catch(e){alert('저장 실패: '+e.message);btn.disabled=false;return;}
+  const k=repKey(title);
+  if(v)doc[type][k]=v;else delete doc[type][k];
+  try{await db.collection('idol_rep_status').doc(id).set(doc);}catch(e){alert('저장 실패: '+e.message);return false;}
   DB.repStatus[id]=doc;renderAdmRep(document.getElementById('adm-ct'),true);
+  return true;
+}
+function repUndoBar(sid,type,title,from,to){
+  let bar=document.getElementById('rep-undo');if(bar)bar.remove();
+  bar=document.createElement('div');bar.id='rep-undo';
+  bar.style.cssText='position:fixed;left:50%;bottom:24px;transform:translateX(-50%);width:calc(100% - 32px);max-width:440px;background:#2b2233;color:#fff;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.25);font-size:13px';
+  bar.innerHTML=`<div style="flex:1;min-width:0"><div style="font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(repStuName(sid))} · ${esc(title)}</div><div style="opacity:.85;margin-top:2px">${esc(from||'미체크')} → <b>${esc(to||'미체크')}</b> 저장됨</div></div><button style="background:#fff;color:#2b2233;border:none;border-radius:9px;padding:8px 12px;font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;white-space:nowrap">되돌리기</button>`;
+  bar.querySelector('button').onclick=async()=>{bar.remove();if(await repSet(sid,type,title,from))toast('↩ 되돌렸어요');};
+  document.body.appendChild(bar);
+  clearTimeout(window._repUndoT);window._repUndoT=setTimeout(()=>{const b=document.getElementById('rep-undo');if(b)b.remove();},7000);
 }
 async function renderAdmRep(c,cached){
   if(!c)return;
@@ -2473,7 +2505,7 @@ async function renderAdmRep(c,cached){
   const fb=(v,l)=>`<button onclick="_repCls='${v}';renderAdmRep(document.getElementById('adm-ct'),true)" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${_repCls===v?'var(--or)':'var(--bd)'};background:${_repCls===v?'var(--ob)':'#fff'};color:${_repCls===v?'var(--or)':'var(--gy)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${l}</button>`;
   const sec=(s,type,lbl,col,list)=>list.length?`<div style="margin-top:9px"><div style="font-size:11px;font-weight:800;color:${col};margin-bottom:5px">${lbl} ${list.length}곡</div><div style="display:flex;flex-wrap:wrap;gap:6px">${list.map(t=>repChip(s.id,type,t,t)).join('')}</div></div>`:'';
   c.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px">${fb('all','전체')}${fb('audition','오디션반')}${fb('kids','키즈오디션반')}</div>
-  <div style="font-size:12px;color:var(--gy);margin-bottom:12px">곡을 누를 때마다 <b>미체크 → 연습 중 → 오디션 사용 가능</b> 순서로 바뀌어요.</div>
+  <div style="font-size:12px;color:var(--gy);margin-bottom:12px">곡을 누르면 <b>미체크 / 연습 중 / 오디션 사용 가능</b> 중에서 고를 수 있어요. 바꾼 뒤 몇 초 동안은 <b>되돌리기</b>도 돼요.</div>
   ${act.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;align-items:start">${act.map(({student:s,data})=>{
     const d=data.danceRep||[],v=data.vocalRep||[];const tot=d.length+v.length;
     const ok=d.filter(t=>repStatusOf(s.id,'dance',t)===REP_OK).length+v.filter(t=>repStatusOf(s.id,'vocal',t)===REP_OK).length;
