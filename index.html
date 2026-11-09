@@ -1770,7 +1770,7 @@ function offTxt(x){return x.level==='planned'?'예정 '+schDateTxt(x.next):x.lev
 function offGroups(act,tr){
   if(tr==='dance')return TASK_GROUPS.filter(([g])=>g!=='all').map(([g,l])=>({key:g,label:l.replace('오디션반 · ','오디션반 트레이닝 · ').replace('키즈 · ','키즈 트레이닝 · '),members:act.filter(s=>taskInGroup(s,g))}));
   const map={};act.forEach(s=>stuVocal(s).filter(c=>tr==='v11'?V11_RE.test(c.name||''):(vocalGroupOf(s,c)&&(_taskT!=='vd'&&_taskT!=='vg'||vocalGroupOf(s,c)===_taskT))).forEach(c=>{const k=tr==='v11'?tchName(c.teacher):(c.name||'')+'|'+tchName(c.teacher);if(!map[k])map[k]={key:k,label:tr==='v11'?'1:1 보컬 · '+tchName(c.teacher):(c.name||'보컬')+' · '+tchName(c.teacher),members:[]};if(!map[k].members.includes(s))map[k].members.push(s);}));
-  return Object.values(map).sort((a,b)=>a.label.localeCompare(b.label,'ko'));
+  return Object.values(map).sort((a,b)=>(/디자인/.test(b.label)-/디자인/.test(a.label))||a.label.localeCompare(b.label,'ko'));
 }
 function dashOffCard(act){
   const sub=act.filter(s=>taskInGroup(s,_taskT));
