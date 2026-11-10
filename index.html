@@ -736,6 +736,52 @@ function renderPvBanner(){
   pv.innerHTML=v?`<div style="display:flex;align-items:center;gap:10px;justify-content:space-between"><span>👀 <b>${esc(v.name)}</b> 학생 화면으로 보는 중</span><button onclick="_viewAs=null;goTeacher()" style="border:0;background:var(--or);color:#fff;border-radius:9px;padding:6px 13px;font-weight:900;font-family:inherit;cursor:pointer;white-space:nowrap">나가기</button></div>`
    :`<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center"><span>👀 관리자로 학생 화면을 보는 중 · 학생을 고르면 그 학생 눈으로 볼 수 있어요</span><select onchange="if(this.value)viewAsStudent(Number(this.value))" style="width:auto;padding:4px 8px;font-size:12.5px;border-radius:8px;font-family:inherit;-webkit-appearance:menulist;appearance:auto"><option value="">학생 선택</option>${opts.map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select><span onclick="goTeacher()" style="text-decoration:underline;cursor:pointer">관리자 화면으로</span></div>`;
 }
+// 데일리 연습 기록: 학생이 날마다 댄스·보컬 연습 시간을 드래그로 기록 → 주간·월간 합계 (idol_students.practice = {날짜:{d:분,v:분}})
+const PR_MAX=360,PR_STEP=10;let _prDate=null,_prDraft=null;
+function prOf(s,d){const x=(s&&s.practice||{})[d];return {d:+(x&&x.d)||0,v:+(x&&x.v)||0};}
+function prMin(m){m=Math.round(+m||0);const h=Math.floor(m/60),r=m%60;return m?((h?h+'시간':'')+(r?(h?' ':'')+r+'분':'')):'0분';}
+function prSum(s,from,to){let d=0,v=0;Object.entries(s&&s.practice||{}).forEach(([k,x])=>{if(k>=from&&k<=to){d+=+(x&&x.d)||0;v+=+(x&&x.v)||0;}});return {d,v};}
+function prWeek(){const a=schAddDays(today(),-((new Date().getDay()+6)%7));return [a,schAddDays(a,6)];}
+function prMonth(){return [ym()+'-01',ym()+'-31'];}
+function prCard(s){
+  const t=today();if(!_prDate)_prDate=t;const sel=_prDate;const cur=_prDraft&&_prDraft.sid===s.id&&_prDraft.date===sel?_prDraft:prOf(s,sel);
+  const days=[...Array(7)].map((_,i)=>schAddDays(t,-i));const wd=['일','월','화','수','목','금','토'];
+  const lbl=d=>d===t?'오늘':d===schAddDays(t,-1)?'어제':(+d.slice(5,7))+'/'+(+d.slice(8))+'('+wd[new Date(d+'T00:00:00').getDay()]+')';
+  const [w0,w1]=prWeek();const [m0,m1]=prMonth();const wk=prSum(s,w0,w1),mo=prSum(s,m0,m1);
+  const wdays=[...Array(7)].map((_,i)=>schAddDays(w0,i));const mx=Math.max(60,...wdays.map(d=>{const x=prOf(s,d);return x.d+x.v;}));
+  const slider=(k,icon,l,col)=>`<div style="margin-top:12px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:13.5px;font-weight:800">${icon} ${l}</span><span id="pr-${k}-v" style="font-size:18px;font-weight:900;color:${col}">${prMin(cur[k])}</span></div>
+    <input type="range" min="0" max="${PR_MAX}" step="${PR_STEP}" value="${cur[k]}" oninput="prDrag(${s.id},'${k}',this.value)" style="width:100%;margin:8px 0 0;padding:0;border:0;background:none;-webkit-appearance:auto;appearance:auto;accent-color:${col};height:28px">
+    <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--gy2)"><span>0</span><span>1시간</span><span>2시간</span><span>3시간</span><span>4시간</span><span>5시간</span><span>6시간</span></div></div>`;
+  return `<div class="cd" style="margin-bottom:14px"><div class="cd-h"><div class="cd-t">⏱ 연습 기록</div><span style="font-size:11.5px;color:var(--gy)">드래그해서 시간 맞추기</span></div><div class="cd-b" style="padding-top:2px">
+    <div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:3px">${days.map(d=>{const x=prOf(s,d);const has=x.d||x.v;return `<button onclick="_prDate='${d}';_prDraft=null;renderStuHero()" style="flex-shrink:0;border:1.5px solid ${d===sel?'var(--or)':'var(--bd)'};background:${d===sel?'var(--or)':'#fff'};color:${d===sel?'#fff':'var(--bk)'};border-radius:18px;padding:5px 10px;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer">${lbl(d)}${has?' ✓':''}</button>`;}).join('')}</div>
+    ${slider('d','💃','댄스','#7C3AED')}${slider('v','🎤','보컬','#0F9D76')}
+    <button onclick="prSave(${s.id})" class="btn btn-or" style="margin-top:12px">${lbl(sel)} 연습 저장</button>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <div style="flex:1;background:var(--lt);border-radius:11px;padding:10px"><div style="font-size:11px;color:var(--gy);font-weight:700">이번 주</div><div style="font-size:12.5px;font-weight:800;margin-top:3px">💃 ${prMin(wk.d)}</div><div style="font-size:12.5px;font-weight:800">🎤 ${prMin(wk.v)}</div></div>
+      <div style="flex:1;background:var(--lt);border-radius:11px;padding:10px"><div style="font-size:11px;color:var(--gy);font-weight:700">${+ym().slice(5)}월</div><div style="font-size:12.5px;font-weight:800;margin-top:3px">💃 ${prMin(mo.d)}</div><div style="font-size:12.5px;font-weight:800">🎤 ${prMin(mo.v)}</div></div></div>
+    <div style="display:flex;gap:6px;align-items:flex-end;height:84px;margin-top:14px;padding:0 2px">${wdays.map((d,i)=>{const x=prOf(s,d);const hd=Math.round(x.d/mx*62),hv=Math.round(x.v/mx*62);return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:100%;max-width:26px;display:flex;flex-direction:column;justify-content:flex-end;height:62px"><div style="height:${hv}px;background:#34D399;border-radius:${hd?0:4}px ${hd?0:4}px 0 0"></div><div style="height:${hd}px;background:#A78BFA;border-radius:${hv?0:4}px ${hv?0:4}px 0 0"></div></div><div style="font-size:10.5px;color:${d===t?'var(--or)':'var(--gy)'};font-weight:${d===t?900:600}">${'월화수목금토일'[i]}</div></div>`;}).join('')}</div>
+    <div style="font-size:10.5px;color:var(--gy);text-align:center;margin-top:4px"><span style="color:#7C3AED">■</span> 댄스 <span style="color:#0F9D76;margin-left:6px">■</span> 보컬 · 이번 주 (월~일)</div>
+  </div></div>`;
+}
+function prDrag(sid,k,v){const s=(DB.students||[]).find(x=>x.id===sid);if(!s)return;if(!_prDraft||_prDraft.sid!==sid||_prDraft.date!==_prDate)_prDraft={sid,date:_prDate,...prOf(s,_prDate)};_prDraft[k]=+v;const el=document.getElementById('pr-'+k+'-v');if(el)el.textContent=prMin(v);}
+async function prSave(sid){
+  const s=(DB.students||[]).find(x=>x.id===sid);if(!s)return;const d=_prDate||today();const x=_prDraft&&_prDraft.sid===sid&&_prDraft.date===d?_prDraft:prOf(s,d);
+  if(!s.practice)s.practice={};if(!x.d&&!x.v)delete s.practice[d];else s.practice[d]={d:x.d,v:x.v,ts:Date.now()};
+  await fbSv('idol_students',s.id,s);_prDraft=null;toast('✅ 연습 기록 저장됨 · 댄스 '+prMin(x.d)+' · 보컬 '+prMin(x.v));renderStuHero();
+}
+// 현황판: 학생별 이번 주·이번 달 연습 시간
+function dashPracticeCard(act){
+  const sub=act.filter(s=>taskInGroup(s,_taskT));const [w0,w1]=prWeek();const [m0,m1]=prMonth();
+  const rows=sub.map(s=>{const w=prSum(s,w0,w1),m=prSum(s,m0,m1);const keys=Object.keys(s.practice||{}).sort();return {s,w,m,last:keys[keys.length-1]||''};}).sort((a,b)=>(b.w.d+b.w.v)-(a.w.d+a.w.v)||String(a.s.name).localeCompare(String(b.s.name),'ko'));
+  const none=rows.filter(r=>!(r.w.d+r.w.v)).length;
+  return `<div class="cd"><div class="cd-h"><div class="cd-t">⏱ 연습 기록 <span style="font-size:12px;color:var(--gy);font-weight:600">학생이 날마다 기록</span></div><span style="font-size:12px;font-weight:800;color:${none?'#B91C1C':'#15803D'}">이번 주 기록 없음 ${none}명</span></div>
+    <div style="display:flex;padding:7px 13px;font-size:11px;font-weight:800;color:var(--gy);border-bottom:1px solid var(--bd)"><div style="flex:1.1">이름</div><div style="flex:1.5">이번 주</div><div style="flex:1.5">${+ym().slice(5)}월</div><div style="flex:.8;text-align:right">마지막</div></div>
+    ${rows.map(({s,w,m,last})=>`<div style="display:flex;align-items:center;padding:8px 13px;border-top:1px solid var(--bd);font-size:12.5px"><div style="flex:1.1;font-weight:800;cursor:pointer" onclick="admOpenProf(${s.id})">${esc(s.name)}</div>
+      <div style="flex:1.5;line-height:1.45;${w.d+w.v?'':'color:#B91C1C;font-weight:700'}">${w.d+w.v?`💃 ${prMin(w.d)}<br>🎤 ${prMin(w.v)}`:'기록 없음'}</div>
+      <div style="flex:1.5;line-height:1.45;color:var(--gy)">${m.d+m.v?`💃 ${prMin(m.d)}<br>🎤 ${prMin(m.v)}`:'-'}</div>
+      <div style="flex:.8;text-align:right;font-size:11px;color:var(--gy)">${last?esc(schDateTxt(last)):'-'}</div></div>`).join('')||'<div class="emp-msg">학생이 없어요</div>'}
+  </div>`;
+}
 function renderStuHero(){
   const w=document.getElementById('stu-hero');if(!w)return;
   const vid=_authRole==='student'?_authSid:_viewAs;if(vid==null){w.innerHTML='';return;}
@@ -746,7 +792,7 @@ function renderStuHero(){
   const pos=wishPos(s);const gr=schoolGrade(s.birth);
   const ups=[...schUpcoming(s.id),...taskShoots(s.id).filter(x=>x.date>=today())].sort((a,b)=>a.date.localeCompare(b.date));
   const ev=(DB.events||[]).filter(e=>e.date>=today()).sort((a,b)=>a.date.localeCompare(b.date))[0];
-  const miss=[];if(!wk||!wkItems.length)miss.push('이번 주 체크리스트');if(!hasGoal)miss.push(mo+'월 목표');if(!ibThis)miss.push(mo+'월 인바디');if(!pos)miss.push('희망 포지션');
+  const miss=[];if(!wk||!wkItems.length)miss.push('이번 주 체크리스트');if(!hasGoal)miss.push(mo+'월 목표');if(!ibThis)miss.push(mo+'월 인바디');if(!pos)miss.push('희망 포지션');{const t=prOf(s,today());if(!t.d&&!t.v)miss.push('오늘 연습');}
   const tile=(v,l)=>`<div style="flex:1;min-width:0;background:rgba(255,255,255,.12);border-radius:14px;padding:12px 12px 10px"><div style="font-size:20px;font-weight:900;color:#fff;line-height:1.1">${v}</div><div style="font-size:11.5px;color:rgba(255,255,255,.8);margin-top:5px">${l}</div></div>`;
   const first=ups[0];
   w.innerHTML=`<div style="background:linear-gradient(135deg,#2B1B47 0%,#5B2A86 55%,#9B3FA0 100%);border-radius:20px;padding:18px 16px 16px;color:#fff;margin-bottom:12px;box-shadow:0 10px 26px rgba(70,30,110,.25);overflow:hidden">
@@ -762,7 +808,8 @@ function renderStuHero(){
   ${miss.length?`<div style="background:#FFF7ED;border:2px solid #FDBA74;border-radius:18px;padding:14px 14px 13px;margin-bottom:14px">
     <div style="font-size:15px;font-weight:900;color:#C2410C;margin-bottom:9px">⚠️ 아직 안 적은 게 있어요</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px">${miss.map(m=>`<span style="border:1.5px solid #FDBA74;background:#fff;color:#9A3412;border-radius:20px;padding:4px 11px;font-size:12.5px;font-weight:800">${m}</span>`).join('')}</div>
-    <button onclick="openLock(${s.id})" style="width:100%;border:0;border-radius:12px;background:var(--or);color:#fff;font-size:14.5px;font-weight:900;padding:12px;cursor:pointer;font-family:inherit">내 페이지에서 적으러 가기 →</button></div>`:''}`;
+    <button onclick="openLock(${s.id})" style="width:100%;border:0;border-radius:12px;background:var(--or);color:#fff;font-size:14.5px;font-weight:900;padding:12px;cursor:pointer;font-family:inherit">내 페이지에서 적으러 가기 →</button></div>`:''}
+  ${prCard(s)}`;
 }
 function renderEvs(){
   const w=document.getElementById('w-ev');if(!w)return;
@@ -2104,6 +2151,7 @@ function renderAdmDash(c){
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">${tile('학생',sub.length)}${tile('오피셜 촬영 필요',needN)}${tile('예상일 넣을 과제',readyN)}</div>
   ${dashOffCard(act)}
   ${dashShootCard(act)}
+  ${dashPracticeCard(act)}
   <div class="cd"><div class="cd-h"><div class="cd-t">📅 앞으로 ${SCH_DAYS}일 일정</div><button class="sbtn or" onclick="openSch(null)">+ 일정 추가</button></div>${up.length?up.map(row).join(''):'<div class="emp-msg">예정된 일정이 없어요</div>'}</div>
   <div class="cd"><div class="cd-h" style="cursor:pointer" onclick="_dashPast=!_dashPast;renderAdmCt()"><div class="cd-t">지난 일정 ${past.length}건</div><div style="font-size:12px;color:var(--gy)">${_dashPast?'접기 ▲':'펼치기 ▼'}</div></div>${_dashPast?(past.length?past.map(row).join(''):'<div class="emp-msg">지난 일정이 없어요</div>'):''}</div>`;
 }
