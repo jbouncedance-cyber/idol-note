@@ -262,7 +262,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
   <!-- sticky 헤더 -->
   <div class="hd" style="flex-shrink:0">
     <button class="back" onclick="showPage('pg-land')">←</button>
-    <div><div class="logo">🌟 JB IDOL</div><div class="hd-sub">관리자 모드</div></div>
+    <div><div class="logo">🌟 JB IDOL</div><div class="hd-sub" id="adm-sub">관리자 모드</div></div>
     <div class="hd-r">
       <button class="sbtn" id="adm-refresh-btn" onclick="refreshAdm()" style="font-size:16px">🔄</button>
       <button class="sbtn dk" onclick="admOut()">로그아웃</button>
@@ -580,7 +580,7 @@ function startMsgSync(){
   });
 }
 // 새 버전 자동 확인: 휴대폰이 예전 화면을 붙잡고 있을 때(캐시) 새 버전으로 바꿔줌. 올릴 때마다 APP_VER를 바꿈
-const APP_VER='2026-11-10-1125';
+const APP_VER='2026-11-10-1840';
 async function checkAppVer(mode){
   try{const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),3500);const r=await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store',signal:ac.signal});clearTimeout(tm);const t=await r.text();const m=t.match(/const APP_VER='([^']+)'/);
     if(!m||m[1]===APP_VER)return false;
@@ -608,10 +608,13 @@ function showPage(id){
 let _authRole=null,_authSid=null;
 const _loginMode=true;
 function openLogin(target){document.getElementById('lg-title').textContent=target==='teacher'?'🎹 선생님 로그인':target==='kids'?'✨ 키즈오디션반 로그인':'🌟 오디션반 로그인';document.getElementById('lg-id').value='';document.getElementById('lg-pw').value='';document.getElementById('lg-err').textContent='';showPage('pg-login');}
+let _authName='';
+function tnorm(t){return String(t||'').replace(/\s/g,'').replace(/(선생님|쌤)$/,'').toLowerCase();}
+function isVocalTch(n){const k=tnorm(n);return VOCAL_TEACHERS.some(v=>tnorm(v)===k);}
 async function resolveAccount(user){
   const snap=await db.collection('idol_accounts').doc(user.uid).get();
   if(!snap.exists)return false;
-  const a=snap.data();_authRole=a.role;_authSid=a.sid;isAdm=a.role!=='student';
+  const a=snap.data();_authRole=a.role;_authSid=a.sid;_authName=a.role==='student'?'':(a.name||'');isAdm=a.role!=='student';
   return true;
 }
 function routeAfterLogin(){
@@ -653,15 +656,15 @@ function authBoot(){
 function boardAuthUI(p){
   if(!_authRole)return;const hide=x=>{const e=document.getElementById(x);if(!e)return;const f=e.closest('.fr');(f||e).style.display='none';};
   hide(p+'-role');hide(p+'-pw');hide(p+'-au');const sr=document.getElementById(p+'-sr');if(sr)sr.style.display='none';
-  const tr=document.getElementById(p+'-tr');if(tr)tr.style.display=_authRole==='student'?'none':'block';
+  const tr=document.getElementById(p+'-tr');if(tr)tr.style.display=_authRole==='student'||_authName?'none':'block';
 }
 function boardAuthor(p){
   if(_authRole==='student'){const st=DB.students.find(x=>x.id===_authSid);return st?{author:st.name,isT:false}:null;}
-  if(_authRole){const tn=(document.getElementById(p+'-tn').value||'').trim();if(!tn)return {err:'선생님 이름을 입력해주세요'};return {author:tn,isT:true};}
+  if(_authRole){const el=document.getElementById(p+'-tn');const tn=((el&&el.value)||'').trim()||_authName;if(!tn)return {err:'선생님 이름을 입력해주세요'};return {author:tn,isT:true};}
   return null;
 }
 
-function goTeacher(){_viewAs=null;
+function goTeacher(){_viewAs=null;{const e=document.getElementById('adm-sub');if(e)e.textContent=_authName?_authName+' · '+(_authRole==='admin'?'관리자':'선생님')+' 모드':'관리자 모드';}
   if(_loginMode&&!_authRole){openLogin('teacher');return;}
   if(_loginMode&&_authRole==='student'){const st=DB.students.find(x=>x.id===_authSid);if(st)goClass(st.cls==='kids'?'kids':'audition');return;}
   if(isAdm){
@@ -2251,7 +2254,8 @@ function acctDraw(msg){
   w.innerHTML=`<div style="padding:12px 2px 2px">
     ${msg?`<div style="background:var(--goldb);border-radius:8px;padding:8px 10px;font-size:12px;margin-bottom:10px">${esc(msg)}</div>`:''}
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--lt);border-radius:9px;padding:9px;margin-bottom:12px"><div style="flex:1;min-width:180px;font-size:12px">잠금 전환 준비: 학생 카드 공개 정보와 계정의 이름을 맞춰요.</div><button class="edt-btn" onclick="acctSync(this)">🔄 맞추기</button></div>
-    <div style="font-weight:800;font-size:13px;margin-bottom:4px">선생님·관리자 계정</div>${staff('teacher','선생님','teacher')}${staff('admin','관리자','admin')}
+    ${acctTchSection()}
+    <div style="font-weight:800;font-size:13px;margin:14px 0 4px">관리자 계정</div>${staff('admin','관리자','admin')}
     <div style="display:flex;align-items:center;gap:8px;margin:12px 0 8px;flex-wrap:wrap"><div style="font-weight:800;font-size:13px">학생 계정</div><span style="font-size:12px;color:var(--gy)">만듦 ${don} · 만들 예정 ${todo} · 생년월일 필요 ${nob}</span>${todo?`<button id="acct-go" class="edt-btn" style="margin-left:auto" onclick="acctBulk(this)">학생 계정 ${todo}개 만들기</button>`:''}</div>
     <div style="max-height:360px;overflow:auto;border:1px solid var(--bd);border-radius:9px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--lt);position:sticky;top:0"><th style="padding:7px;text-align:left">이름</th><th style="text-align:left">아이디</th><th style="text-align:left">비밀번호</th><th style="text-align:left">상태</th></tr></thead><tbody>${plan.map(x=>`<tr style="border-top:1px solid var(--bd)"><td style="padding:7px;font-weight:700">${esc(x.s.name)}</td><td>${esc(x.id)||'-'}</td><td>${esc(x.pw)||'-'}</td><td>${x.state==='done'?`<span class="bx gr">만듦</span> <button class="edt-btn" style="font-size:11px;padding:2px 7px" onclick="acctEditOpen('${esc(x.uid||'')}')">수정</button>`:x.state==='todo'?(_acctIds[x.s.id]?`<span class="bx gy" title="${esc(_acctIds[x.s.id])}">실패</span>`:'<span class="bx gy">대기</span>'):'<span class="bx gy">생년월일 필요</span>'}</td></tr>`).join('')}</tbody></table></div>
   </div>`;
@@ -2328,6 +2332,42 @@ async function acctBulk(btn){
     await new Promise(r=>setTimeout(r,250));
   }
   acctDraw(ok+'개 만들었어요'+(bad?' · 실패 '+bad+'건: '+last:'')+'.');
+}
+// 선생님 개인 계정: 선생님마다 아이디(이름 이니셜) → 로그인하면 이름이 자동으로 붙음, 퇴사하면 계정만 지우면 됨
+const STAFF_DEFAULT=['김함비쌤','STIA쌤','김선령쌤','김선우쌤','한지예쌤','장지은쌤','FOXXB쌤'];
+function tchIdOf(n){return acctInitial(String(n).replace(/(선생님|쌤)$/,''));}
+function acctTchSection(){
+  const tch=Object.entries(_acctMap||{}).filter(([k,a])=>a.role==='teacher').map(([uid,a])=>({uid,...a}));
+  const madeNames=new Set(tch.map(a=>tnorm(a.name)));
+  const todo=STAFF_DEFAULT.filter(n=>!madeNames.has(tnorm(n)));
+  const row=a=>`<tr style="border-top:1px solid var(--bd)"><td style="padding:7px;font-weight:700">${esc(a.name||'(이름 없음 · 공용 계정)')}</td><td>${esc(a.loginId)}</td><td>${a.pwCustom===false?'처음 비밀번호':'직접 정함'}</td><td style="white-space:nowrap"><button class="edt-btn" style="font-size:11px;padding:2px 7px" onclick="acctEditOpen('${esc(a.uid)}')">수정</button> <button class="del-btn" style="font-size:11px;padding:2px 7px" onclick="acctRetire('${esc(a.uid)}')">퇴사</button></td></tr>`;
+  return `<div style="font-weight:800;font-size:13px;margin-bottom:6px">선생님 계정 <span style="font-size:11.5px;color:var(--gy);font-weight:600">선생님마다 따로 · 로그인하면 이름이 자동으로 들어가요</span></div>
+    ${tch.length?`<div style="border:1px solid var(--bd);border-radius:9px;overflow:auto;margin-bottom:8px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:var(--lt)"><th style="padding:7px;text-align:left">이름</th><th style="text-align:left">아이디</th><th style="text-align:left">비밀번호</th><th></th></tr></thead><tbody>${tch.sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko')).map(row).join('')}</tbody></table></div>`:''}
+    <div style="background:var(--lt);border-radius:10px;padding:10px">
+      <div style="font-size:12px;font-weight:800;margin-bottom:6px">새 선생님 계정 만들기</div>
+      <div id="tch-new" style="display:flex;flex-direction:column;gap:6px">${todo.map((n,i)=>`<div style="display:flex;gap:6px;align-items:center"><label style="display:flex;align-items:center;gap:5px;flex:1;min-width:0"><input type="checkbox" class="tn-cb" checked style="width:16px;height:16px;margin:0;padding:0;flex:none;-webkit-appearance:checkbox;appearance:auto;border:0;accent-color:var(--or)"><input class="tn-name" value="${esc(n)}" style="flex:1;min-width:0;padding:6px 8px;border:1px solid var(--bd);border-radius:7px;font-family:inherit" oninput="this.closest('div').querySelector('.tn-id').value=tchIdOf(this.value)"></label><input class="tn-id" value="${esc(tchIdOf(n))}" style="width:90px;padding:6px 8px;border:1px solid var(--bd);border-radius:7px;font-family:inherit" autocapitalize="off"></div>`).join('')}</div>
+      <button class="edt-btn" style="margin-top:6px;font-size:12px" onclick="acctTchAddRow()">+ 선생님 한 명 더</button>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:8px"><input id="tn-pw" type="text" autocomplete="off" placeholder="처음 비밀번호 (6자 이상, 모두 같게)" style="flex:1;padding:7px 9px;border:1px solid var(--bd);border-radius:8px;font-family:inherit"><button class="sbtn or" onclick="acctTchCreate(this)">체크한 선생님 만들기</button></div>
+      <div style="font-size:11px;color:var(--gy);margin-top:6px">아이디는 이름 이니셜이에요. 바꾸고 싶으면 아이디 칸을 고쳐서 만들면 돼요.</div>
+    </div>`;
+}
+function acctTchAddRow(){const w=document.getElementById('tch-new');if(!w)return;const d=document.createElement('div');d.style.cssText='display:flex;gap:6px;align-items:center';d.innerHTML=`<label style="display:flex;align-items:center;gap:5px;flex:1;min-width:0"><input type="checkbox" class="tn-cb" checked style="width:16px;height:16px;margin:0;padding:0;flex:none;-webkit-appearance:checkbox;appearance:auto;border:0;accent-color:var(--or)"><input class="tn-name" placeholder="이름 (예: 홍길동쌤)" style="flex:1;min-width:0;padding:6px 8px;border:1px solid var(--bd);border-radius:7px;font-family:inherit" oninput="this.closest('div').querySelector('.tn-id').value=tchIdOf(this.value)"></label><input class="tn-id" placeholder="아이디" style="width:90px;padding:6px 8px;border:1px solid var(--bd);border-radius:7px;font-family:inherit" autocapitalize="off">`;w.appendChild(d);}
+async function acctTchCreate(btn){
+  const pw=(document.getElementById('tn-pw').value||'').trim();if(pw.length<6){alert('처음 비밀번호를 6자 이상 적어주세요');return;}
+  const rows=[...document.querySelectorAll('#tch-new > div')].filter(r=>r.querySelector('.tn-cb').checked).map(r=>({name:r.querySelector('.tn-name').value.trim(),id:r.querySelector('.tn-id').value.trim().toLowerCase()})).filter(r=>r.name);
+  if(!rows.length){alert('만들 선생님을 체크해주세요');return;}
+  const used=new Set(Object.values(_acctMap||{}).map(a=>a.loginId));
+  for(const r of rows){if(!/^[a-z0-9._-]{3,30}$/.test(r.id)){alert(r.name+': 아이디는 영어 소문자·숫자 3자 이상이어야 해요');return;}if(used.has(r.id)){alert(r.name+': 아이디 '+r.id+'는 이미 있어요');return;}used.add(r.id);}
+  btn.disabled=true;const done=[],fail=[];
+  for(const r of rows){btn.textContent='만드는 중 '+(done.length+1)+'/'+rows.length;
+    try{const rec=await acctCreate(r.id,pw,'teacher');rec.name=r.name;rec.pwCustom=false;await db.collection('idol_accounts').doc(rec.uid).update({name:r.name,pwCustom:false});done.push(r.name+'('+r.id+')');}
+    catch(e){fail.push(r.name+': '+acctErr(e));}}
+  acctDraw('✅ 선생님 계정 '+done.length+'개를 만들었어요'+(done.length?': '+done.join(', '):'')+(fail.length?' · 실패: '+fail.join(' / '):''));
+}
+async function acctRetire(uid){
+  const a=_acctMap[uid];if(!a)return;
+  if(!confirm((a.name||a.loginId)+' 계정을 퇴사 처리할까요?\n\n이 아이디로는 더 이상 로그인할 수 없어요. 그동안 남긴 피드백·글은 그대로 남아요.'))return;
+  try{await db.collection('idol_accounts').doc(uid).delete();delete _acctMap[uid];acctDraw('✅ '+(a.name||a.loginId)+' 계정을 퇴사 처리했어요');}catch(e){alert('실패: '+acctErr(e));}
 }
 async function acctStaff(role){
   const id=(document.getElementById('ac-'+role+'-id').value||'').trim().toLowerCase();const pw=document.getElementById('ac-'+role+'-pw').value||'';
@@ -2630,11 +2670,11 @@ function renderAdmFbInput(c){
       <div><label class="fl">기획사</label><select id="fb-ag" onchange="onFbAg()"><option value="">직접 입력</option>${DEF_AG.map(a=>`<option value="${a}">${a}</option>`).join('')}</select><input type="text" id="fb-ag-t" placeholder="기획사명 직접 입력" style="margin-top:4px"></div>
     </div>
     <div style="margin-bottom:12px"><label class="fl" style="color:var(--dn);font-weight:800">💃 댄스 피드백</label>
-      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:6px"><input type="text" id="fb-dr" placeholder="선생님 이름"><textarea id="fb-dt2" placeholder="댄스 피드백 내용" style="min-height:70px"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:6px"><input type="text" id="fb-dr" placeholder="선생님 이름" value="${_authName&&!isVocalTch(_authName)?esc(_authName):''}"><textarea id="fb-dt2" placeholder="댄스 피드백 내용" style="min-height:70px"></textarea></div>
       <input type="text" id="fb-vd" placeholder="💃 댄스 영상 링크 (구글드라이브)">
     </div>
     <div style="margin-bottom:12px"><label class="fl" style="color:var(--vc);font-weight:800">🎤 보컬 피드백</label>
-      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:6px"><input type="text" id="fb-vr" placeholder="선생님 이름"><textarea id="fb-vt" placeholder="보컬 피드백 내용" style="min-height:70px"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;margin-bottom:6px"><input type="text" id="fb-vr" placeholder="선생님 이름" value="${_authName&&isVocalTch(_authName)?esc(_authName):''}"><textarea id="fb-vt" placeholder="보컬 피드백 내용" style="min-height:70px"></textarea></div>
       <input type="text" id="fb-vv" placeholder="🎤 보컬 영상 링크 (구글드라이브)">
     </div>
     <button class="btn btn-or" onclick="saveFb()">저장하기</button><div id="fb-st" style="margin-top:8px;font-size:13px"></div>
@@ -2649,7 +2689,7 @@ async function saveFb(){
   if(!dText&&!vMain){alert('피드백 내용을 입력해주세요');return;}
   const fb={id:Date.now()+'',cls:s.cls||'audition',name:s.name,date:dt,agency:ag,dTeacher:document.getElementById('fb-dr').value.trim(),dText,vTeacher:document.getElementById('fb-vr').value.trim(),vMain,videoDance:document.getElementById('fb-vd').value.trim(),videoVocal:document.getElementById('fb-vv').value.trim(),ts:Date.now()};
   const stat=document.getElementById('fb-st');stat.textContent='저장 중...';stat.style.color='var(--gy)';
-  try{await db.collection('feedbacks').doc(fb.id).set(fb);stat.style.color='var(--gn)';stat.textContent='✅ 저장됐어요!';['fb-dr','fb-dt2','fb-vr','fb-vt','fb-vd','fb-vv'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});setTimeout(()=>{if(stat)stat.textContent='';},2500);}
+  try{await db.collection('feedbacks').doc(fb.id).set(fb);stat.style.color='var(--gn)';stat.textContent='✅ 저장됐어요!';['fb-dt2','fb-vt','fb-vd','fb-vv'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});setTimeout(()=>{if(stat)stat.textContent='';},2500);}
   catch(e){stat.style.color='var(--rd)';stat.textContent='❌ 저장 실패: '+e.message;}
 }
 
