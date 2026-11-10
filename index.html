@@ -752,9 +752,10 @@ function prCard(s){
   const slider=(k,icon,l,col)=>`<div style="margin-top:12px"><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:13.5px;font-weight:800">${icon} ${l}</span><span id="pr-${k}-v" style="font-size:18px;font-weight:900;color:${col}">${prMin(cur[k])}</span></div>
     <input type="range" min="0" max="${PR_MAX}" step="${PR_STEP}" value="${cur[k]}" oninput="prDrag(${s.id},'${k}',this.value)" style="width:100%;margin:8px 0 0;padding:0;border:0;background:none;-webkit-appearance:auto;appearance:auto;accent-color:${col};height:28px">
     <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--gy2)"><span>0</span><span>1시간</span><span>2시간</span><span>3시간</span><span>4시간</span><span>5시간</span><span>6시간</span></div></div>`;
-  return `<div class="cd" style="margin-bottom:14px"><div class="cd-h"><div class="cd-t">⏱ 연습 기록</div><span style="font-size:11.5px;color:var(--gy)">드래그해서 시간 맞추기</span></div><div class="cd-b" style="padding-top:2px">
+  return `<div class="cd" id="pr-card" style="margin-bottom:14px"><div class="cd-h"><div class="cd-t">⏱ 연습 기록</div><span style="font-size:11.5px;color:var(--gy)">드래그해서 시간 맞추기</span></div><div class="cd-b" style="padding-top:2px">
+    <div style="background:#FBEFF6;border-radius:12px;padding:11px 13px;font-size:13px;line-height:1.6;color:#6B2A50;margin-bottom:12px">💗 연습 기록은 <b>검사용이 아니라 나를 위한 기록</b>이에요.<br>적게 한 날도 괜찮아요. <b>솔직하게, 매일 꾸준히</b> 남겨주세요.</div>
     <div style="display:flex;gap:5px;overflow-x:auto;padding-bottom:3px">${days.map(d=>{const x=prOf(s,d);const has=x.d||x.v;return `<button onclick="_prDate='${d}';_prDraft=null;renderStuHero()" style="flex-shrink:0;border:1.5px solid ${d===sel?'var(--or)':'var(--bd)'};background:${d===sel?'var(--or)':'#fff'};color:${d===sel?'#fff':'var(--bk)'};border-radius:18px;padding:5px 10px;font-size:12px;font-weight:800;font-family:inherit;cursor:pointer">${lbl(d)}${has?' ✓':''}</button>`;}).join('')}</div>
-    ${slider('d','💃','댄스','#7C3AED')}${slider('v','🎤','보컬','#0F9D76')}
+    ${slider('d','💃','댄스 연습','#7C3AED')}${slider('v','🎤','보컬 연습','#0F9D76')}
     <button onclick="prSave(${s.id})" class="btn btn-or" style="margin-top:12px">${lbl(sel)} 연습 저장</button>
     <div style="display:flex;gap:8px;margin-top:14px">
       <div style="flex:1;background:var(--lt);border-radius:11px;padding:10px"><div style="font-size:11px;color:var(--gy);font-weight:700">이번 주</div><div style="font-size:12.5px;font-weight:800;margin-top:3px">💃 ${prMin(wk.d)}</div><div style="font-size:12.5px;font-weight:800">🎤 ${prMin(wk.v)}</div></div>
@@ -808,7 +809,7 @@ function renderStuHero(){
   ${miss.length?`<div style="background:#FFF7ED;border:2px solid #FDBA74;border-radius:18px;padding:14px 14px 13px;margin-bottom:14px">
     <div style="font-size:15px;font-weight:900;color:#C2410C;margin-bottom:9px">⚠️ 아직 안 적은 게 있어요</div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:11px">${miss.map(m=>`<span style="border:1.5px solid #FDBA74;background:#fff;color:#9A3412;border-radius:20px;padding:4px 11px;font-size:12.5px;font-weight:800">${m}</span>`).join('')}</div>
-    <button onclick="openLock(${s.id})" style="width:100%;border:0;border-radius:12px;background:var(--or);color:#fff;font-size:14.5px;font-weight:900;padding:12px;cursor:pointer;font-family:inherit">내 페이지에서 적으러 가기 →</button></div>`:''}
+    <button onclick="openLock(${s.id})" style="width:100%;border:0;border-radius:12px;background:var(--or);color:#fff;font-size:14.5px;font-weight:900;padding:12px;cursor:pointer;font-family:inherit">내 페이지에서 적으러 가기 →</button>${miss.includes('오늘 연습')?`<button onclick="const c=document.getElementById('pr-card');if(c)c.scrollIntoView({behavior:'smooth',block:'start'})" style="width:100%;margin-top:8px;border:2px solid var(--or);border-radius:12px;background:#fff;color:var(--or);font-size:14.5px;font-weight:900;padding:11px;cursor:pointer;font-family:inherit">⏱ 아래에서 오늘 연습 기록하기 ↓</button>`:''}</div>`:''}
   ${prCard(s)}`;
 }
 function renderEvs(){
