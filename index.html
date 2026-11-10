@@ -771,6 +771,40 @@ async function prSave(sid){
   await fbSv('idol_students',s.id,s);_prDraft=null;toast('✅ 연습 기록 저장됨 · 댄스 '+prMin(x.d)+' · 보컬 '+prMin(x.v));renderStuHero();
 }
 // 현황판: 학생별 이번 주·이번 달 연습 시간
+// 선생님별 할 일: 현황판 맨 위. 숫자를 누르면 해당 반·탭으로 이동
+function tnorm(t){return String(t||'').replace(/\s/g,'').replace(/(선생님|쌤)$/,'').toLowerCase();}
+function dashGo(task,off,flt,anchor){_taskT=task;if(off)_offT=off;_shootF=flt||'all';renderAdmCt();setTimeout(()=>{const el=document.getElementById(anchor);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},50);}
+function dashTeacherCard(act){
+  const t=today(),wk=schAddDays(t,7);
+  const badge=(n,l,col,go)=>`<span onclick="${go}" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;border-radius:8px;padding:4px 9px;font-size:12px;font-weight:800;white-space:nowrap;${n?`background:${col}1A;color:${col}`:'background:var(--lt);color:var(--gy2)'}">${l} <b style="font-size:13.5px">${n}</b></span>`;
+  const offN=(list,tr,lv)=>list.filter(s=>{const x=trackStatus(s,tr);return x.applies&&x.level===lv;}).length;
+  const home=(g,lbl)=>{const sub=act.filter(s=>taskInGroup(s,g));const ids=new Set(sub.map(s=>s.id));const ts=(DB.tasks||[]).filter(x=>ids.has(x.sid));
+    const since=schAddDays(t,-30);const none=sub.filter(s=>!taskOf(s.id).some(x=>x.status!=='done'||String(x.doneAt||'')>=since)).length;
+    return `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px"><span style="font-size:11.5px;color:var(--gy);font-weight:800;min-width:66px">${lbl}</span>
+      ${badge(offN(sub,'dance','need'),'댄스 촬영 필요','#DC2626',`dashGo('${g}','dance','all','dash-off')`)}${badge(offN(sub,'dance','soon'),'촬영 시기','#B45309',`dashGo('${g}','dance','all','dash-off')`)}
+      ${badge(ts.filter(x=>x.status==='todo'&&x.due&&x.due<=t).length,'검사할 과제','#DC2626',`dashGo('${g}',null,'late','dash-task')`)}${badge(ts.filter(x=>x.status==='ready').length,'예상일 넣기','#15803D',`dashGo('${g}',null,'ready','dash-task')`)}
+      ${badge(ts.filter(x=>x.status==='scheduled'&&x.shootDate&&x.shootDate>=t&&x.shootDate<=wk).length,'이번 주 촬영','#2563EB',`dashGo('${g}',null,'sched','dash-task')`)}${badge(none,'30일 과제 없음','#9333EA',`dashGo('${g}',null,'none','dash-task')`)}</div>`;};
+  // 보컬 선생님: 단체보컬 반(보컬디자인 vd / 단체보컬 vg)과 1:1 담당 학생
+  const vt={};
+  act.forEach(s=>stuVocal(s).forEach(c=>{const k=tnorm(c.teacher);if(!k)return;if(!vt[k])vt[k]={name:tchName(c.teacher),grp:new Set(),v11:new Set()};const g=vocalGroupOf(s,c);if(V11_RE.test(c.name||''))vt[k].v11.add(s);else if(g)vt[k].grp.add(g);}));
+  const vocalRow=v=>{const v11=[...v.v11];const parts=[];
+    [...v.grp].forEach(g=>{const sub=act.filter(s=>taskInGroup(s,g));parts.push(badge(offN(sub,'vclass','need'),(g==='vd'?'보컬디자인':'단체보컬')+' 촬영 필요','#DC2626',`dashGo('${g}','vclass','all','dash-off')`)+badge(offN(sub,'vclass','soon'),'촬영 시기','#B45309',`dashGo('${g}','vclass','all','dash-off')`));});
+    if(v11.length)parts.push(badge(offN(v11,'v11','need'),'1:1 촬영 필요','#DC2626',`dashGo('all','v11','all','dash-off')`)+badge(offN(v11,'v11','soon'),'촬영 시기','#B45309',`dashGo('all','v11','all','dash-off')`));
+    const role=[v.grp.size?'단체보컬 촬영':'',v11.length?`1:1 보컬 ${v11.length}명 촬영(트레이닝·녹음)`:'',v11.length?'오디션 보컬 피드백':''].filter(Boolean).join(' · ');
+    return `<div style="padding:10px 13px;border-top:1px solid var(--bd)"><div style="font-weight:800;font-size:14px">🎤 ${esc(v.name)} <span style="font-size:11.5px;color:var(--gy);font-weight:600">${esc(role)}</span></div><div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${parts.join('')}</div></div>`;};
+  const vrows=Object.entries(vt).filter(([k])=>!/함비|stia/.test(k)).sort((a,b)=>a[1].name.localeCompare(b[1].name,'ko')).map(([k,v])=>vocalRow(v)).join('');
+  const recentAud=(DB.schedules||[]).filter(x=>String(x.kind).startsWith('오디션')&&x.date<=t&&x.date>=schAddDays(t,-14)).length;
+  const upAud=(DB.schedules||[]).filter(x=>String(x.kind).startsWith('오디션')&&x.date>t&&x.date<=schAddDays(t,14)).length;
+  const auditBtn="(document.querySelector(&quot;#adm-tb .tbtn[onclick*='audit']&quot;)||{click(){}}).click()";
+  return `<div class="cd"><div class="cd-h"><div class="cd-t">👩‍🏫 선생님별 할 일</div><span style="font-size:11px;color:var(--gy)">숫자를 누르면 해당 반으로 이동</span></div>
+    <div style="padding:2px 13px 10px"><div style="font-weight:800;font-size:14px">💃 김함비쌤 <span style="font-size:11.5px;color:var(--gy);font-weight:600">트레이닝 담임 · 댄스 촬영 · 콘텐츠 과제 · 오디션 댄스 피드백</span></div>${home('aud','오디션반')}${home('kh','키즈(목)')}</div>
+    <div style="padding:10px 13px;border-top:1px solid var(--bd)"><div style="font-weight:800;font-size:14px">💃 Stia쌤 <span style="font-size:11.5px;color:var(--gy);font-weight:600">키즈 트레이닝 담임 · 댄스 촬영 · 콘텐츠 과제 · 오디션 댄스 피드백</span></div>${home('ks','키즈(Stia)')}</div>
+    ${vrows}
+    <div style="padding:10px 13px;border-top:1px solid var(--bd)"><div style="font-weight:800;font-size:14px">🗂 대표님 · 실장 <span style="font-size:11.5px;color:var(--gy);font-weight:600">오디션 2차 이상 결과 입력 · 공지·행사 · 계정·휴원 관리</span></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">${badge(recentAud,'최근 2주 오디션 (결과 입력 확인)','#DC2626',auditBtn)}${badge(upAud,'2주 안 오디션','#2563EB',auditBtn)}</div></div>
+    <div style="padding:8px 13px;border-top:1px solid var(--bd);font-size:11px;color:var(--gy)">연습 기록은 참고용이라 할 일에 넣지 않았어요 · 댄스기본기(배찬열쌤)는 정비중</div>
+  </div>`;
+}
 function dashPracticeCard(act){
   const sub=act.filter(s=>taskInGroup(s,_taskT));const [w0,w1]=prWeek();const [m0,m1]=prMonth();
   const rows=sub.map(s=>{const w=prSum(s,w0,w1),m=prSum(s,m0,m1);const keys=Object.keys(s.practice||{}).sort();return {s,w,m,last:keys[keys.length-1]||''};}).sort((a,b)=>(b.w.d+b.w.v)-(a.w.d+a.w.v)||String(a.s.name).localeCompare(String(b.s.name),'ko'));
@@ -1882,7 +1916,7 @@ function dashOffCard(act){
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><div style="flex:1;font-size:13.5px;font-weight:800">${esc(g.label)} <span style="font-size:11px;color:var(--gy);font-weight:600">${g.members.length}명</span></div>
       <button class="sbtn or" onclick="openOffShoot('${_offT}',[${ids}],'${esc(g.label).replace(/'/g,'')}')">+ 촬영 예상일·기록</button></div>
       <div style="display:flex;flex-wrap:wrap;gap:5px">${ms.map(({s,x})=>`<span onclick="openOffShoot('${_offT}',[${s.id}],'${esc(g.label).replace(/'/g,'')}')" style="cursor:pointer;background:${OFF_COL[x.level][0]};color:${OFF_COL[x.level][1]};border-radius:7px;padding:4px 8px;font-size:12px;font-weight:700;white-space:nowrap"><b style="color:var(--bk)">${esc(s.name)}</b> ${offTxt(x)}</span>`).join('')}</div></div>`;};
-  return `<div class="cd"><div class="cd-h"><div class="cd-t">📹 오피셜 촬영 <span style="font-size:12px;color:var(--gy);font-weight:600">2~3개월마다</span></div></div>
+  return `<div class="cd" id="dash-off"><div class="cd-h"><div class="cd-t">📹 오피셜 촬영 <span style="font-size:12px;color:var(--gy);font-weight:600">2~3개월마다</span></div></div>
     <div style="display:flex;border-bottom:1px solid var(--bd);margin:0 0 10px">${OFF_TRACKS.map(tab).join('')}${OFF_PAUSED.map(([k,l])=>`<button onclick="_offT='${k}';renderAdmCt()" style="flex:1;border:0;border-bottom:3px solid ${_offT===k?'var(--gy)':'transparent'};background:none;padding:9px 4px;font-size:13px;font-weight:800;color:var(--gy2);cursor:pointer;font-family:inherit">${l}</button>`).join('')}</div>
     <div style="font-size:11px;color:var(--gy);padding:0 13px 9px;line-height:1.6">${_offT==='dance'?'트레이닝 수업에서 개인 또는 단체로 촬영':_offT==='vclass'?'보컬디자인(김선령쌤)·단체보컬(김선우쌤) 수업에서 촬영':'개인 보컬 선생님이 트레이닝·녹음 후 촬영'} · <span style="color:#15803D">초록</span> 최근 촬영 · <span style="color:#B45309">노랑</span> 2개월 지남 · <span style="color:#B91C1C">빨강</span> 3개월 지남/기록 없음 · <span style="color:#1D4ED8">파랑</span> 예상일 있음<br>이름을 누르면 그 학생만, <b>+ 촬영 예상일·기록</b>은 반 전체를 한 번에 넣어요. 정확한 날이 안 정해져도 예상일로 미리 넣고, 지난 날짜를 넣으면 이미 찍은 기록이 돼요.</div>
     ${groups.length?groups.map(card).join(''):`<div class="emp-msg">${_offT==='dance'?'학생이 없어요':'이 수업을 듣는 학생이 없어요. 학생 개인 페이지의 보컬 수업 배정을 확인해 주세요'}</div>`}
@@ -2012,7 +2046,7 @@ function dashShootCard(act){
   const tchip=x=>{const late=taskLate(x);const c=late?'#FEE2E2;color:#B91C1C':x.status==='ready'?'#DCFCE7;color:#15803D':x.status==='scheduled'?'#DBEAFE;color:#1D4ED8':'var(--lt);color:var(--bk)';
     const when=x.status==='scheduled'&&x.shootDate?`📅 ${esc(schDateTxt(x.shootDate))} 촬영 예상 <b>${ddayTxt(x.shootDate)}</b>`:x.status==='todo'&&x.due?`기한 ${esc(schDateTxt(x.due))} <b>${ddayTxt(x.due)}</b>`:'';
     return `<span onclick="event.stopPropagation();openTaskView('${esc(x.id)}')" style="cursor:pointer;background:${c};border-radius:8px;padding:5px 9px;font-size:12px;font-weight:700;display:inline-flex;flex-direction:column;gap:1px;line-height:1.3;max-width:100%"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.kind)}${x.title?' · '+esc(x.title):''}</span><span style="font-size:11px;font-weight:600;opacity:.9;white-space:nowrap">${late?'⚠️ 기한 지남':TASK_ST[x.status]}${when?' · '+when:''}</span></span>`;};
-  return `<div class="cd"><div class="cd-h"><div class="cd-t">🎬 콘텐츠 과제 <span style="font-size:12px;color:var(--gy);font-weight:600">담임이 내주는 과제</span></div><button class="sbtn or" onclick="openTask(null)">+ 과제 내주기</button></div>
+  return `<div class="cd" id="dash-task"><div class="cd-h"><div class="cd-t">🎬 콘텐츠 과제 <span style="font-size:12px;color:var(--gy);font-weight:600">담임이 내주는 과제</span></div><button class="sbtn or" onclick="openTask(null)">+ 과제 내주기</button></div>
   <div style="padding:0 13px 10px"><div style="display:flex;gap:5px;flex-wrap:wrap">${flt('ready','예상일 넣기','#16A34A')}${flt('late','기한 지남','#DC2626')}${flt('none','과제 없음','#9333EA')}${flt('sched','촬영 예상','#2563EB')}</div>
     <div style="font-size:11px;color:var(--gy);margin-top:6px;line-height:1.6">준비 중 → 과제 검사 통과(<b style="color:#15803D">예상일 넣기</b>) → 학원 촬영 예상일(<b style="color:#1D4ED8">촬영 예상</b>) → 촬영 완료 · 과제 없음 = 최근 30일 · 과제 칩을 누르면 검사·예상일 넣기${_shootF!=='all'?' · 숫자를 다시 누르면 전체':''}</div></div>
   ${list.length?list.map(({s,open,doneN,f})=>`<div style="padding:9px 13px;border-top:1px solid var(--bd);display:flex;align-items:center;gap:7px;flex-wrap:wrap">
@@ -2148,7 +2182,7 @@ function renderAdmDash(c){
   const gchip=(v,l)=>`<button onclick="_taskT='${v}';${v==='vd'||v==='vg'?"_offT='vclass';":""}renderAdmCt()" style="border:1px solid ${_taskT===v?'var(--or)':'var(--bd)'};background:${_taskT===v?'var(--or)':'#fff'};color:${_taskT===v?'#fff':'var(--bk)'};border-radius:20px;padding:6px 12px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit">${l}</button>`;
   const tile=(l,v)=>`<div class="cd" style="margin:0;padding:12px;text-align:center"><div style="font-size:12px;color:var(--gy);font-weight:700">${l}</div><div style="font-size:24px;font-weight:900;margin-top:3px">${v}</div></div>`;
   const row=x=>`<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:9px 13px;border-top:1px solid var(--bd)"><div style="font-size:12px;color:var(--gy);width:78px">${esc(x.date)}</div><div style="font-weight:800;min-width:56px;cursor:pointer" onclick="admOpenProf(${Number(x.sid)||0})">${esc(nm(x.sid))}</div><span class="bx ${x.task?'kk':String(x.kind).startsWith('오디션')?'or':String(x.kind).includes('보컬')?'vc':'dn'}">${esc(x.kind)}</span><div style="flex:1;min-width:100px;font-size:13px">${esc(x.memo||'')}</div>${x.task?'<span style="font-size:11px;color:var(--gy)">콘텐츠 과제</span>':`<button onclick="openSch('${esc(x.id)}')" class="edt-btn" style="font-size:11px;padding:3px 7px">수정</button><button onclick="dlSch('${esc(x.id)}')" class="del-btn" style="font-size:11px;padding:3px 7px">삭제</button>`}</div>`;
-  c.innerHTML=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${DASH_GROUPS.map(([v,l])=>gchip(v,l==='전체'?'전체 반':l)).join('')}</div>
+  c.innerHTML=`${dashTeacherCard(act)}<div id="dash-groups" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${DASH_GROUPS.map(([v,l])=>gchip(v,l==='전체'?'전체 반':l)).join('')}</div>
   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px">${tile('학생',sub.length)}${tile('오피셜 촬영 필요',needN)}${tile('예상일 넣을 과제',readyN)}</div>
   ${dashOffCard(act)}
   ${dashShootCard(act)}
