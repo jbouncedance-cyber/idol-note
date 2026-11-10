@@ -579,7 +579,20 @@ function startMsgSync(){
     if(document.getElementById('pg-main').classList.contains('active'))renderMain();
   });
 }
-async function refreshData(){const btn=document.getElementById('refresh-btn');if(btn){btn.style.animation='spin .6s linear infinite';btn.disabled=true;}await loadAll();toast('✅ 업데이트됐어요!');if(btn){btn.style.animation='';btn.disabled=false;}}
+// 새 버전 자동 확인: 휴대폰이 예전 화면을 붙잡고 있을 때(캐시) 새 버전으로 바꿔줌. 올릴 때마다 APP_VER를 바꿈
+const APP_VER='2026-11-10-1125';
+async function checkAppVer(mode){
+  try{const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),3500);const r=await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store',signal:ac.signal});clearTimeout(tm);const t=await r.text();const m=t.match(/const APP_VER='([^']+)'/);
+    if(!m||m[1]===APP_VER)return false;
+    const go=()=>location.replace(location.pathname+'?v='+encodeURIComponent(m[1]));
+    if(mode==='auto'){let k='';try{k=sessionStorage.getItem('jbi_upd');}catch(e){}if(k!==m[1]){try{sessionStorage.setItem('jbi_upd',m[1]);}catch(e){}go();return true;}}
+    if(mode==='now'){go();return true;}
+    let b=document.getElementById('upd-bar');if(!b){b=document.createElement('div');b.id='upd-bar';b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:10000;background:#FFD54A;color:#2B1B47;font-weight:900;font-size:14px;text-align:center;padding:11px 12px;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18)';b.textContent='🔄 새 버전이 나왔어요 · 눌러서 업데이트';b.onclick=go;document.body.appendChild(b);}
+    return true;
+  }catch(e){return false;}
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkAppVer('bar');});
+async function refreshData(){if(await checkAppVer('now'))return;const btn=document.getElementById('refresh-btn');if(btn){btn.style.animation='spin .6s linear infinite';btn.disabled=true;}await loadAll();toast('✅ 업데이트됐어요!');if(btn){btn.style.animation='';btn.disabled=false;}}
 
 // PAGES
 function showPage(id){
@@ -2817,6 +2830,7 @@ function sendBroadcast(){const nm=(document.getElementById('bc-nm').value||'').t
 window.addEventListener('load',async()=>{
   await new Promise(r=>setTimeout(r,200));
   document.querySelectorAll('.bnav').forEach(b=>{b.style.display='none';b.style.pointerEvents='none';});
+  if(await checkAppVer('auto'))return;
   await authBoot();
   // isAdm이면 adm 버튼 표시만 (자동 이동은 안 함 - 랜딩 먼저)
   if(isAdm){
