@@ -2240,7 +2240,7 @@ function acctPlan(){
     let id=ini+pw,n=2;while(used[id]){id=ini+pw+n;n++;}used[id]=1;return {s,id,pw,state:'todo'};
   });
 }
-async function acctOpen(){
+async function acctOpen(){if(_authRole&&_authRole!=='admin'){alert('계정 관리는 관리자 계정에서만 할 수 있어요');return;}
   const w=document.getElementById('acct-sec');if(!w)return;
   w.innerHTML='<div style="padding:12px;color:var(--gy);font-size:13px">불러오는 중...</div>';
   try{const q=await db.collection('idol_accounts').get();_acctMap={};q.forEach(d=>{_acctMap[d.id]=d.data();});}catch(e){w.innerHTML='<div style="padding:12px;color:#c33;font-size:13px">불러오기 실패: '+esc(e.message)+'</div>';return;}
@@ -2860,11 +2860,12 @@ function dlRes(id){if(!confirm('삭제할까요?'))return;DB.resources=(DB.resou
 
 // 설정
 function renderAdmCfg(c){
+  const adm=_authRole==='admin'||!_authRole;
   c.innerHTML=`<div class="adm-sec"><div class="adm-r"><div style="flex:1;font-weight:800">전체 메시지 보내기</div><button onclick="openM('ov-bc')" class="edt-btn">📢 전송</button></div></div>
-  <div class="adm-sec" style="margin-top:12px"><div class="adm-r"><div style="flex:1"><div style="font-weight:800">전체 데이터 백업</div><div style="font-size:12px;color:var(--gy)">학생 정보, 기록, 피드백을 이 기기에 파일로 저장해요. 개인정보가 들어 있으니 안전한 곳에 보관하세요.</div></div><button onclick="admBackup(this)" class="edt-btn">💾 백업 받기</button></div></div>
-  <div class="adm-sec" style="margin-top:12px"><div class="adm-r"><div style="flex:1"><div style="font-weight:800">로그인 계정 관리</div><div style="font-size:12px;color:var(--gy)">학생·선생님·관리자 로그인 계정을 만들어요. 새 학생은 여기서 계정을 꼭 만들어 주세요.</div></div><button onclick="acctOpen()" class="edt-btn">👤 계정 관리</button></div><div id="acct-sec"></div></div>`;
+  ${adm?`<div class="adm-sec" style="margin-top:12px"><div class="adm-r"><div style="flex:1"><div style="font-weight:800">전체 데이터 백업</div><div style="font-size:12px;color:var(--gy)">학생 정보, 기록, 피드백을 이 기기에 파일로 저장해요. 개인정보가 들어 있으니 안전한 곳에 보관하세요.</div></div><button onclick="admBackup(this)" class="edt-btn">💾 백업 받기</button></div></div>
+  <div class="adm-sec" style="margin-top:12px"><div class="adm-r"><div style="flex:1"><div style="font-weight:800">로그인 계정 관리</div><div style="font-size:12px;color:var(--gy)">학생·선생님·관리자 로그인 계정을 만들어요. 새 학생은 여기서 계정을 꼭 만들어 주세요.</div></div><button onclick="acctOpen()" class="edt-btn">👤 계정 관리</button></div><div id="acct-sec"></div></div>`:`<div style="margin-top:12px;font-size:12px;color:var(--gy);padding:10px 4px">백업과 계정 관리는 관리자 계정에서만 할 수 있어요.</div>`}`;
 }
-function sendBroadcast(){const nm=(document.getElementById('bc-nm').value||'').trim();const ct=document.getElementById('bc-ct').value.trim();if(!nm||!ct){alert('이름과 메시지를 입력해주세요');return;}if(!confirm('모든 학생 '+DB.students.length+'명에게 전송할까요?'))return;DB.students.forEach(s=>{if(!s.teacherMessages)s.teacherMessages=[];s.teacherMessages.push({id:'tm'+Date.now()+Math.random(),content:'['+nm+'] '+ct,date:nowT(),read:false});fbSv('idol_students',s.id,s);});toast('✅ 전송 완료');closeM('ov-bc');}
+function sendBroadcast(){const nm=(document.getElementById('bc-nm').value||'').trim()||_authName;const ct=document.getElementById('bc-ct').value.trim();if(!nm||!ct){alert('이름과 메시지를 입력해주세요');return;}if(!confirm('모든 학생 '+DB.students.length+'명에게 전송할까요?'))return;DB.students.forEach(s=>{if(!s.teacherMessages)s.teacherMessages=[];s.teacherMessages.push({id:'tm'+Date.now()+Math.random(),content:'['+nm+'] '+ct,date:nowT(),read:false});fbSv('idol_students',s.id,s);});toast('✅ 전송 완료');closeM('ov-bc');}
 
 // INIT
 window.addEventListener('load',async()=>{
