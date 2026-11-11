@@ -512,6 +512,9 @@ async function fbStaffCfg(){try{await db.collection('idol_config').doc('staff').
 
 async function loadAll(){
   try{
+    const sid=String(_authSid),soft=q=>q.catch(()=>null);
+    const bP=_authRole==='student'?Promise.all([db.collection('idol_public').get(),db.collection('idol_students').doc(sid).get(),db.collection('idol_messages').get(),soft(db.collection('idol_resources').get()),soft(db.collection('idol_schedules').where('sid','==',_authSid).get()),soft(db.collection('idol_tasks').where('sid','==',_authSid).get()),soft(db.collection('idol_student_meta').doc(sid).get()),soft(db.collection('idol_rep_status').doc(sid).get())]):Promise.all([db.collection('idol_students').get(),db.collection('idol_messages').get(),soft(db.collection('idol_resources').get()),soft(db.collection('idol_schedules').get()),soft(db.collection('idol_tasks').get()),soft(db.collection('idol_student_meta').get()),soft(db.collection('idol_rep_status').get())]);bP.catch(()=>{});
+    const sfP=isAdm?db.collection('idol_config').doc('staff').get().catch(()=>null):null;
     const c=await db.collection('idol_config').doc('main').get();
     if(c.exists){
       const d=c.data();
@@ -526,38 +529,37 @@ async function loadAll(){
     if(isAdm){
       // 선생님 메모는 선생님 전용 문서(idol_config/staff)에 보관. 예전 위치에 남은 메모와 비밀번호는 한 번만 옮기고 지움
       try{
-        const old=c.exists?c.data():{};const sf=await db.collection('idol_config').doc('staff').get();
+        const old=c.exists?c.data():{};const sf=(await sfP)||await db.collection('idol_config').doc('staff').get();
         if(sf.exists)DB.teacherMemos=sf.data().teacherMemos||[];
         else{DB.teacherMemos=old.teacherMemos||[];await fbStaffCfg();}
         if('adminPw' in old||'teacherMemos' in old)await fbCfg();
       }catch(e){console.warn(e);}
     }else DB.teacherMemos=[];
     if(_authRole==='student'){
-      const pb=await db.collection('idol_public').get();DB.students=[];pb.forEach(d=>{const x=d.data();if(!x.cls)x.cls='audition';DB.students.push(x);});
-      const own=await db.collection('idol_students').doc(String(_authSid)).get();
+      const [pb,own,ms0,rs0,sc0,tk0,m0,r0]=await bP;
+      DB.students=[];pb.forEach(d=>{const x=d.data();if(!x.cls)x.cls='audition';DB.students.push(x);});
       if(own.exists){const o=own.data();if(!o.cls)o.cls='audition';const i=DB.students.findIndex(x=>x.id===o.id);if(i>=0)DB.students[i]=o;else DB.students.push(o);}
-      const ms0=await db.collection('idol_messages').get();DB.messages=[];ms0.forEach(d=>DB.messages.push(d.data()));DB.messages.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
-      try{const rs0=await db.collection('idol_resources').get();DB.resources=[];rs0.forEach(d=>DB.resources.push(d.data()));}catch(e){DB.resources=[];}
-      try{const sc0=await db.collection('idol_schedules').where('sid','==',_authSid).get();DB.schedules=[];sc0.forEach(d=>DB.schedules.push(d.data()));}catch(e){DB.schedules=[];}
-      try{const tk0=await db.collection('idol_tasks').where('sid','==',_authSid).get();DB.tasks=[];tk0.forEach(d=>DB.tasks.push(d.data()));}catch(e){DB.tasks=[];}
-      DB.meta={};try{const m0=await db.collection('idol_student_meta').doc(String(_authSid)).get();if(m0.exists)DB.meta[String(_authSid)]=m0.data();}catch(e){}
-      DB.repStatus={};try{const r0=await db.collection('idol_rep_status').doc(String(_authSid)).get();if(r0.exists)DB.repStatus[String(_authSid)]=r0.data();}catch(e){}
+      DB.messages=[];ms0.forEach(d=>DB.messages.push(d.data()));DB.messages.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
+      DB.resources=[];if(rs0)rs0.forEach(d=>DB.resources.push(d.data()));
+      DB.schedules=[];if(sc0)sc0.forEach(d=>DB.schedules.push(d.data()));
+      DB.tasks=[];if(tk0)tk0.forEach(d=>DB.tasks.push(d.data()));
+      DB.meta={};if(m0&&m0.exists)DB.meta[sid]=m0.data();
+      DB.repStatus={};if(r0&&r0.exists)DB.repStatus[sid]=r0.data();
       DB.grades=null;window.DB=DB;
       if(document.getElementById('pg-main').classList.contains('active'))renderMain();
       return;
     }
-    const ss=await db.collection('idol_students').get();
+    const [ss,ms,rs,sc,tk,mt,rs2]=await bP;
     if(!ss.empty){DB.students=[];ss.forEach(d=>{const stu=d.data();if(!stu.cls)stu.cls='audition';DB.students.push(stu);});}
     else{for(const s of DB.students)await fbSv('idol_students',s.id,s);}
-    const ms=await db.collection('idol_messages').get();
     DB.messages=[];ms.forEach(d=>DB.messages.push(d.data()));
     DB.messages.sort((a,b)=>String(a.id).localeCompare(String(b.id)));
-    try{const rs=await db.collection('idol_resources').get();DB.resources=[];rs.forEach(d=>DB.resources.push(d.data()));}catch(e){DB.resources=[];}
-    try{const sc=await db.collection('idol_schedules').get();DB.schedules=[];sc.forEach(d=>DB.schedules.push(d.data()));}catch(e){DB.schedules=[];}
-    try{const tk=await db.collection('idol_tasks').get();DB.tasks=[];tk.forEach(d=>DB.tasks.push(d.data()));}catch(e){DB.tasks=[];}
-    try{const mt=await db.collection('idol_student_meta').get();DB.meta={};mt.forEach(d=>{DB.meta[d.id]=d.data();});}catch(e){DB.meta={};}
+    DB.resources=[];if(rs)rs.forEach(d=>DB.resources.push(d.data()));
+    DB.schedules=[];if(sc)sc.forEach(d=>DB.schedules.push(d.data()));
+    DB.tasks=[];if(tk)tk.forEach(d=>DB.tasks.push(d.data()));
+    DB.meta={};if(mt)mt.forEach(d=>{DB.meta[d.id]=d.data();});
     DB.grades=null;
-    try{const rs2=await db.collection('idol_rep_status').get();DB.repStatus={};rs2.forEach(d=>{DB.repStatus[d.id]=d.data();});}catch(e){DB.repStatus={};}
+    DB.repStatus={};if(rs2)rs2.forEach(d=>{DB.repStatus[d.id]=d.data();});
     window.DB=DB;
   }catch(e){console.warn('로드 실패:',e);}
   // 세션 복원 (UI 상태만 - 페이지 이동 없음)
@@ -580,7 +582,7 @@ function startMsgSync(){
   });
 }
 // 새 버전 자동 확인: 휴대폰이 예전 화면을 붙잡고 있을 때(캐시) 새 버전으로 바꿔줌. 올릴 때마다 APP_VER를 바꿈
-const APP_VER='2026-11-10-2200';
+const APP_VER='2026-11-12-0410';
 async function checkAppVer(mode){
   try{const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),3500);const r=await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store',signal:ac.signal});clearTimeout(tm);const t=await r.text();const m=t.match(/const APP_VER='([^']+)'/);
     if(!m||m[1]===APP_VER)return false;
@@ -2874,17 +2876,16 @@ function renderAdmCfg(c){
 function sendBroadcast(){const nm=(document.getElementById('bc-nm').value||'').trim()||_authName;const ct=document.getElementById('bc-ct').value.trim();if(!nm||!ct){alert('이름과 메시지를 입력해주세요');return;}if(!confirm('모든 학생 '+DB.students.length+'명에게 전송할까요?'))return;DB.students.forEach(s=>{if(!s.teacherMessages)s.teacherMessages=[];s.teacherMessages.push({id:'tm'+Date.now()+Math.random(),content:'['+nm+'] '+ct,date:nowT(),read:false});fbSv('idol_students',s.id,s);});toast('✅ 전송 완료');closeM('ov-bc');}
 
 // INIT
-window.addEventListener('load',async()=>{
-  await new Promise(r=>setTimeout(r,200));
+document.addEventListener('DOMContentLoaded',async()=>{
   document.querySelectorAll('.bnav').forEach(b=>{b.style.display='none';b.style.pointerEvents='none';});
-  if(await checkAppVer('auto'))return;
+  checkAppVer('auto');
   await authBoot();
   // isAdm이면 adm 버튼 표시만 (자동 이동은 안 함 - 랜딩 먼저)
   if(isAdm){
     const ab=document.getElementById('adm-btn');const an=document.getElementById('adm-nav');
     if(ab)ab.style.display='';if(an)an.style.display='';
   }
-  setTimeout(()=>{const ov=document.getElementById('lov');if(ov){ov.style.opacity='0';ov.style.transition='opacity .3s';setTimeout(()=>ov&&ov.remove(),300);}},200);
+  {const ov=document.getElementById('lov');if(ov){ov.style.opacity='0';ov.style.transition='opacity .3s';setTimeout(()=>ov&&ov.remove(),300);}}
 });
 </script>
 </body>
