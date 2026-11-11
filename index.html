@@ -582,7 +582,7 @@ function startMsgSync(){
   });
 }
 // 새 버전 자동 확인: 휴대폰이 예전 화면을 붙잡고 있을 때(캐시) 새 버전으로 바꿔줌. 올릴 때마다 APP_VER를 바꿈
-const APP_VER='2026-11-12-0410';
+const APP_VER='2026-11-12-0500';
 async function checkAppVer(mode){
   try{const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),3500);const r=await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store',signal:ac.signal});clearTimeout(tm);const t=await r.text();const m=t.match(/const APP_VER='([^']+)'/);
     if(!m||m[1]===APP_VER)return false;
@@ -2060,6 +2060,7 @@ function openTask(id,sid){
   const kidsOther=stu.filter(s=>s.cls==='kids'&&!taskInGroup(s,'kh')&&!taskInGroup(s,'ks'));
   det.innerHTML=`<div class="md"><div class="mh"><div class="mt">🎬 촬영 과제 ${id?'수정':'내주기'}</div><button class="xb" onclick="closeM('ov-task')">✕</button></div><div class="mb">
     <div class="fr"><label class="fl">학생${id?'':' (여러 명 선택 가능)'}</label>${id?`<div style="font-weight:800">${esc((stu.find(x=>x.id===r.sid)||{}).name||'')}</div>`:grp('aud','오디션반 · 김함비쌤')+grp('kh','키즈 · 김함비쌤(목)')+grp('ks','키즈 · Stia쌤')+(kidsOther.length?`<div style="font-size:11px;font-weight:800;color:var(--gy);margin:8px 0 4px">키즈 · 담임 미배정</div><div style="display:flex;flex-wrap:wrap;gap:6px">${kidsOther.map(s=>`<label style="font-size:13px;display:inline-flex;align-items:center;gap:4px;cursor:pointer;border:1px solid var(--bd);border-radius:8px;padding:5px 9px;background:#fff"><input type="checkbox" class="tk-cb" value="${s.id}" style="width:16px;height:16px;margin:0;padding:0;flex:none;accent-color:var(--or);-webkit-appearance:checkbox;appearance:auto;border:0">${esc(s.name)}</label>`).join('')}</div>`:'')}</div>
+    <button type="button" onclick="openTips()" style="width:100%;margin:0 0 12px;padding:11px;border-radius:10px;border:1.5px solid var(--or);background:var(--lt);color:var(--or);font-weight:900;font-size:14px;font-family:inherit;cursor:pointer">💡 이번 주 과제 팁 보기</button>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" class="fr"><div><label class="fl">종류</label><select id="tk-kind">${TASK_KINDS.map(v=>`<option ${r.kind===v?'selected':''}>${v}</option>`).join('')}</select></div>
     <div><label class="fl">준비 기한 (과제 검사일)</label><input type="date" id="tk-due" value="${esc(r.due||schAddDays(today(),7))}"></div></div>
     <div class="fr"><label class="fl">무엇을 준비할지</label><input type="text" id="tk-title" maxlength="60" placeholder="예: OO 챌린지 안무, 1분 자기소개 대본" value="${esc(r.title||'')}"></div>
@@ -2067,6 +2068,37 @@ function openTask(id,sid){
   </div><div class="mf"><button class="btn btn-or" onclick="saveTask()">${id?'저장하기':'과제 내주기'}</button></div></div>`;
   det.classList.add('on');
 }
+// 과제 팁 (tips.json, 매주 갱신)
+let _tips=null,_tipF='all',_tipOpen='';
+async function openTips(){
+  let ov=document.getElementById('ov-tips');
+  if(!ov){ov=document.createElement('div');ov.id='ov-tips';ov.className='ov';ov.onclick=function(e){if(e.target===this)closeM('ov-tips');};document.body.appendChild(ov);}
+  ov.innerHTML='<div class="md"><div class="mh"><div class="mt">💡 이번 주 과제 팁</div><button class="xb" onclick="closeM(\'ov-tips\')">✕</button></div><div class="mb" id="tips-ct"><div class="emp-msg">불러오는 중…</div></div></div>';
+  ov.classList.add('on');
+  try{const r=await fetch('tips.json?v='+Date.now(),{cache:'no-store'});if(!r.ok)throw 0;_tips=await r.json();}catch(e){if(!_tips){document.getElementById('tips-ct').innerHTML='<div class="emp-msg">팁을 불러오지 못했어요. 인터넷 연결을 확인해 주세요</div>';return;}}
+  renderTips();
+}
+function tipMatch(sec,it){if(_tipF==='all')return true;if(_tipF==='vocal'||_tipF==='kids')return (it.tags||[]).includes(_tipF);return sec.id===_tipF;}
+function renderTips(){
+  const c=document.getElementById('tips-ct');if(!c||!_tips)return;const T=_tips;
+  const fl=[['all','전체'],...T.sections.map(x=>[x.id,x.title]),['vocal','보컬'],['kids','키즈 OK']];
+  const chip=(t,bg,fg)=>`<span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px;background:${bg};color:${fg}">${esc(t)}</span>`;
+  let h=`<div style="background:linear-gradient(135deg,#6B3FA0,#8B3FA0);color:#fff;border-radius:14px;padding:13px 14px;margin-bottom:10px"><div style="font-size:12px;opacity:.85">${esc(T.week||'')} · ${esc(T.updated||'')} 업데이트</div><div style="font-weight:800;font-size:14px;margin-top:3px">${esc(T.oneLine||'')}</div></div>`;
+  h+=`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">${fl.map(([k,l])=>`<button onclick="_tipF='${k}';renderTips()" style="font-size:12px;font-weight:800;padding:5px 10px;border-radius:99px;border:1.5px solid ${_tipF===k?'var(--or)':'var(--bd)'};background:${_tipF===k?'var(--or)':'#fff'};color:${_tipF===k?'#fff':'var(--gy)'};font-family:inherit">${esc(l)}</button>`).join('')}</div>`;
+  T.sections.forEach((sec,si)=>{const its=sec.items.map((it,ii)=>[it,ii]).filter(([it])=>tipMatch(sec,it));if(!its.length)return;
+    h+=`<div style="font-weight:900;font-size:15px;margin:14px 0 2px">${sec.emoji||''} ${esc(sec.title)}</div><div style="font-size:12px;color:var(--gy);margin-bottom:6px">${esc(sec.desc||'')}</div>`;
+    its.forEach(([it,ii])=>{const key=si+'_'+ii,op=_tipOpen===key;const tg=it.tags||[];
+      h+=`<div style="border:1px solid var(--bd);border-radius:12px;padding:11px 12px;margin-bottom:7px;background:#fff"><div onclick="_tipOpen=_tipOpen==='${key}'?'':'${key}';renderTips()" style="cursor:pointer"><div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:5px">${it.hot?chip(it.hot,'#ffeaea','#e0324b'):''}${chip(it.kind,'#eef1ff','#4257e0')}${tg.includes('vocal')?chip('보컬','#e8f9ee','#1c9e5b'):''}${tg.includes('kids')?chip('키즈 OK','#fff3e0','#e08600'):''}${chip('난이도 '+'★'.repeat(it.level||1)+'☆'.repeat(3-(it.level||1)),'#f4f4f4','#666')}</div><div style="display:flex;gap:6px;align-items:flex-start"><div style="flex:1"><div style="font-weight:900;font-size:14.5px">${esc(it.title)}</div><div style="font-size:12px;color:var(--gy)">${esc(it.meta||'')}</div></div><span style="color:var(--gy);font-size:12px">${op?'▲':'▼'}</span></div></div>`;
+      if(op)h+=`<div style="font-size:13px;margin-top:8px;line-height:1.6">${esc(it.body||'')}</div><div style="margin-top:7px;background:var(--lt);border-radius:9px;padding:8px 10px;font-size:12.5px"><b style="color:var(--or)">오디션 포인트</b> ${esc(it.why||'')}</div>${it.shoot?`<div style="margin-top:6px;font-size:12.5px"><b style="color:#e08600">📷 촬영 팁</b> ${esc(it.shoot)}</div>`:''}<div style="margin-top:7px;border:1.5px dashed var(--bd);border-radius:9px;padding:8px 10px;font-size:12.5px"><div style="font-size:11px;color:var(--gy);font-weight:800">가이드 (과제에 그대로 들어가요)</div>${esc(it.guide||'')}</div><div style="display:flex;gap:8px;align-items:center;margin-top:9px"><button class="btn btn-or" style="flex:1;padding:10px" onclick="useTip(${si},${ii})">이걸로 과제 내기</button>${it.src&&it.src.url?`<a href="${esc(it.src.url)}" target="_blank" rel="noopener" style="font-size:11.5px;color:var(--gy)">출처: ${esc(it.src.name||'')}</a>`:''}</div>`;
+      h+='</div>';});});
+  if(T.note)h+=`<div style="font-size:12px;color:var(--gy);margin-top:10px">⚠️ ${esc(T.note)}</div>`;
+  c.innerHTML=h;
+}
+function useTip(si,ii){const it=_tips&&_tips.sections[si]&&_tips.sections[si].items[ii];if(!it)return;
+  const k=document.getElementById('tk-kind');if(k&&TASK_KINDS.includes(it.kind))k.value=it.kind;
+  const t=document.getElementById('tk-title');if(t)t.value=(it.task||it.title).slice(0,60);
+  const g=document.getElementById('tk-guide');if(g)g.value=it.guide||'';
+  closeM('ov-tips');toast('✅ 과제 칸에 채웠어요. 학생 고르고 내주세요');}
 async function saveTask(){
   const v=k=>(document.getElementById(k).value||'').trim();const title=v('tk-title');if(!title){alert('무엇을 준비할지 적어주세요');return;}
   const base={kind:v('tk-kind'),due:v('tk-due'),title,guide:v('tk-guide')};let recs=[];
