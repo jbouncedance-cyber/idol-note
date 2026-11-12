@@ -582,7 +582,7 @@ function startMsgSync(){
   });
 }
 // 새 버전 자동 확인: 휴대폰이 예전 화면을 붙잡고 있을 때(캐시) 새 버전으로 바꿔줌. 올릴 때마다 APP_VER를 바꿈
-const APP_VER='2026-11-12-0500';
+const APP_VER='2026-11-12-1030';
 async function checkAppVer(mode){
   try{const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),3500);const r=await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store',signal:ac.signal});clearTimeout(tm);const t=await r.text();const m=t.match(/const APP_VER='([^']+)'/);
     if(!m||m[1]===APP_VER)return false;
@@ -2432,7 +2432,7 @@ async function admBackup(btn){
 }
 
 // 학생 현황 (보기 전용: 개인 페이지에 등록된 정보를 그대로 표시)
-let _chartCls='all',_chartQ='';
+let _chartCls='all',_chartQ='',_chartSt='act';
 function chartAge(b){if(!b)return null;const d=new Date(b);if(isNaN(d))return null;const n=new Date();let a=n.getFullYear()-d.getFullYear();if(n.getMonth()<d.getMonth()||(n.getMonth()===d.getMonth()&&n.getDate()<d.getDate()))a--;return a;}
 function chartCls(s,pfx,arr){
   return Object.keys(s.classes||{}).filter(k=>k[0]===pfx&&s.classes[k]).sort().map(k=>(arr||[]).find(x=>x.id===s.classes[k])).filter(Boolean);
@@ -2445,10 +2445,10 @@ async function renderAdmChart(c){
   if(!c)return;
   await ensureGrades();
   if(admTab_!=='chart')return;
-  const act=(DB.students||[]).filter(s=>!s.inactive);
+  const act=(DB.students||[]).filter(s=>stuStatus(s)===_chartSt);
   const isKid=s=>s.cls==='kids';
   const fBtn=(v,l,n)=>`<button onclick="_chartCls='${v}';renderAdmCt()" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${_chartCls===v?'var(--or)':'var(--bd)'};background:${_chartCls===v?'var(--ob)':'#fff'};color:${_chartCls===v?'var(--or)':'var(--gy)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${l} ${n}</button>`;
-  let h=`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;align-items:center">
+  let h=stuStTabs(_chartSt,'_chartSt',DB.students||[])+`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;align-items:center">
     ${fBtn('all','전체',act.length)}${fBtn('audition','오디션반',act.filter(s=>!isKid(s)).length)}${fBtn('kids','키즈오디션반',act.filter(isKid).length)}
     <input id="chart-q" type="text" value="${esc(_chartQ)}" placeholder="이름 검색" oninput="_chartQ=this.value;renderAdmChartList()" style="flex:1;min-width:120px;padding:7px 11px;border:1px solid var(--bd);border-radius:9px;font-size:13px;font-family:inherit">
   </div>
@@ -2460,7 +2460,7 @@ async function renderAdmChart(c){
 function renderAdmChartList(){
   const w=document.getElementById('chart-list');if(!w)return;
   const isKid=s=>s.cls==='kids';const q=_chartQ.trim();
-  const list=(DB.students||[]).filter(s=>!s.inactive&&(_chartCls==='all'||(_chartCls==='kids')===isKid(s))&&(!q||String(s.name||'').includes(q))&&(_chartTeacher==='all'||(_chartTeacher==='none'?!autoTeachers(s).train.length:autoTeachers(s).train.some(t=>t.replace(/\s/g,'').replace(/(선생님|쌤)$/,'')===_chartTeacher.replace(/\s/g,'').replace(/(선생님|쌤)$/,''))))).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko'));
+  const list=(DB.students||[]).filter(s=>stuStatus(s)===_chartSt&&(_chartCls==='all'||(_chartCls==='kids')===isKid(s))&&(!q||String(s.name||'').includes(q))&&(_chartTeacher==='all'||(_chartTeacher==='none'?!autoTeachers(s).train.length:autoTeachers(s).train.some(t=>t.replace(/\s/g,'').replace(/(선생님|쌤)$/,'')===_chartTeacher.replace(/\s/g,'').replace(/(선생님|쌤)$/,''))))).sort((a,b)=>String(a.name||'').localeCompare(String(b.name||''),'ko'));
   if(!list.length){w.innerHTML='<div class="emp-msg">해당하는 학생이 없어요</div>';return;}
   w.innerHTML=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px">${list.map(s=>{
     const k=isKid(s);const age=chartAge(s.birth);const ib=s.inbody&&s.inbody.length?s.inbody[s.inbody.length-1]:null;
@@ -2483,13 +2483,25 @@ function renderAdmChartList(){
 }
 
 // 학생 관리
+let _stuSt='act';
+function stuStTabs(cur,setter,src){
+  const cnt=k=>src.filter(x=>stuStatus(x)===k).length;
+  const tabs=[['act','재원','var(--or)','var(--ob)'],['leave','휴원','#B45309','#FFFBEB'],['out','퇴원','#92400e','#fef3c7']];
+  return `<div style="display:flex;gap:6px;margin:4px 0 10px">${tabs.map(([k,l,fg,bg])=>`<button onclick="${setter}='${k}';renderAdmCt()" style="flex:1;padding:8px 6px;border-radius:10px;border:1.5px solid ${cur===k?fg:'var(--bd)'};background:${cur===k?bg:'#fff'};color:${cur===k?fg:'var(--gy)'};font-size:13px;font-weight:800;cursor:pointer;font-family:inherit">${l} ${cnt(k)}</button>`).join('')}</div>`;
+}
 function renderAdmStu(c){
-  const aud=DB.students.filter(s=>s.cls==='audition'||!s.cls);const kids=DB.students.filter(s=>s.cls==='kids');
-  let h=`<button class="btn btn-or" onclick="openStuM(null)" style="margin-bottom:14px">+ 학생 추가</button>`;
+  const all=DB.students||[];
+  const inSt=x=>stuStatus(x)===_stuSt;
+  const aud=all.filter(s=>(s.cls==='audition'||!s.cls)&&inSt(s));const kids=all.filter(s=>s.cls==='kids'&&inSt(s));
+  let h=`<button class="btn btn-or" onclick="openStuM(null)" style="margin-bottom:10px">+ 학생 추가</button>`;
+  h+=stuStTabs(_stuSt,'_stuSt',all);
+  if(_stuSt==='leave')h+=`<div style="font-size:12px;color:#B45309;background:#FFFBEB;border-radius:9px;padding:8px 11px;margin-bottom:6px">휴원생은 로그인은 그대로 되고, 촬영 필요·과제 알림에서만 빠져요. 복귀하면 상태를 '재원'으로 바꿔주세요.</div>`;
+  if(_stuSt==='out')h+=`<div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:9px;padding:8px 11px;margin-bottom:6px">퇴원생은 다른 명단·현황판에 안 보여요. 기록(피드백·인바디·오디션 등)은 그대로 남아 있고, 다시 오면 상태를 '재원'으로 바꾸면 돼요.</div>`;
+  if(!aud.length&&!kids.length)h+=`<div class="emp-msg">${({act:'재원',leave:'휴원',out:'퇴원'})[_stuSt]} 학생이 없어요</div>`;
   ['오디션반','키즈오디션반'].forEach((lbl,li)=>{
     const list=li===0?aud:kids;
-    const inaN=list.filter(s=>s.inactive).length;const lvN=list.filter(isLeave).length;const actN=list.length-inaN-lvN;
-    h+=`<div style="font-size:11px;font-weight:800;color:var(--gy);margin:12px 0 7px">${lbl} · 재원 ${actN}명${lvN?` <span style="color:#B45309">· 휴원 ${lvN}명</span>`:''}${inaN?` <span style="color:#92400e">· 퇴원 ${inaN}명</span>`:''}</div>`;
+    if(!list.length)return;
+    h+=`<div style="font-size:11px;font-weight:800;color:var(--gy);margin:12px 0 7px">${lbl} · ${list.length}명</div>`;
     list.sort((a,b)=>stuRank(a)-stuRank(b)||a.name.localeCompare(b.name,'ko')).forEach((s,idx)=>{
       const isK=li===1;
       const dC=Object.keys(s.classes||{}).filter(k=>k[0]==='d'&&s.classes[k]);
