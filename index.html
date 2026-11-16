@@ -582,7 +582,7 @@ function startMsgSync(){
   });
 }
 // 새 버전 자동 확인: 휴대폰이 예전 화면을 붙잡고 있을 때(캐시) 새 버전으로 바꿔줌. 올릴 때마다 APP_VER를 바꿈
-const APP_VER='2026-11-12-2330';
+const APP_VER='2026-11-16-1930';
 async function checkAppVer(mode){
   try{const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),3500);const r=await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store',signal:ac.signal});clearTimeout(tm);const t=await r.text();const m=t.match(/const APP_VER='([^']+)'/);
     if(!m||m[1]===APP_VER)return false;
@@ -1876,11 +1876,11 @@ function trackStatus(s,tr){
   const fut=hit.filter(x=>x.date>t).map(x=>x.date).sort();const next=fut[0]||'';
   const prep=((metaOf(s.id).offPrep)||{})[tr]||null;
   const level=next?'planned':prep?'prep':!last||schAddMonths(last,3)<=t?'need':schAddMonths(last,2)<=t?'soon':'ok';
-  return {applies:trackApplies(s,tr),last,next,level,prep};
+  return {applies:trackApplies(s,tr),last,next,level,prep,nextN:fut.length};
 }
 function offNeedAny(s){return OFF_TRACKS.some(([tr])=>{const x=trackStatus(s,tr);return x.applies&&x.level==='need';});}
 const OFF_COL={ok:['#DCFCE7','#15803D'],soon:['#FEF3C7','#B45309'],need:['#FEE2E2','#B91C1C'],planned:['#DBEAFE','#1D4ED8'],prep:['#F3E8FF','#7E22CE']};
-function offTxt(x){if(x.level==='prep'){const m=String(x.prep&&x.prep.memo||'');return '준비 중'+(m?' · '+(m.length>12?m.slice(0,12)+'…':m):'');}return x.level==='planned'?'예상 '+schDateTxt(x.next):x.level==='need'?(x.last?'필요 · '+schDateTxt(x.last):'필요 · 기록 없음'):x.level==='soon'?'촬영 시기 · '+schDateTxt(x.last):schDateTxt(x.last);}
+function offTxt(x){if(x.level==='prep'){const m=String(x.prep&&x.prep.memo||'');return '준비 중'+(m?' · '+(m.length>12?m.slice(0,12)+'…':m):'');}return x.level==='planned'?'예상 '+schDateTxt(x.next)+(x.nextN>1?' 외 '+(x.nextN-1)+'회':'')+(x.last?' · 최근 '+schDateTxt(x.last):''):x.level==='need'?(x.last?'필요 · '+schDateTxt(x.last):'필요 · 기록 없음'):x.level==='soon'?'촬영 시기 · '+schDateTxt(x.last):schDateTxt(x.last);}
 // 촬영이 이뤄지는 반 단위 묶음
 function offGroups(act,tr){
   if(tr==='dance')return TASK_GROUPS.filter(([g])=>g!=='all').map(([g,l])=>({key:g,label:l.replace('오디션반 · ','오디션반 트레이닝 · ').replace('키즈 · ','키즈 트레이닝 · '),members:act.filter(s=>taskInGroup(s,g))}));
@@ -1907,6 +1907,30 @@ function dashOffCard(act){
     ${tabsHtml()}
     <div style="font-size:11px;color:var(--gy);padding:0 13px 9px;line-height:1.6">${_offT==='dance'?'트레이닝 수업에서 개인 또는 단체로 촬영':_offT==='vclass'?'보컬디자인(김선령쌤)·단체보컬(김선우쌤) 수업에서 촬영':'개인 보컬 선생님이 트레이닝·녹음 후 촬영'} · <span style="color:#15803D">초록</span> 최근 촬영 · <span style="color:#B45309">노랑</span> 2개월 지남 · <span style="color:#B91C1C">빨강</span> 3개월 지남/기록 없음 · <span style="color:#1D4ED8">파랑</span> 예상일 있음 · <span style="color:#7E22CE">보라</span> 날짜 미정·준비 중<br>이름을 누르면 그 학생만, <b>+ 촬영 예상일·기록</b>은 반 전체를 한 번에 넣어요. 정확한 날이 안 정해져도 예상일로 미리 넣고, 지난 날짜를 넣으면 이미 찍은 기록이 돼요.</div>
     ${groups.length?groups.map(card).join(''):`<div class="emp-msg">${_offT==='dance'?'학생이 없어요':'이 수업을 듣는 학생이 없어요. 학생 개인 페이지의 보컬 수업 배정을 확인해 주세요'}</div>`}
+    ${offHistHtml(sub)}
+  </div>`;
+}
+// 오피셜 촬영 일정·기록 (현재 반/트랙): 예정 + 촬영 완료(월별)
+let _offHistAll=false;
+function offHistHtml(sub){
+  const ids=new Set(sub.map(s=>s.id));const kinds=OFF_KINDS[_offT]||[];const t=today();
+  const nm=id=>{const s=(DB.students||[]).find(x=>x.id===id);return s?s.name:'?';};
+  const recs=(DB.schedules||[]).filter(x=>ids.has(x.sid)&&kinds.includes(x.kind));
+  const fut=recs.filter(x=>x.date>t).sort((a,b)=>a.date.localeCompare(b.date)||String(nm(a.sid)).localeCompare(String(nm(b.sid)),'ko'));
+  const past=recs.filter(x=>x.date<=t).sort((a,b)=>b.date.localeCompare(a.date)||String(nm(a.sid)).localeCompare(String(nm(b.sid)),'ko'));
+  if(!fut.length&&!past.length)return '';
+  const wd=d=>'일월화수목금토'[new Date(d+'T00:00:00').getDay()];
+  const byDate=list=>{const m=[];list.forEach(x=>{const g=m.find(y=>y.d===x.date);if(g)g.l.push(x);else m.push({d:x.date,l:[x]});});return m;};
+  const row=x=>`<div onclick="openSch('${x.id}')" style="display:flex;gap:8px;align-items:baseline;padding:4px 0;cursor:pointer"><b style="min-width:48px;font-size:13px">${esc(nm(x.sid))}</b><span style="font-size:12.5px;color:#4a3d66;flex:1;min-width:0">${esc(String(x.memo||'').replace(/^(개인|단체) · /,'')||x.kind)}${/^단체/.test(x.memo||'')?' <span style="font-size:11px;color:var(--gy)">(단체)</span>':''}</span></div>`;
+  const day=(g,col)=>`<div style="display:flex;gap:10px;padding:8px 0;border-top:1px solid var(--bd)"><div style="flex:none;width:62px"><div style="font-size:13px;font-weight:900;color:${col}">${schDateTxt(g.d)}</div><div style="font-size:11px;color:var(--gy)">${wd(g.d)}요일 · ${g.l.length}명</div></div><div style="flex:1;min-width:0">${g.l.map(row).join('')}</div></div>`;
+  const cut=_offHistAll?'':schAddMonths(t,-3);const shown=past.filter(x=>!cut||x.date>=cut);const hidden=past.length-shown.length;
+  const months=[];byDate(shown).forEach(g=>{const k=g.d.slice(0,7);let m=months.find(y=>y.k===k);if(!m){m={k,g:[]};months.push(m);}m.g.push(g);});
+  return `<div style="margin:4px 13px 12px;border:1px solid var(--bd);border-radius:11px;background:#fff;padding:10px 12px">
+    <div style="font-size:13.5px;font-weight:900">🗂 촬영 일정 · 기록</div>
+    <div style="font-size:11px;color:var(--gy);margin:2px 0 4px">줄을 누르면 수정·삭제할 수 있어요. 같은 학생이 여러 번 찍어도 날짜마다 따로 쌓여요.</div>
+    ${fut.length?`<div style="font-size:12px;font-weight:800;color:#1D4ED8;margin:8px 0 2px">예정 ${fut.length}건</div>${byDate(fut).map(g=>day(g,'#1D4ED8')).join('')}`:''}
+    ${months.map(m=>`<div style="font-size:12px;font-weight:800;color:#15803D;margin:10px 0 2px">${Number(m.k.slice(5))}월 촬영 완료 ${m.g.reduce((n,g)=>n+g.l.length,0)}건</div>${m.g.map(g=>day(g,'#15803D')).join('')}`).join('')}
+    ${hidden?`<button onclick="_offHistAll=true;renderAdmCt()" style="margin-top:8px;width:100%;padding:8px;border:1px solid var(--bd);border-radius:9px;background:var(--lt);font-size:12.5px;font-weight:800;color:var(--gy);font-family:inherit;cursor:pointer">이전 기록 ${hidden}건 더 보기</button>`:''}
   </div>`;
 }
 function openOffShoot(tr,ids,label){
@@ -1919,6 +1943,7 @@ function openOffShoot(tr,ids,label){
   det.innerHTML=`<div class="md"><div class="mh"><div class="mt">📹 ${esc(kind)}</div><button class="xb" onclick="closeM('ov-off')">✕</button></div><div class="mb">
     <div style="font-size:12px;color:var(--gy);font-weight:700;margin-bottom:10px">${esc(label)}</div>
     <div class="fr"><label class="fl">학생 (빠지는 학생은 체크 해제)</label><div style="display:flex;flex-wrap:wrap;gap:6px">${ms.map(cb).join('')}</div></div>
+    ${ms.length===1?(()=>{const ex=schOf(ms[0].id).filter(x=>OFF_KINDS[tr].includes(x.kind)).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);return ex.length?`<div style="font-size:12px;background:var(--lt);border-radius:9px;padding:8px 10px;margin:-4px 0 12px;line-height:1.7"><b style="color:var(--gy)">이미 넣은 날짜</b> <span style="color:var(--gy)">(저장하면 새 날짜가 하나 더 추가돼요)</span>${ex.map(x=>`<div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b style="color:${x.date>today()?'#1D4ED8':'#15803D'}">${schDateTxt(x.date)}</b> ${esc(String(x.memo||'').replace(/^(개인|단체) · /,''))}</div>`).join('')}</div>`:'';})():''}
     <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:800;color:#7E22CE;background:#F3E8FF;border-radius:9px;padding:9px 11px;margin-bottom:12px;cursor:pointer"><input type="checkbox" id="off-prep" ${prep0?'checked':''} onchange="document.getElementById('off-date').disabled=this.checked;document.getElementById('off-mode').disabled=this.checked;document.getElementById('off-dm').style.opacity=this.checked?.35:1" style="width:17px;height:17px;margin:0;padding:0;flex:none;accent-color:#7E22CE;-webkit-appearance:checkbox;appearance:auto;border:0">날짜 미정 · 지금 준비 중으로 표시</label>
     <div id="off-dm" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;opacity:${prep0?.35:1}" class="fr"><div><label class="fl">촬영 예상일 (지난 날짜 = 기록)</label><input type="date" id="off-date" value="${today()}" ${prep0?'disabled':''}></div>
     <div><label class="fl">방식</label><select id="off-mode" ${prep0?'disabled':''}><option>${ms.length>1?'단체':'개인'}</option><option>${ms.length>1?'개인':'단체'}</option></select></div></div>
@@ -2241,17 +2266,18 @@ function openSch(id){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px" class="fr"><div><label class="fl">날짜</label><input type="date" id="sc-date" value="${esc(r.date||today())}"></div>
     <div><label class="fl">구분</label><select id="sc-kind">${(r.kind&&!SCH_KINDS.includes(r.kind)?[r.kind,...SCH_KINDS]:SCH_KINDS).map(v=>`<option value="${v}" ${r.kind===v?'selected':''}>${v}</option>`).join('')}</select></div></div>
     <div class="fr" style="margin-bottom:0"><label class="fl">내용 (학생에게도 보여요)</label><input type="text" id="sc-memo" placeholder="예: A2O, 정기 촬영, 흰 티셔츠 준비" value="${esc(r.memo||'')}"></div>
-  </div><div class="mf"><button class="btn btn-or" onclick="saveSch()">저장하기</button></div></div>`;
+    ${id?`<div style="font-size:12px;color:#B45309;background:#FFFBEB;border-radius:9px;padding:8px 10px;margin-top:12px">⚠️ <b>수정 저장</b>은 이 일정을 바꿔요. 같은 학생이 <b>다른 날 또 찍는</b> 거면 <b>새 일정으로 추가</b>를 눌러주세요.</div>`:''}
+  </div><div class="mf">${id?`<div style="display:flex;gap:8px"><button class="btn" style="flex:1;background:#fff;border:1.5px solid var(--or);color:var(--or)" onclick="saveSch(true)">새 일정으로 추가</button><button class="btn btn-or" style="flex:1" onclick="saveSch()">수정 저장</button></div><button onclick="closeM('ov-sch');dlSch('${id}')" style="margin-top:8px;width:100%;background:none;border:0;color:#B91C1C;font-size:12.5px;cursor:pointer;font-family:inherit">이 일정 삭제</button>`:`<button class="btn btn-or" onclick="saveSch()">저장하기</button>`}</div></div>`;
   det.classList.add('on');
 }
-async function saveSch(){
+async function saveSch(asNew){
   const raw=document.getElementById('sc-stu').value;const st=(DB.students||[]).find(x=>String(x.id)===raw);
   const date=document.getElementById('sc-date').value;
   if(!st){alert('학생을 선택해주세요');return;}if(!date){alert('날짜를 입력해주세요');return;}
-  const rec={id:_schEditId||('sc'+Date.now()),sid:st.id,date,kind:document.getElementById('sc-kind').value,memo:(document.getElementById('sc-memo').value||'').trim()};
+  const rec={id:(!asNew&&_schEditId)||('sc'+Date.now()),sid:st.id,date,kind:document.getElementById('sc-kind').value,memo:(document.getElementById('sc-memo').value||'').trim()};
   try{await db.collection('idol_schedules').doc(rec.id).set(rec);}catch(e){alert('저장 실패: '+e.message);return;}
   const i=(DB.schedules||[]).findIndex(x=>x.id===rec.id);if(i>=0)DB.schedules[i]=rec;else DB.schedules.push(rec);
-  closeM('ov-sch');toast('✅ 일정 저장됨');renderAdmCt();
+  closeM('ov-sch');toast(asNew?'✅ 새 일정 추가됨':'✅ 일정 저장됨');renderAdmCt();
 }
 async function dlSch(id){
   if(!confirm('이 일정을 삭제할까요?'))return;
