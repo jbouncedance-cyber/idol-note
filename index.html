@@ -582,7 +582,7 @@ function startMsgSync(){
   });
 }
 // 새 버전 자동 확인: 휴대폰이 예전 화면을 붙잡고 있을 때(캐시) 새 버전으로 바꿔줌. 올릴 때마다 APP_VER를 바꿈
-const APP_VER='2026-11-16-1930';
+const APP_VER='2026-11-17-1700';
 async function checkAppVer(mode){
   try{const ac=new AbortController();const tm=setTimeout(()=>ac.abort(),3500);const r=await fetch(location.pathname+'?vc='+Date.now(),{cache:'no-store',signal:ac.signal});clearTimeout(tm);const t=await r.text();const m=t.match(/const APP_VER='([^']+)'/);
     if(!m||m[1]===APP_VER)return false;
@@ -1404,8 +1404,8 @@ async function renderRep(s,type,c){
       <div class="cd-h"><div class="cd-t">${lbl}</div><button class="sbtn or" onclick="openRepAdd('${type}','${foundKey}',${s.id})">+ 추가</button></div>
       <div class="cd-b">
         ${!list.length?'<div style="text-align:center;padding:16px;color:var(--gy);font-size:13px">아직 없어요. + 추가 버튼으로 입력해보세요!</div>':
-        list.map((r,i)=>`<div style="padding:9px 11px 9px 14px;background:${bg};border-radius:8px;margin-bottom:6px;display:flex;align-items:center;gap:8px">
-          <div style="flex:1;font-size:13px;font-weight:700;color:var(--bk)">• ${esc(r)}${repStatusOf(s.id,type,r)?` <span style="${repChipStyle(repStatusOf(s.id,type,r))};border-radius:6px;padding:1px 7px;font-size:11px;margin-left:4px;white-space:nowrap">${repStatusOf(s.id,type,r)}</span>`:''}</div>
+        repSortByRank(list,s.id,type).map(({x:r,i})=>`<div style="padding:9px 11px 9px 14px;background:${bg};border-radius:8px;margin-bottom:6px;display:flex;align-items:center;gap:8px${repRankOf(s.id,type,r)===1?';outline:2px solid #6B3FA0':''}">
+          <div style="flex:1;font-size:13px;font-weight:700;color:var(--bk)">${repRankOf(s.id,type,r)?repRankBadge(repRankOf(s.id,type,r))+' ':'• '}${esc(r)}${repStatusOf(s.id,type,r)?` <span style="${repChipStyle(repStatusOf(s.id,type,r))};border-radius:6px;padding:1px 7px;font-size:11px;margin-left:4px;white-space:nowrap">${repStatusOf(s.id,type,r)}</span>`:''}</div>
           <button onclick="openRepEdit('${type}','${foundKey}',${s.id},${i})" style="background:none;border:1px solid var(--bd);color:var(--gy);border-radius:7px;padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit;flex-shrink:0">수정</button>
           <button onclick="dlRep('${type}','${foundKey}',${s.id},${i})" class="del-btn" style="padding:3px 8px;font-size:11px;flex-shrink:0">삭제</button>
         </div>`).join('')}
@@ -2004,13 +2004,14 @@ async function fillPStatusRep(s){
   }
   const el=document.getElementById('pst-rep-'+s.id);if(!el)return;
   const rank=x=>x==='연습 중'?0:x===REP_OK?1:2;
-  const items=[...(data.danceRep||[]).map(t=>({t,type:'dance'})),...(data.vocalRep||[]).map(t=>({t,type:'vocal'}))].map(r=>({...r,st:repStatusOf(s.id,r.type,r.t)})).sort((a,b)=>rank(a.st)-rank(b.st));
+  const items=[...(data.danceRep||[]).map(t=>({t,type:'dance'})),...(data.vocalRep||[]).map(t=>({t,type:'vocal'}))].map(r=>({...r,st:repStatusOf(s.id,r.type,r.t),rk:repRankOf(s.id,r.type,r.t)})).sort((a,b)=>(a.rk||99)-(b.rk||99)||rank(a.st)-rank(b.st));
   if(!items.length){el.innerHTML='아직 등록된 레퍼토리가 없어요. 댄스·보컬 레파토리 탭에서 추가할 수 있어요';return;}
   const cnt=v=>items.filter(x=>x.st===v).length;
-  el.innerHTML=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${cnt(REP_OK)?`<span style="${repChipStyle(REP_OK)};border-radius:20px;padding:2px 9px;font-size:11px;font-weight:800">${REP_OK} ${cnt(REP_OK)}곡</span>`:''}${cnt('연습 중')?`<span style="${repChipStyle('연습 중')};border-radius:20px;padding:2px 9px;font-size:11px;font-weight:800">연습 중 ${cnt('연습 중')}곡</span>`:''}</div>`+
+  const mains=items.filter(x=>x.rk===1);
+  el.innerHTML=(mains.length?`<div style="background:linear-gradient(135deg,#2D1054,#6B3FA0);color:#fff;border-radius:11px;padding:10px 12px;margin-bottom:8px"><div style="font-size:11px;color:#FFD54A;font-weight:900">⭐ 나의 메인곡 · 1순위로 준비하기</div>${mains.map(x=>`<div style="font-size:14px;font-weight:800;margin-top:3px">${x.type==='dance'?'💃 댄스':'🎤 보컬'} · ${esc(x.t)}</div>`).join('')}</div>`:'')+`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">${cnt(REP_OK)?`<span style="${repChipStyle(REP_OK)};border-radius:20px;padding:2px 9px;font-size:11px;font-weight:800">${REP_OK} ${cnt(REP_OK)}곡</span>`:''}${cnt('연습 중')?`<span style="${repChipStyle('연습 중')};border-radius:20px;padding:2px 9px;font-size:11px;font-weight:800">연습 중 ${cnt('연습 중')}곡</span>`:''}</div>`+
     items.map(r=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;margin-bottom:5px;background:${r.type==='dance'?'#F7F1FC':'#EEF9F5'}">
       <span class="bx ${r.type==='dance'?'dn':'vc'}">${r.type==='dance'?'댄스':'보컬'}</span>
-      <div style="flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--bk);overflow:hidden;text-overflow:ellipsis">${esc(r.t)}</div>
+      <div style="flex:1;min-width:0;font-size:13px;font-weight:700;color:var(--bk);overflow:hidden;text-overflow:ellipsis">${r.rk?repRankBadge(r.rk)+' ':''}${esc(r.t)}</div>
       <span style="${repChipStyle(r.st)};border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;white-space:nowrap">${r.st||'미체크'}</span></div>`).join('');
 }
 // 콘텐츠 촬영 과제: 담임이 과제를 내줌(준비 중) → 과제 검사 통과(준비 완료) → 학원에서 카메라·조명으로 촬영 날짜 잡기(촬영 예정) → 촬영 완료
@@ -2684,20 +2685,27 @@ let _repCls='all',_repStu=null;
 function repKey(t){return String(t||'').trim().toLowerCase().replace(/\s+/g,' ');}
 function repStatusOf(sid,type,title){const d=(DB.repStatus||{})[String(sid)];return d&&d[type]?(d[type][repKey(title)]||''):'';}
 const REP_OK='오디션 사용 가능';
+function repRankOf(sid,type,title){const d=(DB.repStatus||{})[String(sid)];return d&&d.rank&&d.rank[type]?(Number(d.rank[type][repKey(title)])||0):0;}
+function repRankLbl(n){return n===1?'⭐ 메인':n?n+'순위':'';}
+function repRankBadge(n){return n?`<span style="background:${n===1?'#6B3FA0':'#EDE4FB'};color:${n===1?'#FFD54A':'#6B3FA0'};border-radius:6px;padding:1px 7px;font-size:11px;font-weight:900;white-space:nowrap">${repRankLbl(n)}</span>`:'';}
+function repSortByRank(list,sid,type,get){const r=x=>repRankOf(sid,type,get?get(x):x)||99;return list.map((x,i)=>({x,i})).sort((a,b)=>r(a.x)-r(b.x)||a.i-b.i);}
 function repChipStyle(st){return st===REP_OK?'background:#C6E8C9;border:1.5px solid #5FB36A;color:#1F6B2A':st==='연습 중'?'background:#FFF2CC;border:1.5px solid #E0B84A;color:#7A5A00':'background:#fff;border:1.5px dashed var(--bd);color:var(--gy)';}
-function repChip(sid,type,title,label){const st=repStatusOf(sid,type,title);return `<button data-sid="${sid}" data-type="${type}" data-title="${esc(title)}" onclick="event.stopPropagation();repCycle(this)" title="눌러서 완성도 고르기" style="${repChipStyle(st)};border-radius:7px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${esc(label)}${st?' · '+st:' · 미체크'}</button>`;}
+function repChip(sid,type,title,label){const st=repStatusOf(sid,type,title);return `<button data-sid="${sid}" data-type="${type}" data-title="${esc(title)}" onclick="event.stopPropagation();repCycle(this)" title="눌러서 완성도·순위 고르기" style="${repChipStyle(st)};border-radius:7px;padding:4px 10px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${repRankOf(sid,type,title)?repRankBadge(repRankOf(sid,type,title))+' ':''}${esc(label)}${st?' · '+st:' · 미체크'}</button>`;}
 // 레파토리 완성도: 칩을 누르면 바로 바뀌지 않고 상태 고르는 창이 열림 → 고르면 저장 + 5초 동안 '되돌리기'
 function repCycle(btn){
   const sid=Number(btn.dataset.sid)||btn.dataset.sid,type=btn.dataset.type,title=btn.dataset.title;
   const cur=repStatusOf(sid,type,title);const st=(DB.students||[]).find(x=>String(x.id)===String(sid));
   let det=document.getElementById('ov-rep');
   if(!det){det=document.createElement('div');det.id='ov-rep';det.className='ov';det.onclick=function(e){if(e.target===this)closeM('ov-rep');};document.body.appendChild(det);}
-  window._repPick={sid,type,title};
+  window._repPick={sid,type,title};const curR=repRankOf(sid,type,title);
   const opt=(v,l)=>`<button onclick="repSet('${v}')" style="${repChipStyle(v)};display:block;width:100%;text-align:left;border-radius:10px;padding:13px 14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:8px;${cur===v?'outline:3px solid var(--or);outline-offset:1px':''}">${l}${cur===v?' <span style="font-size:12px;font-weight:700">(지금)</span>':''}</button>`;
-  det.innerHTML=`<div class="md"><div class="mh"><div class="mt">🎵 완성도 체크</div><button class="xb" onclick="closeM('ov-rep')">✕</button></div><div class="mb">
+  det.innerHTML=`<div class="md"><div class="mh"><div class="mt">🎵 완성도 · 순위</div><button class="xb" onclick="closeM('ov-rep')">✕</button></div><div class="mb">
     <div style="font-size:13px;color:var(--gy);margin-bottom:4px">${esc(st?st.name:'')} · ${type==='dance'?'댄스':'보컬'}</div>
     <div style="font-size:16px;font-weight:800;margin-bottom:14px">${esc(title)}</div>
     ${opt('','미체크')}${opt('연습 중','연습 중')}${opt(REP_OK,REP_OK)}
+    <div style="font-size:13px;font-weight:900;margin:14px 0 4px">우선순위 <span style="font-size:11.5px;color:var(--gy);font-weight:600">(${type==='dance'?'댄스':'보컬'} 곡 중에서 · 학생 화면에도 보여요)</span></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${[[1,'⭐ 메인'],[2,'2순위'],[3,'3순위'],[0,'없음']].map(([n,l])=>`<button onclick="repSetRank(${n})" style="padding:11px 4px;border-radius:10px;border:1.5px solid ${curR===n?'#6B3FA0':'var(--bd)'};background:${curR===n?(n===1?'#6B3FA0':'#EDE4FB'):'#fff'};color:${curR===n&&n===1?'#FFD54A':curR===n?'#6B3FA0':'var(--gy)'};font-size:13.5px;font-weight:900;cursor:pointer;font-family:inherit">${l}</button>`).join('')}</div>
+    <div style="font-size:11.5px;color:var(--gy);margin-top:6px">⭐ 메인 = 오디션에서 1순위로 쓸 곡. 다른 곡이 같은 순위였으면 그 곡은 순위가 빠져요.</div>
   </div></div>`;
   det.classList.add('on');
 }
@@ -2713,6 +2721,20 @@ async function repSet(val){
   try{await repSave(p.sid,p.type,p.title,val);}catch(e){alert('저장 실패: '+e.message);return;}
   renderAdmRep(document.getElementById('adm-ct'),true);
   repUndoBar(`'${p.title}' → ${val||'미체크'}`,async()=>{try{await repSave(p.sid,p.type,p.title,prev);renderAdmRep(document.getElementById('adm-ct'),true);toast('↩︎ 되돌렸어요');}catch(e){alert('되돌리기 실패: '+e.message);}});
+}
+async function repSaveRankMap(sid,type,map){
+  if(!DB.repStatus)DB.repStatus={};const id=String(sid);
+  const doc=JSON.parse(JSON.stringify(DB.repStatus[id]||{sid,dance:{},vocal:{}}));if(!doc.rank)doc.rank={};doc.rank[type]=map;
+  await db.collection('idol_rep_status').doc(id).set(doc);DB.repStatus[id]=doc;
+}
+async function repSetRank(n){
+  const p=window._repPick;if(!p)return;closeM('ov-rep');
+  const d=(DB.repStatus||{})[String(p.sid)];const prevMap=JSON.parse(JSON.stringify((d&&d.rank&&d.rank[p.type])||{}));
+  const k=repKey(p.title);if((Number(prevMap[k])||0)===n)return;
+  const map={};Object.keys(prevMap).forEach(x=>{if(x!==k&&Number(prevMap[x])!==n)map[x]=prevMap[x];});if(n)map[k]=n;
+  try{await repSaveRankMap(p.sid,p.type,map);}catch(e){alert('저장 실패: '+e.message);return;}
+  renderAdmRep(document.getElementById('adm-ct'),true);
+  repUndoBar(`'${p.title}' → ${n?repRankLbl(n):'순위 없음'}`,async()=>{try{await repSaveRankMap(p.sid,p.type,prevMap);renderAdmRep(document.getElementById('adm-ct'),true);toast('↩︎ 되돌렸어요');}catch(e){alert('되돌리기 실패: '+e.message);}});
 }
 function repUndoBar(text,undo){
   let el=document.getElementById('rep-undo');if(el)el.remove();
@@ -2743,9 +2765,9 @@ async function renderAdmRep(c,cached){
   if(admTab_!=='rep')return;
   const act=stuData.filter(x=>!x.student.inactive&&(_repCls==='all'||(_repCls==='kids')===(x.student.cls==='kids'))).sort((a,b)=>String(a.student.name||'').localeCompare(String(b.student.name||''),'ko'));
   const fb=(v,l)=>`<button onclick="_repCls='${v}';renderAdmRep(document.getElementById('adm-ct'),true)" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${_repCls===v?'var(--or)':'var(--bd)'};background:${_repCls===v?'var(--ob)':'#fff'};color:${_repCls===v?'var(--or)':'var(--gy)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${l}</button>`;
-  const sec=(s,type,lbl,col,list)=>list.length?`<div style="margin-top:9px"><div style="font-size:11px;font-weight:800;color:${col};margin-bottom:5px">${lbl} ${list.length}곡</div><div style="display:flex;flex-wrap:wrap;gap:6px">${list.map(t=>repChip(s.id,type,t,t)).join('')}</div></div>`:'';
+  const sec=(s,type,lbl,col,list)=>list.length?`<div style="margin-top:9px"><div style="font-size:11px;font-weight:800;color:${col};margin-bottom:5px">${lbl} ${list.length}곡</div><div style="display:flex;flex-wrap:wrap;gap:6px">${repSortByRank(list,s.id,type).map(({x:t})=>repChip(s.id,type,t,t)).join('')}</div></div>`:'';
   c.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px">${fb('all','전체')}${fb('audition','오디션반')}${fb('kids','키즈오디션반')}</div>
-  <div style="font-size:12px;color:var(--gy);margin-bottom:12px">곡을 누르면 <b>미체크 / 연습 중 / 오디션 사용 가능</b> 중에서 고르는 창이 열려요. 잘못 바꿨으면 아래에 뜨는 <b>되돌리기</b>를 눌러주세요.</div>
+  <div style="font-size:12px;color:var(--gy);margin-bottom:12px">곡을 누르면 <b>미체크 / 연습 중 / 오디션 사용 가능</b>과 <b>⭐ 메인 · 2순위 · 3순위</b>를 고르는 창이 열려요. 잘못 바꿨으면 아래에 뜨는 <b>되돌리기</b>를 눌러주세요.</div>
   ${act.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;align-items:start">${act.map(({student:s,data})=>{
     const d=data.danceRep||[],v=data.vocalRep||[];const tot=d.length+v.length;
     const ok=d.filter(t=>repStatusOf(s.id,'dance',t)===REP_OK).length+v.filter(t=>repStatusOf(s.id,'vocal',t)===REP_OK).length;
