@@ -2681,7 +2681,10 @@ function renderAdmAudit(c){
 
 // 레파토리 전체 보기
 // 레파토리 완성도 (곡 제목별 연습 중 / 가능, idol_rep_status에 학생별 저장)
-let _repCls='all',_repStu=null;
+let _repCls='all',_repStu=null,_repKid='all';
+// 키즈 담임반: 'kh' 김함비쌤반, 'ks' Stia쌤반, 'kx' 담임 미배정 (담당·등급 창의 담임 → 없으면 트레이닝 수업 선생님)
+function kidGroups(s){const t=kidsTrainer(s,metaOf(s.id));const g=[];if(t.includes('김함비쌤'))g.push('kh');if(t.includes('Stia쌤'))g.push('ks');return g.length?g:['kx'];}
+const KID_GROUP_LBL={kh:'김함비쌤반',ks:'Stia쌤반',kx:'담임 미배정'};
 function repKey(t){return String(t||'').trim().toLowerCase().replace(/\s+/g,' ');}
 function repStatusOf(sid,type,title){const d=(DB.repStatus||{})[String(sid)];return d&&d[type]?(d[type][repKey(title)]||''):'';}
 const REP_OK='오디션 사용 가능';
@@ -2763,17 +2766,34 @@ async function renderAdmRep(c,cached){
   _repStu=stuData;
   }
   if(admTab_!=='rep')return;
-  const act=stuData.filter(x=>!x.student.inactive&&(_repCls==='all'||(_repCls==='kids')===(x.student.cls==='kids'))).sort((a,b)=>String(a.student.name||'').localeCompare(String(b.student.name||''),'ko'));
+  const act=stuData.filter(x=>!x.student.inactive&&(_repCls==='all'||(_repCls==='kids')===(x.student.cls==='kids'))&&(_repCls!=='kids'||_repKid==='all'||x.student.cls==='kids'&&kidGroups(x.student).includes(_repKid))).sort((a,b)=>String(a.student.name||'').localeCompare(String(b.student.name||''),'ko'));
   const fb=(v,l)=>`<button onclick="_repCls='${v}';renderAdmRep(document.getElementById('adm-ct'),true)" style="padding:6px 14px;border-radius:20px;border:1.5px solid ${_repCls===v?'var(--or)':'var(--bd)'};background:${_repCls===v?'var(--ob)':'#fff'};color:${_repCls===v?'var(--or)':'var(--gy)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${l}</button>`;
   const sec=(s,type,lbl,col,list)=>list.length?`<div style="margin-top:9px"><div style="font-size:11px;font-weight:800;color:${col};margin-bottom:5px">${lbl} ${list.length}곡</div><div style="display:flex;flex-wrap:wrap;gap:6px">${repSortByRank(list,s.id,type).map(({x:t})=>repChip(s.id,type,t,t)).join('')}</div></div>`:'';
-  c.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px">${fb('all','전체')}${fb('audition','오디션반')}${fb('kids','키즈오디션반')}</div>
-  <div style="font-size:12px;color:var(--gy);margin-bottom:12px">곡을 누르면 <b>미체크 / 연습 중 / 오디션 사용 가능</b>과 <b>⭐ 메인 · 2순위 · 3순위</b>를 고르는 창이 열려요. 잘못 바꿨으면 아래에 뜨는 <b>되돌리기</b>를 눌러주세요.</div>
-  ${act.length?`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;align-items:start">${act.map(({student:s,data})=>{
+  const card=({student:s,data})=>{
     const d=data.danceRep||[],v=data.vocalRep||[];const tot=d.length+v.length;
     const ok=d.filter(t=>repStatusOf(s.id,'dance',t)===REP_OK).length+v.filter(t=>repStatusOf(s.id,'vocal',t)===REP_OK).length;
     const k=s.cls==='kids';
-    return `<div class="cd" style="margin:0"><div style="padding:12px 13px"><div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="admOpenProf(${s.id})"><div style="font-size:15px;font-weight:800">${esc(s.name)}</div><span class="bx ${k?'kk':'or'}">${k?'키즈':'오디션'}</span><div style="margin-left:auto;font-size:12px;color:var(--gy)">오디션 사용 가능 <b>${ok}</b> / ${tot}곡</div></div>
-    ${tot?sec(s,'dance','💃 댄스','var(--dn)',d)+sec(s,'vocal','🎤 보컬','var(--vc)',v):'<div style="font-size:12px;color:var(--gy2);margin-top:9px">등록된 레파토리 없음</div>'}</div></div>`;}).join('')}</div>`:'<div class="emp-msg">해당하는 학생이 없어요</div>'}`;
+    return `<div class="cd" style="margin:0"><div style="padding:12px 13px"><div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="admOpenProf(${s.id})"><div style="font-size:15px;font-weight:800">${esc(s.name)}</div><span class="bx ${k?'kk':'or'}">${k?'키즈'+(kidGroups(s)[0]!=='kx'?' · '+kidGroups(s).map(g=>KID_GROUP_LBL[g].replace('쌤반','')).join('·'):''):'오디션'}</span><div style="margin-left:auto;font-size:12px;color:var(--gy)">오디션 사용 가능 <b>${ok}</b> / ${tot}곡</div></div>
+    ${tot?sec(s,'dance','💃 댄스','var(--dn)',d)+sec(s,'vocal','🎤 보컬','var(--vc)',v):'<div style="font-size:12px;color:var(--gy2);margin-top:9px">등록된 레파토리 없음</div>'}</div></div>`;};
+  const grid=list=>`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;align-items:start">${list.map(card).join('')}</div>`;
+  const head=(lbl,n,col)=>`<div style="display:flex;align-items:center;gap:8px;margin:18px 2px 8px"><div style="width:4px;height:18px;border-radius:2px;background:${col}"></div><div style="font-size:15px;font-weight:800">${lbl}</div><div style="font-size:12px;color:var(--gy)">${n}명</div></div>`;
+  // 반별로 묶어서 보여주기: 오디션반 / 키즈 김함비쌤반 / 키즈 Stia쌤반 / 키즈 담임 미배정
+  const aud=act.filter(x=>x.student.cls!=='kids');
+  const kg=k=>act.filter(x=>x.student.cls==='kids'&&kidGroups(x.student).includes(k));
+  let body='';
+  if(!act.length)body='<div class="emp-msg">해당하는 학생이 없어요</div>';
+  else if(_repCls==='kids'&&_repKid!=='all')body=grid(act);
+  else{
+    if(aud.length&&_repCls==='all')body+=head('오디션반',aud.length,'var(--or)')+grid(aud);
+    else if(aud.length)body+=grid(aud);
+    ['kh','ks','kx'].forEach(k=>{const l=kg(k);if(l.length)body+=head((_repCls==='all'?'키즈 · ':'')+KID_GROUP_LBL[k],l.length,k==='kx'?'var(--gy2)':'var(--k)')+grid(l);});
+  }
+  const kAll=stuData.filter(x=>!x.student.inactive&&x.student.cls==='kids');
+  const kb=(v,l)=>{const n=v==='all'?kAll.length:kAll.filter(x=>kidGroups(x.student).includes(v)).length;if(v==='kx'&&!n)return '';const on=_repKid===v;return `<button onclick="_repKid='${v}';renderAdmRep(document.getElementById('adm-ct'),true)" style="padding:5px 12px;border-radius:20px;border:1.5px solid ${on?'var(--k)':'var(--bd)'};background:${on?'var(--kb)':'#fff'};color:${on?'var(--k)':'var(--gy)'};font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">${l} ${n}</button>`;};
+  c.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:8px">${fb('all','전체')}${fb('audition','오디션반')}${fb('kids','키즈오디션반')}</div>
+  ${_repCls==='kids'?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;padding-left:10px;border-left:3px solid var(--kb)">${kb('all','키즈 전체')}${kb('kh','김함비쌤반')}${kb('ks','Stia쌤반')}${kb('kx','담임 미배정')}</div>`:''}
+  <div style="font-size:12px;color:var(--gy);margin-bottom:12px">곡을 누르면 <b>미체크 / 연습 중 / 오디션 사용 가능</b>과 <b>⭐ 메인 · 2순위 · 3순위</b>를 고르는 창이 열려요. 잘못 바꿨으면 아래에 뜨는 <b>되돌리기</b>를 눌러주세요.</div>
+  ${body}`;
 }
 
 // 피드백 입력
