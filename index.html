@@ -167,6 +167,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;heigh
   <div id="pv-banner" style="display:none;background:#FEF3C7;color:#92400E;font-size:12.5px;font-weight:700;padding:8px 14px;text-align:center">👀 관리자 계정으로 학생 화면을 보는 중이에요 · 학생 카드를 누르면 누구 페이지든 열려요 · <span onclick="goTeacher()" style="text-decoration:underline;cursor:pointer">관리자 화면으로</span></div>
   <div class="page-body"><div class="ct">
     <div id="stu-hero"></div>
+    <div id="stu-todo"></div>
     <a href="audition.html" style="display:flex;align-items:center;gap:12px;text-decoration:none;background:linear-gradient(135deg,#6B3FA0,#8B3FA0);color:#fff;border-radius:16px;padding:16px 18px;margin-bottom:14px;box-shadow:0 6px 18px rgba(107,63,160,.3)"><span style="font-size:26px">📢</span><span style="flex:1"><span style="display:block;font-size:16px;font-weight:800">오늘의 오디션 소식</span><span style="display:block;font-size:12.5px;opacity:.9;margin-top:2px">매일 업데이트되는 오디션·대회·업계 소식 보기 ✨</span></span><span style="font-size:22px">›</span></a><div id="w-ntc"></div><div id="w-ev"></div><div id="w-res"></div><div id="w-msg"></div><div id="w-stu"></div>
   </div></div>
   <div class="bnav">
@@ -731,7 +732,7 @@ function renderTT(s){
 }
 
 // MAIN
-function renderMain(){renderStuHero();const lo=document.getElementById('main-logout');if(lo)lo.style.display=_authRole==='student'?'':'none';renderPvBanner();renderNtc();renderEvs();renderRes();renderMsg();renderStuList();}
+function renderMain(){renderStuHero();renderStuTodo();const lo=document.getElementById('main-logout');if(lo)lo.style.display=_authRole==='student'?'':'none';renderPvBanner();renderNtc();renderEvs();renderRes();renderMsg();renderStuList();}
 window.renderMain=renderMain;
 
 function renderNtc(){
@@ -1640,9 +1641,59 @@ function renderAdm(){
 function renderAdmMain(container){
   // 게시판 + 학생목록 합체
   if(!container) return;
-  container.innerHTML='<div id="adm-w-memo"></div><div id="adm-w-ntc"></div><div id="adm-w-ev"></div><div id="adm-w-res"></div><div id="adm-w-msg"></div><div id="adm-w-stu"></div>';
+  container.innerHTML='<div id="adm-w-todo"></div><div id="adm-w-memo"></div><div id="adm-w-ntc"></div><div id="adm-w-ev"></div><div id="adm-w-res"></div><div id="adm-w-msg"></div><div id="adm-w-stu"></div>';
+  renderAdmTodo();
   renderAdmMemo();
   renderAdmBoard(container,true);
+}
+// ===== 미입력 학생 (입시반 앱과 같은 방식) =====
+// 이번 주 체크리스트 · 이번 달 목표 · (15일부터) 달성률 · 이번 달 인바디
+function missingInputs(s){
+  const n=new Date(),mon=n.getMonth()+1,m=ym();const miss=[];
+  // 이번 주: 이번 주 월요일 하루 전부터의 기록이면 작성한 것으로 봄 (주차 키 시간대 차이 보정)
+  const d=new Date(n);d.setDate(n.getDate()-((n.getDay()+6)%7)-1);
+  const from=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  if(!(s.weeklies||[]).some(w=>w.weekKey&&w.weekKey>=from&&(w.items||[]).length))miss.push({key:'week',label:'이번 주 체크리스트'});
+  const g=(s.monthlyGoals||[]).find(x=>x.month===m);
+  if(!g||!String(g.goal||'').trim())miss.push({key:'goal',label:mon+'월 목표'});
+  else if(n.getDate()>=15&&!(g.achievement>0))miss.push({key:'ach',label:mon+'월 달성률'});
+  if(!(s.inbody||[]).some(ib=>String(ib.date||'').slice(0,7)===m))miss.push({key:'inbody',label:mon+'월 인바디'});
+  return miss;
+}
+function renderStuTodo(){
+  const w=document.getElementById('stu-todo');if(!w)return;
+  if(_authRole!=='student'){w.innerHTML='';return;}
+  const me=DB.students.find(x=>x.id===_authSid);if(!me||me.inactive){w.innerHTML='';return;}
+  const miss=missingInputs(me);if(!miss.length){w.innerHTML='';return;}
+  w.innerHTML=`<div style="background:#fff7ed;border:1.5px solid #fdba74;border-radius:14px;padding:12px 14px;margin:0 0 12px">
+    <div style="font-size:14px;font-weight:900;color:#c2410c;margin-bottom:6px">⚠️ 아직 안 적은 게 있어요</div>
+    <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px">${miss.map(x=>`<span style="background:#fff;border:1px solid #fdba74;color:#9a3412;border-radius:20px;padding:3px 10px;font-size:12px;font-weight:800">${x.label}</span>`).join('')}</div>
+    <button onclick="openProf(${me.id})" class="sbtn or" style="width:100%;padding:10px;font-size:14px">내 페이지에서 적으러 가기 →</button></div>`;
+}
+let _todoOpen=false,_todoGrp='all';
+function todoGroupOf(s){if(s.cls!=='kids')return ['aud'];return kidGroups(s);}
+function renderAdmTodo(){
+  const w=document.getElementById('adm-w-todo');if(!w)return;
+  const all=(DB.students||[]).filter(s=>!s.inactive);
+  const studs=_todoGrp==='all'?all:all.filter(s=>todoGroupOf(s).includes(_todoGrp));
+  const groups={};
+  studs.forEach(s=>missingInputs(s).forEach(x=>{(groups[x.key]=groups[x.key]||{label:x.label,names:[]}).names.push(s);}));
+  const keys=['week','goal','ach','inbody'].filter(k=>groups[k]);
+  const anyAll=all.some(s=>missingInputs(s).length);
+  if(!anyAll){w.innerHTML='';return;}
+  const GL={all:'전체',aud:'오디션반',kh:'키즈 · 김함비쌤반',ks:'키즈 · Stia쌤반',kx:'키즈 · 담임 미배정'};
+  const chip=k=>{const n=k==='all'?all.length:all.filter(s=>todoGroupOf(s).includes(k)).length;if(!n)return '';const on=_todoGrp===k;
+    return `<button onclick="event.stopPropagation();_todoGrp='${k}';renderAdmTodo()" style="padding:4px 11px;border-radius:20px;border:1.5px solid ${on?'#c2410c':'#fed7aa'};background:${on?'#c2410c':'#fff'};color:${on?'#fff':'#9a3412'};font-size:12px;font-weight:800;cursor:pointer;font-family:inherit">${GL[k]} ${n}</button>`;};
+  const tag=s=>{const g=todoGroupOf(s)[0];return g==='aud'?'':`<span style="font-size:10px;color:#9a3412;opacity:.7;margin-left:3px">${g==='kh'?'함비':g==='ks'?'Stia':'키즈'}</span>`;};
+  w.innerHTML=`<div style="background:#fff7ed;border:1.5px solid #fdba74;border-radius:14px;padding:12px 14px;margin-bottom:12px">
+    <div onclick="_todoOpen=!_todoOpen;renderAdmTodo()" style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;gap:10px">
+      <div><div style="font-size:14px;font-weight:900;color:#c2410c">⚠️ 미입력 학생</div>
+      <div style="font-size:12px;color:#9a3412;margin-top:3px">${keys.length?keys.map(k=>groups[k].label+' '+groups[k].names.length+'명').join(' · '):'이 반은 모두 입력했어요 👍'}</div></div>
+      <div style="font-size:12px;color:#9a3412;font-weight:800;white-space:nowrap">${_todoOpen?'접기 ▴':'명단 ▾'}</div></div>
+    ${_todoOpen?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">${['all','aud','kh','ks','kx'].map(chip).join('')}</div>`+
+      keys.map(k=>`<div style="margin-top:10px"><div style="font-size:12px;font-weight:800;color:#9a3412;margin-bottom:4px">${groups[k].label} (${groups[k].names.length})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${groups[k].names.sort((a,b)=>String(a.name).localeCompare(String(b.name),'ko')).map(s=>`<span onclick="admOpenProf(${s.id})" style="background:#fff;border:1px solid #fed7aa;border-radius:8px;padding:2px 8px;font-size:12px;cursor:pointer">${esc(s.name)}${tag(s)}</span>`).join('')}</div></div>`).join(''):''}
+  </div>`;
 }
 function renderAdmMemo(){
   const w=document.getElementById('adm-w-memo');if(!w)return;
